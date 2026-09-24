@@ -2,7 +2,10 @@
 # Building the sample sheet
 # Author: GP2 Subtypes and Mechanisms - M.E., M.P.
 # Date: Sept 22, 2026
-# Description: constructs Basename column for minfi, merges clinical info from R12
+# Updated: Sept 24, 2026
+# Description: merges the sample sheets of all datasets in DATASETS, constructs
+#              Basename column for minfi, detects array type per chip, merges
+#              clinical info from R12
 # =============================================================================
 
 # --- 0. Setup ----------------------------------------------------------------
@@ -14,22 +17,36 @@ source("~/methylation/scripts/00_config.R")
 
 # --- 1. Load metadata --------------------------------------------------------
 
-# read the sample sheet
-cat("Loading target sheet...\n")
-sample_sheet <- read.csv(file.path(DIR_DATASET, "AB00000952_QC_table.csv"))
+# read the sample sheet (QC table) of each dataset and set the Basename for minfi
+read_dataset_sheet <- function(dataset) {
+  dir_dataset <- file.path(DIR_DELIVERY, dataset)
+  sheet <- read.csv(file.path(dir_dataset, paste0(dataset, "_QC_table.csv")),
+                    colClasses = c(SentrixBarcode_A = "character"))
 
-# rename columns
-names(sample_sheet)[names(sample_sheet) == "SentrixBarcode_A"]   <- "Sentrix_ID"
-names(sample_sheet)[names(sample_sheet) == "SentrixPosition_A"] <- "Sentrix_Position"
+  sheet %>%
+    rename(Sentrix_ID       = SentrixBarcode_A,
+           Sentrix_Position = SentrixPosition_A) %>%
+    mutate(Dataset  = dataset,
+           Basename = file.path(dir_dataset,
+                                Sentrix_ID,
+                                paste0(Sentrix_ID, "_", Sentrix_Position),
+                                paste0(Sentrix_ID, "_", Sentrix_Position)))
+}
 
-# set Basename column for each sample
-sample_sheet$Basename <- file.path(
-  DIR_DATASET,
-  sample_sheet$Sentrix_ID,
-  paste0(sample_sheet$Sentrix_ID, "_", sample_sheet$Sentrix_Position),
-  paste0(sample_sheet$Sentrix_ID, "_", sample_sheet$Sentrix_Position)
-)
-cat("Sample sheet dimensions:", nrow(sample_sheet), "rows x", ncol(sample_sheet), "cols\n")
+cat("Loading target sheets for", length(DATASETS), "datasets...\n")
+sample_sheet <- map_dfr(DATASETS, read_dataset_sheet)
+cat("Merged sample sheet dimensions:", nrow(sample_sheet), "rows x", ncol(sample_sheet), "cols\n")
+cat("Samples per dataset:\n")
+print(table(sample_sheet$Dataset))
+
+# The same sample can appear in more than one dataset (e.g. re-runs)
+dup_ids <- unique(sample_sheet$Sample_ID[duplicated(sample_sheet$Sample_ID)])
+if (length(dup_ids) > 0) {
+  cat("WARNING:", length(dup_ids), "Sample_IDs appear more than once:\n")
+  print(sample_sheet %>% filter(Sample_ID %in% dup_ids) %>%
+          select(Sample_ID, Dataset, Sentrix_ID, Sentrix_Position) %>%
+          arrange(Sample_ID))
+}
 
 # Load R12 and combine (match 'GP2ID' in R12 to 'Sample_ID' in the sample sheet)
 r12 <- read.csv(file.path(FNAME_METADATA))
@@ -42,8 +59,8 @@ sample_sheet <- sample_sheet %>%
          sex  = biological_sex_for_qc,
          race = race_for_qc,
          age  = age_at_sample_collection,
-         Sentrix_ID, Sentrix_Position, Basename)
-  
+         Dataset, Sentrix_ID, Sentrix_Position, Basename)
+
 # --- 2. Verify idat files exist ----------------------------------------------
 
 cat("\nVerifying idat files exist on disk...\n")
@@ -63,6 +80,37 @@ if (nrow(missing) > 0) {
   print(missing %>% select(Basename))
 } else {
   cat("All idat files found!\n")
+}
+
+# --- 2b. Detect array type ---------------------------------------------------
+
+# Arrays can't be told apart from the QC table, so read one idat per chip and
+# use the number of bead types (EPICv2: 1,105,209; EPICv1: 1,051,815-1,052,641;
+# 450k: 622,399). Anything else (e.g. a genotyping chip) is "Unknown"
+cat("\nDetecting array type per chip...\n")
+array_from_idat <- function(basename) {
+  n_beads <- nrow(illuminaio::readIDAT(paste0(basename, "_Grn.idat"))$Quants)
+  case_when(between(n_beads, 1100000, 1110000) ~ "EPICv2",
+            between(n_beads, 1045000, 1060000) ~ "EPICv1",
+            between(n_beads,  615000,  625000) ~ "450k",
+            TRUE                               ~ "Unknown")
+}
+
+chip_arrays <- sample_sheet %>%
+  filter(both_exist) %>%
+  distinct(Sentrix_ID, .keep_all = TRUE) %>%
+  transmute(Sentrix_ID, Array = map_chr(Basename, array_from_idat))
+
+sample_sheet <- sample_sheet %>%
+  left_join(chip_arrays, by = "Sentrix_ID")
+
+cat("Samples per dataset and array:\n")
+print(table(sample_sheet$Dataset, sample_sheet$Array, useNA = "ifany"))
+
+if (any(sample_sheet$Array %in% "Unknown")) {
+  cat("WARNING: some chips are not a recognised methylation array",
+      "(check DATASETS in 00_config.R):\n")
+  print(sample_sheet %>% filter(Array %in% "Unknown") %>% count(Dataset, Sentrix_ID))
 }
 
 # --- 3. Final clean sample sheet ---------------------------------------------

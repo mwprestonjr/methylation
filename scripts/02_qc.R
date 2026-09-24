@@ -2,7 +2,9 @@
 # Quality Control
 # Author: GP2 Subtypes and Mechanisms - M.E., M.P.
 # Date: Sept 22, 2026
-# Description: Reads idat files into minfi, runs QC following the minfi
+# Updated: Sept 24, 2026
+# Description: Reads idat files of all datasets (merged sample sheet from
+#              Script 01) into minfi, runs QC following the minfi
 #              user guide, filters failed samples and probes, normalizes
 #              using preprocessFunnorm, and saves QC-passed data
 # =============================================================================
@@ -25,6 +27,8 @@ targets <- read.csv(SAMPLE_SHEET,
                                    Basename = "character")) 
 # Quick checks
 cat("Samples loaded:", nrow(targets), "\n")
+cat("Samples per dataset and array:\n")
+print(table(targets$Dataset, targets$Array))
 cat("PD:", sum(targets$GP2_phenotype == "PD"), "\n")
 cat("Control:", sum(targets$GP2_phenotype == "Control"), "\n")
 cat("Other phenotype:", sum(targets$GP2_phenotype != "PD" & targets$GP2_phenotype != "Control"), "\n")
@@ -33,8 +37,21 @@ cat("Male:", sum(targets$sex == "Male"), "\n")
 cat("\nSex by Diagnosis breakdown:\n")
 print(table(targets$GP2_phenotype, targets$sex))
 
+# The annotation and probe filters below are EPICv2-specific, and minfi can't
+# read different array types into one RGChannelSet
+if (!all(targets$Array == "EPICv2")) {
+  stop("Sample sheet contains non-EPICv2 arrays (",
+       paste(setdiff(unique(targets$Array), "EPICv2"), collapse = ", "),
+       "); only EPICv2 is supported for now - see the array table from Script 01")
+}
+
 # TEMP reduce size for testing (need ot increase machine memory)
-targets <- targets[1:N_SAMPLES_TESTING, ]
+# take the first samples of each dataset so the merge is exercised
+# targets <- targets %>%
+#   group_by(Dataset) %>%
+#   slice_head(n = N_SAMPLES_TESTING) %>%
+#   ungroup() %>%
+#   as.data.frame()
 
 # --- 2. Read IDAT files ------------------------------------------------------
 
@@ -135,7 +152,7 @@ failed_samples <- mean_detP > DETECTION_P_THRESHOLD
 cat("Samples failing detection p-value threshold:", sum(failed_samples), "\n")
 if (sum(failed_samples) > 0) {
   cat("Failed samples:\n")
-  print(targets$GP2ID[failed_samples])
+  print(targets[failed_samples, c("GP2ID", "Dataset")])
 }
 
 # 3c. Sex prediction
@@ -146,6 +163,7 @@ sex_predicted <- getSex(mSet_mapped, cutoff = -2)
 # Compare predicted vs reported sex (R12: "Female"/"Male")
 sex_check <- data.frame(
   GP2ID         = targets$GP2ID,
+  Dataset       = targets$Dataset,
   reported_sex  = targets$sex,
   predicted_sex = sex_predicted$predictedSex
 ) %>%
@@ -210,6 +228,14 @@ png(file.path(DIR_RESULTS, "qc_04_density_before_normalization.png"), width = FI
 densityPlot(getBeta(preprocessRaw(rgSet_clean)),
             sampGroups = targets_clean$GP2_phenotype,
             main       = "Beta Values - Before Normalization",
+            legend     = TRUE)
+dev.off()
+
+# Same, grouped by dataset, to spot dataset-level shifts before normalization
+png(file.path(DIR_RESULTS, "qc_04b_density_by_dataset.png"), width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
+densityPlot(getBeta(preprocessRaw(rgSet_clean)),
+            sampGroups = targets_clean$Dataset,
+            main       = "Beta Values by Dataset - Before Normalization",
             legend     = TRUE)
 dev.off()
 

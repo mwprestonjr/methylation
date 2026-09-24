@@ -1,7 +1,8 @@
 # =============================================================================
 # Batch Correction and Cell Type Deconvolution
 # Author: GP2 Subtypes and Mechanisms - M.E., M.P.
-# Date: Sept 23, 2026
+# Date: May 6, 2026
+# Updated: Sept 23, 2026
 # Description: Loads QC-passed methylation data, performs PCA exploration,
 #              confounder analysis, cell type deconvolution, and batch
 #              correction via ComBat. Saves corrected M values for use

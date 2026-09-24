@@ -1,6 +1,6 @@
 # =============================================================================
-# Configuration for PPMI Project_140 methylation pipeline
-# Author: GP2 Subtypes and Mechanisms - M.E.
+# Configuration
+# Author: GP2 Subtypes and Mechanisms - M.E., MP
 # Date: April 23, 2026
 # Updated: Sept 22, 2026
 # Description: Defines shared paths and parameters used across all scripts
@@ -9,13 +9,16 @@
 # --- Paths -------------------------------------------------------------------
 
 # Set directories and paths
-DATASET         <- "AB00000952"
+# Datasets to process together; each has <DIR_DELIVERY>/<ID>/<ID>_QC_table.csv
+# and its idat files under <DIR_DELIVERY>/<ID>/<Sentrix_ID>/
+DATASETS        <- c("AB00000952",
+                     "AB00000963")
+DIR_DELIVERY    <- "/mnt/psomagen_delivery/nba-samples"
 DIR_OUTPUT      <- "/mnt/output/methylation" # path in which to save outputs and results
 # FNAME_METADATA  <- "/mnt/output/metadata/R12_CURRENT_master_key_nba_wgs_20_06_2026.txt" # path to clinical and other metadata (R12)
 FNAME_METADATA  <- "/mnt/output/metadata/INTERNAL_USE_ONLY_master_key_release12_final_vwb.csv" # path to clinical and other metadata (R12)
 
 # Define/create derivative paths
-DIR_DATASET     <- file.path("/mnt/psomagen_delivery/nba-samples/", DATASET) # path to idat files and qc table
 DIR_RESULTS <- file.path(DIR_OUTPUT, "results")
 dir.create(DIR_RESULTS, showWarnings = FALSE, recursive = TRUE)
 
@@ -37,6 +40,3 @@ SAMPLE_SHEET        <- file.path(DIR_RESULTS, "sample_sheet.csv")
 SAMPLE_SHEET_QC     <- file.path(DIR_RESULTS, "sample_sheet_qc_passed.csv")
 MSET_QC             <- file.path(DIR_RESULTS, "mSetSq_qc_passed.rds")
 BVALS_UNFILTERED    <- file.path(DIR_RESULTS, "bVals_unfiltered.rds")  # normalized, no probe filtering (for clocks)
-
-# --- TEMP -----------------------------------------------------
-N_SAMPLES_TESTING <- 5  # Number of samples to use for testing purposes
