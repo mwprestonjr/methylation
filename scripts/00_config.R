@@ -2,56 +2,41 @@
 # Configuration for PPMI Project_140 methylation pipeline
 # Author: GP2 Subtypes and Mechanisms - M.E.
 # Date: April 23, 2026
+# Updated: Sept 22, 2026
 # Description: Defines shared paths and parameters used across all scripts
 # =============================================================================
 
 # --- Paths -------------------------------------------------------------------
 
-# Root data directory
-PPMI_DIR    <- "/mnt/output/data/ppmi"
+# Set directories and paths
+DATASET         <- "AB00000952"
+DIR_OUTPUT      <- "/mnt/output/methylation" # path in which to save outputs and results
+# FNAME_METADATA  <- "/mnt/output/metadata/R12_CURRENT_master_key_nba_wgs_20_06_2026.txt" # path to clinical and other metadata (R12)
+FNAME_METADATA  <- "/mnt/output/metadata/INTERNAL_USE_ONLY_master_key_release12_final_vwb.csv" # path to clinical and other metadata (R12)
 
-# Project 140 directories
-P140_DIR    <- file.path(PPMI_DIR, "project_140")
-RAW_DIR     <- file.path(P140_DIR, "raw")
-IDAT_DIR    <- file.path(P140_DIR, "idat")
-RESULTS_DIR <- file.path(P140_DIR, "results")
-META_DIR    <- file.path(P140_DIR, "metadata")
-SUBJ_DIR    <- file.path(META_DIR, "subject_characteristics")
-
-# Documentation/shared metadata
-DOC_DIR     <- file.path(PPMI_DIR, "documentation")
-
-# Key metadata files
-LINK_LIST          <- file.path(DOC_DIR, "ppmi_140_link_list_20210607.csv")
-PARTICIPANT_STATUS <- file.path(SUBJ_DIR, "Participant_Status_23Apr2026.csv")
-DEMOGRAPHICS       <- file.path(SUBJ_DIR, "Demographics_23Apr2026.csv")
-AGE_AT_VISIT       <- file.path(SUBJ_DIR, "Age_at_visit_23Apr2026.csv")
-
-# --- Cohort definitions ------------------------------------------------------
-# COHORT 1 = Parkinson's Disease
-# COHORT 2 = Healthy Control  
-# COHORT 3 = SWEDD (Scans Without Evidence of Dopaminergic Deficit)
-# COHORT 4 = Prodromal (at risk)
-
-COHORTS_OF_INTEREST <- c(1, 2)  # PD vs Healthy Control
+# Define/create derivative paths
+DIR_DATASET     <- file.path("/mnt/psomagen_delivery/nba-samples/", DATASET) # path to idat files and qc table
+DIR_RESULTS <- file.path(DIR_OUTPUT, "results")
+dir.create(DIR_RESULTS, showWarnings = FALSE, recursive = TRUE)
 
 # --- Analysis parameters -----------------------------------------------------
-
-# Timepoint to use for primary analysis
-PRIMARY_TIMEPOINT <- "BL"  # Baseline only
 
 # QC thresholds
 DETECTION_P_THRESHOLD <- 0.01   # Max detection p-value
 MIN_BEADS             <- 3      # Minimum beads per probe
 FAILED_SAMPLE_CUTOFF  <- 0.1    # Max fraction of failed probes per sample (ChAMP default)
 
+# Figure size for PNGs (16:9, fits a Google Slides slide)
+FIG_WIDTH  <- 6    # inches
+FIG_HEIGHT <- 4  # inches
+FIG_RES    <- 300  # dpi
+
 # --- Pipeline outputs --------------------------------------------------------
 # These files are created by one script and read by the next
+SAMPLE_SHEET        <- file.path(DIR_RESULTS, "sample_sheet.csv")
+SAMPLE_SHEET_QC     <- file.path(DIR_RESULTS, "sample_sheet_qc_passed.csv")
+MSET_QC             <- file.path(DIR_RESULTS, "mSetSq_qc_passed.rds")
+BVALS_UNFILTERED    <- file.path(DIR_RESULTS, "bVals_unfiltered.rds")  # normalized, no probe filtering (for clocks)
 
-SAMPLE_SHEET_BASELINE <- file.path(RESULTS_DIR, "sample_sheet_baseline.csv")
-SAMPLE_SHEET_QC       <- file.path(RESULTS_DIR, "sample_sheet_qc_passed.csv")
-MSET_QC               <- file.path(RESULTS_DIR, "mSetSq_qc_passed.rds")
-
-# Batch variable derivation note
-# Batch is derived from idat folder name in Basename path
-# e.g. /mnt/output/.../idat/20190604_plate1/SENTRIXID/... -> batch = "20190604_plate1"
+# --- TEMP -----------------------------------------------------
+N_SAMPLES_TESTING <- 5  # Number of samples to use for testing purposes
