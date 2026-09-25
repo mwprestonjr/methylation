@@ -7,7 +7,8 @@
 #              Script 01) into minfi, runs QC following the minfi
 #              user guide, optionally computes SeSAMe per-sample QC stats
 #              (USE_SESAME_QC), filters failed samples and probes, normalizes
-#              using preprocessFunnorm, and saves QC-passed data
+#              using preprocessFunnorm, and saves QC-passed data plus the
+#              data for the QC figures (drawn by 03_qc_plots.R)
 # =============================================================================
 
 # --- 0. Setup ----------------------------------------------------------------
@@ -73,44 +74,6 @@ if (USE_SESAME_QC) {
   )
   write.csv(sesame_qc, file.path(DIR_RESULTS, "qc_sesame_stats.csv"), row.names = FALSE)
   cat("SeSAMe QC stats saved\n")
-
-  # Plot fraction of cg probes detected per sample, sorted, coloured by dataset.
-  ord       <- order(sesame_qc$frac_dt_cg)
-  frac_ord  <- sesame_qc$frac_dt_cg[ord]
-  failing   <- frac_ord < SESAME_MIN_FRAC_DETECTED
-  datasets  <- sort(unique(sesame_qc$Dataset))
-  ds_colors <- setNames(palette.colors(length(datasets) + 1, "Okabe-Ito")[-1], datasets)
-
-  png(file.path(DIR_RESULTS, "qc_02b_sesame_detection.png"), width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
-  par(mar = c(3, 4.5, 3, 1), las = 1)
-  plot(frac_ord,
-       ylim = range(c(frac_ord, SESAME_MIN_FRAC_DETECTED, 1)),
-       pch  = 16,
-       cex  = 0.8,
-       col  = ds_colors[sesame_qc$Dataset[ord]],
-       xaxt = "n",
-       xlab = "",
-       ylab = "Fraction of cg probes detected",
-       main = "SeSAMe Detection (pOOBAH) per Sample")
-  mtext(sprintf("Samples, sorted (n = %d)", length(frac_ord)), side = 1, line = 1)
-  abline(h   = SESAME_MIN_FRAC_DETECTED,
-         col = "red",
-         lty = 2)
-  # if (any(failing)) {
-  #   text(which(failing), frac_ord[failing],
-  #        labels = sesame_qc$GP2ID[ord][failing],
-  #        pos    = 4,
-  #        cex    = 0.6,
-  #        col    = "red")
-  # }
-  legend("bottomright",
-         legend = c(datasets, sprintf("Threshold (%g)", SESAME_MIN_FRAC_DETECTED)),
-         col    = c(ds_colors, "red"),
-         pch    = c(rep(16, length(datasets)), NA),
-         lty    = c(rep(NA, length(datasets)), 2),
-         bty    = "n")
-  dev.off()
-  cat("SeSAMe detection plot saved\n")
 } else {
   cat("\nSkipping SeSAMe QC (USE_SESAME_QC = FALSE); using minfi detection p-values\n")
 }
@@ -139,15 +102,9 @@ annotation(rgSet) <- c(array = "IlluminaHumanMethylationEPICv2",
 
 cat("\nRunning initial QC...\n")
 
-# 3a. QC plot - median methylated vs unmethylated intensity per sample
-cat("Generating QC plot (median intensities)...\n")
+# 3a. Median methylated vs unmethylated intensity per sample (plotted in Script 03)
 mSet <- preprocessRaw(rgSet)
 qc   <- getQC(mSet)
-
-png(file.path(DIR_RESULTS, "qc_01_median_intensities.png"), width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
-plotQC(qc)
-dev.off()
-cat("QC plot saved\n")
 
 # 3b. Detection p-values
 cat("Computing detection p-values...\n")
@@ -164,50 +121,6 @@ cat("Probes failed in >50% of samples:",
 mean_detP <- colMeans(detP)
 cat("Mean detection p-value range:",
     round(min(mean_detP), 6), "to", round(max(mean_detP), 6), "\n")
-
-# Plot mean detection p-value per sample, sorted, on a log scale so the
-# threshold (usually far above typical values) stays visible.
-# Only failing samples are labelled (by GP2ID)
-ord      <- order(mean_detP, decreasing = TRUE)
-detP_ord <- mean_detP[ord]
-failing  <- detP_ord > DETECTION_P_THRESHOLD
-y_lim    <- c(10^floor(log10(min(detP_ord))),
-              10 * max(detP_ord, DETECTION_P_THRESHOLD))
-y_ticks  <- 10^seq(log10(y_lim[1]), log10(y_lim[2]))
-
-png(file.path(DIR_RESULTS, "qc_02_detection_pvalues.png"), width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
-par(mar = c(3, 5.5, 3, 1), las = 1)
-plot(detP_ord,
-     log  = "y",
-     ylim = y_lim,
-     pch  = 16,
-     cex  = 0.8,
-     col  = ifelse(failing, "red", "grey30"),
-     xaxt = "n",
-     yaxt = "n",
-     xlab = "",
-     ylab = "",
-     main = "Mean Detection P-value per Sample")
-axis(2, at = y_ticks, labels = format(y_ticks, scientific = TRUE))
-title(ylab = "Mean detection p-value (log scale)", line = 4)
-mtext(sprintf("Samples, sorted (n = %d)", length(detP_ord)), side = 1, line = 1)
-abline(h   = DETECTION_P_THRESHOLD,
-       col = "red",
-       lty = 2)
-# if (any(failing)) {
-#   text(which(failing), detP_ord[failing],
-#        labels = targets$GP2ID[ord][failing],
-#        pos    = 4,
-#        cex    = 0.6,
-#        col    = "red")
-# }
-legend("topright",
-       legend = sprintf("Threshold (%g)", DETECTION_P_THRESHOLD),
-       lty    = 2,
-       col    = "red",
-       bty    = "n")
-dev.off()
-cat("Detection p-value plot saved\n")
 
 # Identify failed samples, using the method chosen by USE_SESAME_QC in 00_config.R
 # (sesame_qc rows are in the same order as targets and the rgSet columns)
@@ -253,44 +166,6 @@ if (sum(sex_check$sex_discordant, na.rm = TRUE) > 0) {
   print(sex_check %>% filter(sex_discordant))
 }
 
-# Plot sex prediction: fill = predicted sex, border = reported sex
-sex_colors    <- c(F = "hotpink", M = "steelblue", Unknown = "grey60")
-fill_col      <- sex_colors[sex_predicted$predictedSex]
-border_col    <- sex_colors[sex_check$reported_sex_label]
-discordant_on_top <- order(!is.na(sex_check$sex_discordant) & sex_check$sex_discordant)
-
-png(file.path(DIR_RESULTS, "qc_03_sex_prediction.png"), width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
-plot(sex_predicted$xMed[discordant_on_top], sex_predicted$yMed[discordant_on_top],
-     pch  = 21,
-     cex  = 1.4,
-     bg   = fill_col[discordant_on_top],
-     col  = border_col[discordant_on_top],
-     lwd  = 1.5,
-     xlab = "X chromosome median intensity",
-     ylab = "Y chromosome median intensity",
-     main = "Sex Prediction")
-mtext("Fill: predicted sex   Border: reported sex", side = 3, line = 0.3, cex = 0.7)
-# Add text labels for discordant samples
-# discordant_idx <- !is.na(sex_check$sex_discordant) & sex_check$sex_discordant
-# if (any(discordant_idx)) {
-#   text(sex_predicted$xMed[discordant_idx],
-#        sex_predicted$yMed[discordant_idx],
-#        labels = sex_check$GP2ID[discordant_idx],
-#        pos    = 3,
-#        cex    = 0.7,
-#        col    = "red")
-# }
-legend("right",
-       legend = c("Female", "Male", "Reported unknown", "Discordant"),
-       pch    = 21,
-       pt.bg  = c("hotpink", "steelblue", "hotpink", "hotpink"),
-       col    = c("hotpink", "steelblue", "grey60", "steelblue"),
-       pt.cex = 1.4,
-       pt.lwd = 1.5,
-       cex    = 0.8)
-dev.off()
-cat("Sex prediction plot saved\n")
-
 # --- 4. Remove failed samples ------------------------------------------------
 
 cat("\nRemoving failed samples...\n")
@@ -301,26 +176,41 @@ cat("Samples remaining:", sum(!samples_to_remove), "\n")
 keep          <- !samples_to_remove
 targets_clean <- targets[keep, ]
 
+# Per-sample QC metrics for all input samples: everything plotted in the
+# qc_01 to qc_03 figures, plus which samples failed and were removed
+qc_metrics <- data.frame(
+  Sample = colnames(mSet),   # idat basename, matches the beta matrix columns
+  targets %>% select(GP2ID, GP2sampleID, GP2_phenotype, sex, Dataset,
+                     Sentrix_ID, Sentrix_Position),
+  mMed               = qc$mMed,                 # qc_01
+  uMed               = qc$uMed,                 # qc_01
+  mean_detP          = mean_detP,               # qc_02
+  frac_dt_cg         = if (USE_SESAME_QC) sesame_qc$frac_dt_cg else NA,   # qc_02b
+  xMed               = sex_predicted$xMed,      # qc_03
+  yMed               = sex_predicted$yMed,      # qc_03
+  predicted_sex      = sex_predicted$predictedSex,
+  reported_sex_label = sex_check$reported_sex_label,
+  sex_discordant     = sex_check$sex_discordant,
+  failed_detection   = failed_samples,
+  removed            = samples_to_remove,
+  row.names = NULL
+)
+write.csv(qc_metrics, file.path(DIR_RESULTS, "qc_sample_metrics.csv"), row.names = FALSE)
+cat("Per-sample QC metrics saved\n")
+
 # --- 5. Normalization --------------------------------------------------------
 
-# Density plots BEFORE normalization (raw betas from the existing mSet, so
+# Per-sample beta density curves, computed as in minfi::densityPlot. Saved so
+# the density figures can be redrawn without the full beta matrices
+density_curves <- function(b) {
+  d <- apply(b, 2, function(x) density(as.vector(x), na.rm = TRUE))
+  list(x = sapply(d, `[[`, "x"), y = sapply(d, `[[`, "y"))
+}
+
+# Density curves BEFORE normalization (raw betas from the existing mSet, so
 # preprocessRaw doesn't have to run again)
 beta_raw <- getBeta(mSet[, keep])
-
-png(file.path(DIR_RESULTS, "qc_04_density_before_normalization.png"), width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
-densityPlot(beta_raw,
-            sampGroups = targets_clean$GP2_phenotype,
-            main       = "Beta Values - Before Normalization",
-            legend     = TRUE)
-dev.off()
-
-# Same, grouped by dataset, to spot dataset-level shifts before normalization
-png(file.path(DIR_RESULTS, "qc_04b_density_by_dataset.png"), width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
-densityPlot(beta_raw,
-            sampGroups = targets_clean$Dataset,
-            main       = "Beta Values by Dataset - Before Normalization",
-            legend     = TRUE)
-dev.off()
+density_before <- density_curves(beta_raw)
 
 # Funnorm needs ~100 MB/sample of working memory on top of its input, so work
 # out the probe filters that need the big objects (bead counts from the extended
@@ -367,17 +257,24 @@ cat("Normalized object dimensions:", dim(mSetSq), "\n")
 rm(rgSet_clean); invisible(gc())
 
 # Save unfiltered betas for methylation clocks (clock CpGs may be removed by probe filters)
-saveRDS(getBeta(mSetSq), BVALS_UNFILTERED)
+beta_norm <- getBeta(mSetSq)
+saveRDS(beta_norm, BVALS_UNFILTERED)
 cat("Unfiltered beta values saved\n")
 
-# Density plot AFTER normalization
-png(file.path(DIR_RESULTS, "qc_05_density_after_normalization.png"), width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
-densityPlot(getBeta(mSetSq),
-            sampGroups = targets_clean$GP2_phenotype,
-            main       = "Beta Values - After Normalization",
-            legend     = TRUE)
-dev.off()
-cat("Density plots saved\n")
+# Density curves AFTER normalization
+density_after <- density_curves(beta_norm)
+rm(beta_norm); invisible(gc())
+
+# Save everything needed to redraw the QC figures: per-sample metrics, density
+# curves (columns named by Sample, as in qc_metrics) and the thresholds used
+saveRDS(list(samples        = qc_metrics,
+             density_before = density_before,
+             density_after  = density_after,
+             params         = list(DETECTION_P_THRESHOLD    = DETECTION_P_THRESHOLD,
+                                   USE_SESAME_QC            = USE_SESAME_QC,
+                                   SESAME_MIN_FRAC_DETECTED = SESAME_MIN_FRAC_DETECTED)),
+        QC_FIGURE_DATA)
+cat("QC figure data saved to:", QC_FIGURE_DATA, "\n")
 
 # --- 6. Probe Filtering -------------------------------------------------------
 
