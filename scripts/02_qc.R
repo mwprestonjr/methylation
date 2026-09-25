@@ -56,16 +56,29 @@ if (!all(targets$Array == "EPICv2")) {
 # EPICv2 in sesame 1.24, so it is not included
 if (USE_SESAME_QC) {
   cat("\nComputing SeSAMe QC stats \n")
+  # The idats are on a gcsfuse mount, where reads occasionally fail with
+  # "error reading from connection" under parallel load; retry those reads
+  read_idat_pair <- function(b, attempts = 3) {
+    for (i in seq_len(attempts)) {
+      sdf <- try(sesame::readIDATpair(b), silent = TRUE)
+      if (!inherits(sdf, "try-error")) return(sdf)
+      Sys.sleep(5 * i)
+    }
+    stop(sprintf("reading %s failed after %d attempts: %s", b, attempts, sdf))
+  }
+
+  # mc.preschedule = FALSE runs each sample as its own job, so one error
+  # only affects that sample instead of every sample on the same core
   sesame_qc <- parallel::mclapply(targets$Basename, function(b) {
-    sdf <- sesame::readIDATpair(b)
+    sdf <- read_idat_pair(b)
     as.data.frame(sesame::sesameQC_getStats(sesame::sesameQC_calcStats(sdf)))
-  }, mc.cores = max(1, parallel::detectCores() - 1))
+  }, mc.cores = max(1, parallel::detectCores() - 1), mc.preschedule = FALSE)
 
   # mclapply returns errors instead of stopping; report which samples failed
   sesame_failed <- map_lgl(sesame_qc, inherits, "try-error")
   if (any(sesame_failed)) {
     stop("SeSAMe QC failed for: ", paste(targets$GP2ID[sesame_failed], collapse = ", "),
-         "\n", sesame_qc[[which(sesame_failed)[1]]])
+         "\n", paste(unique(unlist(sesame_qc[sesame_failed])), collapse = "\n"))
   }
 
   sesame_qc <- bind_cols(
