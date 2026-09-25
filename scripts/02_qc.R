@@ -253,14 +253,23 @@ if (sum(sex_check$sex_discordant, na.rm = TRUE) > 0) {
   print(sex_check %>% filter(sex_discordant))
 }
 
-# Plot sex prediction
+# Plot sex prediction: fill = predicted sex, border = reported sex
+sex_colors    <- c(F = "hotpink", M = "steelblue", Unknown = "grey60")
+fill_col      <- sex_colors[sex_predicted$predictedSex]
+border_col    <- sex_colors[sex_check$reported_sex_label]
+discordant_on_top <- order(!is.na(sex_check$sex_discordant) & sex_check$sex_discordant)
+
 png(file.path(DIR_RESULTS, "qc_03_sex_prediction.png"), width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
-plot(sex_predicted$xMed, sex_predicted$yMed,
-     col  = ifelse(sex_predicted$predictedSex == "F", "hotpink", "steelblue"),
-     pch  = 16,
+plot(sex_predicted$xMed[discordant_on_top], sex_predicted$yMed[discordant_on_top],
+     pch  = 21,
+     cex  = 1.4,
+     bg   = fill_col[discordant_on_top],
+     col  = border_col[discordant_on_top],
+     lwd  = 1.5,
      xlab = "X chromosome median intensity",
      ylab = "Y chromosome median intensity",
      main = "Sex Prediction")
+mtext("Fill: predicted sex   Border: reported sex", side = 3, line = 0.3, cex = 0.7)
 # Add text labels for discordant samples
 # discordant_idx <- !is.na(sex_check$sex_discordant) & sex_check$sex_discordant
 # if (any(discordant_idx)) {
@@ -271,10 +280,14 @@ plot(sex_predicted$xMed, sex_predicted$yMed,
 #        cex    = 0.7,
 #        col    = "red")
 # }
-legend("topright", 
-       legend = c("Female", "Male"),
-       col    = c("hotpink", "steelblue"),
-       pch    = c(16, 16))
+legend("right",
+       legend = c("Female", "Male", "Reported unknown", "Discordant"),
+       pch    = 21,
+       pt.bg  = c("hotpink", "steelblue", "hotpink", "hotpink"),
+       col    = c("hotpink", "steelblue", "grey60", "steelblue"),
+       pt.cex = 1.4,
+       pt.lwd = 1.5,
+       cex    = 0.8)
 dev.off()
 cat("Sex prediction plot saved\n")
 
