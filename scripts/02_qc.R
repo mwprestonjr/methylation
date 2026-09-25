@@ -75,7 +75,6 @@ if (USE_SESAME_QC) {
   cat("SeSAMe QC stats saved\n")
 
   # Plot fraction of cg probes detected per sample, sorted, coloured by dataset.
-  # Only failing samples are labelled (by GP2ID)
   ord       <- order(sesame_qc$frac_dt_cg)
   frac_ord  <- sesame_qc$frac_dt_cg[ord]
   failing   <- frac_ord < SESAME_MIN_FRAC_DETECTED
@@ -97,13 +96,13 @@ if (USE_SESAME_QC) {
   abline(h   = SESAME_MIN_FRAC_DETECTED,
          col = "red",
          lty = 2)
-  if (any(failing)) {
-    text(which(failing), frac_ord[failing],
-         labels = sesame_qc$GP2ID[ord][failing],
-         pos    = 4,
-         cex    = 0.6,
-         col    = "red")
-  }
+  # if (any(failing)) {
+  #   text(which(failing), frac_ord[failing],
+  #        labels = sesame_qc$GP2ID[ord][failing],
+  #        pos    = 4,
+  #        cex    = 0.6,
+  #        col    = "red")
+  # }
   legend("bottomright",
          legend = c(datasets, sprintf("Threshold (%g)", SESAME_MIN_FRAC_DETECTED)),
          col    = c(ds_colors, "red"),
@@ -195,13 +194,13 @@ mtext(sprintf("Samples, sorted (n = %d)", length(detP_ord)), side = 1, line = 1)
 abline(h   = DETECTION_P_THRESHOLD,
        col = "red",
        lty = 2)
-if (any(failing)) {
-  text(which(failing), detP_ord[failing],
-       labels = targets$GP2ID[ord][failing],
-       pos    = 4,
-       cex    = 0.6,
-       col    = "red")
-}
+# if (any(failing)) {
+#   text(which(failing), detP_ord[failing],
+#        labels = targets$GP2ID[ord][failing],
+#        pos    = 4,
+#        cex    = 0.6,
+#        col    = "red")
+# }
 legend("topright",
        legend = sprintf("Threshold (%g)", DETECTION_P_THRESHOLD),
        lty    = 2,
@@ -263,19 +262,19 @@ plot(sex_predicted$xMed, sex_predicted$yMed,
      ylab = "Y chromosome median intensity",
      main = "Sex Prediction")
 # Add text labels for discordant samples
-discordant_idx <- !is.na(sex_check$sex_discordant) & sex_check$sex_discordant
-if (any(discordant_idx)) {
-  text(sex_predicted$xMed[discordant_idx], 
-       sex_predicted$yMed[discordant_idx],
-       labels = sex_check$GP2ID[discordant_idx],
-       pos    = 3,
-       cex    = 0.7,
-       col    = "red")
-}
+# discordant_idx <- !is.na(sex_check$sex_discordant) & sex_check$sex_discordant
+# if (any(discordant_idx)) {
+#   text(sex_predicted$xMed[discordant_idx],
+#        sex_predicted$yMed[discordant_idx],
+#        labels = sex_check$GP2ID[discordant_idx],
+#        pos    = 3,
+#        cex    = 0.7,
+#        col    = "red")
+# }
 legend("topright", 
-       legend = c("Female", "Male", "Discordant"),
-       col    = c("hotpink", "steelblue", "red"), 
-       pch    = c(16, 16, 16))
+       legend = c("Female", "Male"),
+       col    = c("hotpink", "steelblue"),
+       pch    = c(16, 16))
 dev.off()
 cat("Sex prediction plot saved\n")
 
