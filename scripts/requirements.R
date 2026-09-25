@@ -7,6 +7,9 @@
 if (!require("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 
+# sesame depends on 'maps' (C code); unless compilers are on PATH, install its
+# compiled deps from conda first:
+#   mamba install -n methylation -c conda-forge r-maps r-mapproj r-pals
 BiocManager::install(c(
     "minfi",
     "minfiData",
@@ -18,8 +21,14 @@ BiocManager::install(c(
     "limma",
     "bumphunter",
     "sva",                    # ComBat batch correction
-    "FlowSorted.Blood.EPIC"   # cell type deconvolution
+    "FlowSorted.Blood.EPIC",  # cell type deconvolution
+    "sesame",                 # per-sample QC stats (Script 02)
+    "sesameData"              # sesame manifests and reference data
 ), ask = FALSE)
+
+# Download sesame reference data (manifests, idat signatures) into the
+# ExperimentHub cache; needed once per machine before sesame can read idats
+sesameData::sesameDataCache()
 
 # Install preprocessCore without threading (required for Linux/GCP environments)
 BiocManager::install("preprocessCore",
