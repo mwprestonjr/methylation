@@ -49,14 +49,12 @@ if (!all(targets$Array == "EPICv2")) {
 # --- 1. SeSAMe QC stats ---------------------------------------------------
 
 # Per-sample detection (pOOBAH), intensity, dye bias and beta distribution.
-# Only runs when USE_SESAME_QC is TRUE (see 00_config.R; adds ~35-40 min), and
-# then its detection rate is used for sample removal in 3b. Runs before minfi
-# loads the full RGChannelSet, so the parallel workers fork from a small R
-# process and the stats are saved even if a later step fails.
+# Only runs when USE_SESAME_QC is TRUE (see 00_config.R), and then its 
+# detection rate is used for sample removal in 3b.
 # NOTE: sesame's bisulfite conversion score (bisConversionControl) fails on
 # EPICv2 in sesame 1.24, so it is not included
 if (USE_SESAME_QC) {
-  cat("\nComputing SeSAMe QC stats (USE_SESAME_QC = TRUE, ~7 s/sample)...\n")
+  cat("\nComputing SeSAMe QC stats \n")
   sesame_qc <- parallel::mclapply(targets$Basename, function(b) {
     sdf <- sesame::readIDATpair(b)
     as.data.frame(sesame::sesameQC_getStats(sesame::sesameQC_calcStats(sdf)))

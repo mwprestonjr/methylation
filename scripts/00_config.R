@@ -32,8 +32,6 @@ FAILED_SAMPLE_CUTOFF  <- 0.1    # Max fraction of failed probes per sample (ChAM
 # Sample-level detection QC method (Script 02)
 #   TRUE  = SeSAMe pOOBAH: remove samples with < SESAME_MIN_FRAC_DETECTED of cg
 #           probes detected; also saves qc_sesame_stats.csv.
-#           NOTE: adds ~35-40 min for ~280 samples on a 4 vCPU VM (~7 s/sample,
-#           parallel over all but one core)
 #   FALSE = minfi detectionP: remove samples with mean p > DETECTION_P_THRESHOLD
 # Probe-level filtering uses minfi detectionP either way
 USE_SESAME_QC            <- TRUE
