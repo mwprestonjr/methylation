@@ -130,7 +130,7 @@ axis_lim <- range(c(clocks_long$age, clocks_long$DNAm_age), na.rm = TRUE)
 accuracy_labels <- clock_accuracy %>%
   mutate(label = sprintf("r = %.2f\nMAE = %.1f", r, MAE))
 
-png(file.path(DIR_RESULTS, "clock_01_vs_chronological_age.png"), width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
+png(file.path(DIR_FIGURES, "clock_01_vs_chronological_age.png"), width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
 p <- ggplot(clocks_long, aes(age, DNAm_age)) +
   geom_abline(linetype = "dashed", colour = "grey50") +
   geom_smooth(method = "lm", formula = y ~ x, se = FALSE, colour = "black", linewidth = 0.6) +
@@ -178,3 +178,4 @@ write.csv(accel_results,
 
 cat("\nMethylation clock pipeline complete!\n")
 cat("Results saved to:", DIR_RESULTS, "\n")
+cat("Figures saved to:", DIR_FIGURES, "\n")
