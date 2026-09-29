@@ -76,6 +76,12 @@ MIN_BEADS             <- 3      # Minimum beads per probe
 FAILED_SAMPLE_CUTOFF  <- 0.1    # Max fraction of failed probes per sample (ChAMP default)
 REMOVE_SEX_DISCORDANT <- TRUE   # Remove samples whose predicted sex doesn't match reported sex
 
+# Beta density outliers (Script 02), scored on the curves after normalization:
+#   density_mid_peak = prominence of the largest peak between beta 0.15 and
+#                      0.75 (a third bump, e.g. from a mixed sample); 0 = none
+DENSITY_MID_PEAK_MAX    <- 0.05   # flag if density_mid_peak is above this
+REMOVE_DENSITY_OUTLIERS <- FALSE  # TRUE = remove flagged samples; FALSE = flag only
+
 # Sample-level detection QC method (Script 02)
 #   TRUE  = SeSAMe pOOBAH: remove samples with < SESAME_MIN_FRAC_DETECTED of cg
 #           probes detected; also saves qc_sesame_stats.csv.

@@ -17,7 +17,8 @@
 #   qc_04  Beta value densities before normalization, by phenotype
 #   qc_04b Beta value densities before normalization, by dataset
 #   qc_05  Beta value densities after normalization (Funnorm), by phenotype
-#          (qc_04 to qc_05 include only samples that passed QC)
+#          (qc_04 to qc_05 include only samples that passed QC; density
+#          outliers flagged by Script 02 are drawn in black)
 # Usage:       Rscript scripts/03_qc_plots.R <data source>   (see config.R)
 # =============================================================================
 
@@ -150,9 +151,11 @@ cat("Sex prediction plot saved\n")
 
 # Same drawing as minfi::densityPlot, but from the saved density curves
 # (x and y matrices, one column per sample) instead of the beta matrix
-density_plot <- function(curves, sampGroups, main,
+# Density outliers (flagged in Script 02) are drawn last, in black
+density_plot <- function(curves, sampGroups, main, flagged = NULL,
                          pal = RColorBrewer::brewer.pal(8, "Dark2")) {
   sampGroups <- as.factor(sampGroups)
+  if (is.null(flagged)) flagged <- rep(FALSE, ncol(curves$x))
   plot(x    = 0,
        type = "n",
        xlim = range(curves$x),
@@ -161,11 +164,19 @@ density_plot <- function(curves, sampGroups, main,
        xlab = "Beta",
        main = main)
   abline(h = 0, col = "grey80")
-  for (i in seq_len(ncol(curves$x))) {
-    lines(curves$x[, i], curves$y[, i], col = pal[sampGroups[i]])
+  for (i in c(which(!flagged), which(flagged))) {
+    lines(curves$x[, i], curves$y[, i],
+          col = if (flagged[i]) "black" else pal[sampGroups[i]],
+          lwd = if (flagged[i]) 2 else 1)
   }
-  if (length(levels(sampGroups)) > 1) {
-    legend("topright", legend = levels(sampGroups), text.col = pal)
+  legend_text <- if (length(levels(sampGroups)) > 1) levels(sampGroups) else character(0)
+  legend_col  <- pal[seq_along(legend_text)]
+  if (any(flagged)) {
+    legend_text <- c(legend_text, sprintf("Density outlier (n = %d)", sum(flagged)))
+    legend_col  <- c(legend_col, "black")
+  }
+  if (length(legend_text) > 0) {
+    legend("topright", legend = legend_text, text.col = legend_col, cex = 0.7)
   }
 }
 
@@ -173,10 +184,16 @@ density_plot <- function(curves, sampGroups, main,
 groups_for <- function(curves, var) {
   qc_metrics[[var]][match(colnames(curves$x), qc_metrics$Sample)]
 }
+# density_outlier is missing in figure data from before it was added to Script 02
+flagged_for <- function(curves) {
+  if (is.null(qc_metrics$density_outlier)) return(NULL)
+  groups_for(curves, "density_outlier") %in% TRUE
+}
 
 png(file.path(DIR_FIGURES, "qc_04_density_before_normalization.png"), width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
 density_plot(fig_data$density_before,
              sampGroups = groups_for(fig_data$density_before, "phenotype"),
+             flagged    = flagged_for(fig_data$density_before),
              main       = "Beta Values - Before Normalization")
 dev.off()
 
@@ -189,6 +206,7 @@ dev.off()
 png(file.path(DIR_FIGURES, "qc_05_density_after_normalization.png"), width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
 density_plot(fig_data$density_after,
              sampGroups = groups_for(fig_data$density_after, "phenotype"),
+             flagged    = flagged_for(fig_data$density_after),
              main       = "Beta Values - After Normalization")
 dev.off()
 cat("Density plots saved\n")

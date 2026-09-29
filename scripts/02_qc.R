@@ -161,6 +161,23 @@ density_curves <- function(b) {
   d <- apply(b, 2, function(x) density(as.vector(x), na.rm = TRUE))
   list(x = sapply(d, `[[`, "x"), y = sapply(d, `[[`, "y"))
 }
+
+# Density outlier score per sample (see DENSITY_MID_PEAK_MAX in config.R):
+# prominence of the largest peak between beta 0.15 and 0.75, where a normal
+# curve has none. Prominence = a peak's height above the higher of the lowest
+# points on either side of it. Curves are put on a common beta grid first so
+# every sample is scored at the same resolution
+density_outlier_scores <- function(curves, grid = seq(0, 1, by = 0.005)) {
+  mid <- grid[grid > 0.15 & grid < 0.75]
+  peak <- sapply(seq_len(ncol(curves$x)), function(i) {
+    y <- approx(curves$x[, i], curves$y[, i], xout = mid, rule = 2)$y
+    peaks <- which(diff(sign(diff(y))) == -2) + 1
+    if (length(peaks) == 0) return(0)
+    max(sapply(peaks, function(j) y[j] - max(min(y[1:j]), min(y[j:length(y)]))))
+  })
+  data.frame(Sample           = colnames(curves$x),
+             density_mid_peak = peak)
+}
 density_before <- density_curves(getBeta(mSet))
 sample_names   <- colnames(mSet)   # idat basename, matches the beta matrix columns
 
@@ -236,8 +253,6 @@ qc_metrics <- data.frame(
   removed            = samples_to_remove,
   row.names = NULL
 )
-write.csv(qc_metrics, file.path(DIR_RESULTS, "qc_sample_metrics.csv"), row.names = FALSE)
-cat("Per-sample QC metrics saved\n")
 
 # Density curves of the QC-passed samples only
 density_before <- list(x = density_before$x[, keep, drop = FALSE],
@@ -289,13 +304,45 @@ mSetSq <- preprocessFunnorm(rgSet_clean)
 cat("Normalized object dimensions:", dim(mSetSq), "\n")
 rm(rgSet_clean); invisible(gc())
 
+# Density curves AFTER normalization
+beta_norm     <- getBeta(mSetSq)
+density_after <- density_curves(beta_norm)
+
+# 5b. Beta density outliers, scored on the normalized curves (before
+# normalization, chip-level shifts that Funnorm removes dominate the scores)
+cat("\nScoring beta density outliers...\n")
+density_scores <- density_outlier_scores(density_after) %>%
+  mutate(density_outlier = density_mid_peak > DENSITY_MID_PEAK_MAX)
+density_outliers <- density_scores$Sample[density_scores$density_outlier]
+cat("Density outliers (mid peak prominence >", DENSITY_MID_PEAK_MAX, "):",
+    length(density_outliers), "\n")
+if (length(density_outliers) > 0) {
+  print(density_scores %>%
+          filter(density_outlier) %>%
+          left_join(qc_metrics %>% select(Sample, GP2ID, clinical_id, Dataset), by = "Sample"))
+}
+
+# Scores are NA for samples removed before normalization
+qc_metrics <- qc_metrics %>%
+  left_join(density_scores, by = "Sample")
+
+# Outliers are removed after normalization, so they were still part of the
+# Funnorm normalization of the other samples
+cat("Removing density outliers:", REMOVE_DENSITY_OUTLIERS, "\n")
+if (REMOVE_DENSITY_OUTLIERS && length(density_outliers) > 0) {
+  mSetSq        <- mSetSq[, !colnames(mSetSq) %in% density_outliers]
+  beta_norm     <- beta_norm[, !colnames(beta_norm) %in% density_outliers]
+  targets_clean <- targets_clean[!basename(targets_clean$Basename) %in% density_outliers, ]
+  qc_metrics$removed[qc_metrics$Sample %in% density_outliers] <- TRUE
+  cat("Samples remaining:", ncol(mSetSq), "\n")
+}
+
+write.csv(qc_metrics, file.path(DIR_RESULTS, "qc_sample_metrics.csv"), row.names = FALSE)
+cat("Per-sample QC metrics saved\n")
+
 # Save unfiltered betas for methylation clocks (clock CpGs may be removed by probe filters)
-beta_norm <- getBeta(mSetSq)
 saveRDS(beta_norm, BVALS_UNFILTERED)
 cat("Unfiltered beta values saved\n")
-
-# Density curves AFTER normalization
-density_after <- density_curves(beta_norm)
 rm(beta_norm); invisible(gc())
 
 # Save everything needed to redraw the QC figures: per-sample metrics, density
@@ -307,7 +354,9 @@ saveRDS(list(samples        = qc_metrics,
                                    ARRAY                    = array_type,
                                    DETECTION_P_THRESHOLD    = DETECTION_P_THRESHOLD,
                                    USE_SESAME_QC            = USE_SESAME_QC,
-                                   SESAME_MIN_FRAC_DETECTED = SESAME_MIN_FRAC_DETECTED)),
+                                   SESAME_MIN_FRAC_DETECTED = SESAME_MIN_FRAC_DETECTED,
+                                   DENSITY_MID_PEAK_MAX     = DENSITY_MID_PEAK_MAX,
+                                   REMOVE_DENSITY_OUTLIERS  = REMOVE_DENSITY_OUTLIERS)),
         QC_FIGURE_DATA)
 cat("QC figure data saved to:", QC_FIGURE_DATA, "\n")
 
@@ -381,6 +430,7 @@ qc_summary <- data.frame(
   step = c("Input samples",
            if (USE_SESAME_QC) "Failed detection (SeSAMe pOOBAH)" else "Failed detection (minfi mean p-value)",
            if (REMOVE_SEX_DISCORDANT) "Sex discordant (removed)" else "Sex discordant (kept)",
+           if (REMOVE_DENSITY_OUTLIERS) "Density outliers (removed)" else "Density outliers (kept)",
            "Final samples",
            "Input probes",
            "Low bead count probes removed",
@@ -392,6 +442,7 @@ qc_summary <- data.frame(
   n    = c(nrow(targets),
            sum(failed_samples),
            sum(sex_discordant),
+           length(density_outliers),
            nrow(targets_clean),
            n_probes_start,
            n_probes_start - n_after_beads,
