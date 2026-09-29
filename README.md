@@ -47,7 +47,7 @@ Outputs go to `<DIR_OUTPUT>/results` and `<DIR_OUTPUT>/figures`.
 ```bash
 conda env create -f environment.yml
 conda activate methylation
-Rscript scripts/requirements.R
+Rscript requirements.R
 ```
 
 ## Troubleshooting
