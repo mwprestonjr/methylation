@@ -2,6 +2,7 @@
 # QC Plots
 # Author: GP2 Subtypes and Mechanisms - M.P.
 # Date: Sept 25, 2026
+# Updated: Sept 29, 2026
 # Description: Plots the QC results of Script 02 from its saved figure data
 #              (QC_FIGURE_DATA) and saves the figures to DIR_FIGURES:
 #   qc_01  Median methylated vs unmethylated intensity per sample (minfi
@@ -17,11 +18,12 @@
 #   qc_04b Beta value densities before normalization, by dataset
 #   qc_05  Beta value densities after normalization (Funnorm), by phenotype
 #          (qc_04 to qc_05 include only samples that passed QC)
+# Usage:       Rscript scripts/03_qc_plots.R <data source>   (see config.R)
 # =============================================================================
 
 # --- 0. Setup ----------------------------------------------------------------
 # Load shared configuration
-source("~/methylation/scripts/00_config.R")
+source("config.R")
 
 cat("Loading QC figure data...\n")
 fig_data <- readRDS(QC_FIGURE_DATA)
@@ -174,7 +176,7 @@ groups_for <- function(curves, var) {
 
 png(file.path(DIR_FIGURES, "qc_04_density_before_normalization.png"), width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
 density_plot(fig_data$density_before,
-             sampGroups = groups_for(fig_data$density_before, "GP2_phenotype"),
+             sampGroups = groups_for(fig_data$density_before, "phenotype"),
              main       = "Beta Values - Before Normalization")
 dev.off()
 
@@ -186,7 +188,7 @@ dev.off()
 
 png(file.path(DIR_FIGURES, "qc_05_density_after_normalization.png"), width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
 density_plot(fig_data$density_after,
-             sampGroups = groups_for(fig_data$density_after, "GP2_phenotype"),
+             sampGroups = groups_for(fig_data$density_after, "phenotype"),
              main       = "Beta Values - After Normalization")
 dev.off()
 cat("Density plots saved\n")

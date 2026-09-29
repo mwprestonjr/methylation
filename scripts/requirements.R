@@ -40,9 +40,3 @@ install.packages("remotes")
 
 # GitHub package for cross-reactive probe removal - depends on minfiData
 remotes::install_github("markgene/maxprobes")
-# Methylation clocks (Horvath, Hannum, PhenoAge, etc.) and pace of aging
-# Run from an activated env (compilers must be on PATH). Deps needing cmake/libuv
-# come from conda first:
-#   mamba install -n methylation -c conda-forge r-nloptr r-httpuv r-deriv r-doby r-lme4
-BiocManager::install(c("methylclock", "methylclockData"), ask = FALSE)
-remotes::install_github("danbelsky/DunedinPACE")

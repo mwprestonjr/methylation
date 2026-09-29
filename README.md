@@ -1,17 +1,47 @@
 # methylation
 methylation data and scripts 
 
+QC pipeline for Illumina EPIC methylation arrays (EPICv1 and EPICv2). Each data
+source is processed separately, with the same QC code; results from different
+sources can then be combined for downstream analyses.
+
+## Data sources
+
+| `DATA_SOURCE` | Data | Array | Sample sheet script |
+|---|---|---|---|
+| `ppmi_p140` | PPMI Project 140 | EPICv1 | `scripts/01_build_sample_sheet_ppmi.R` |
+| `psomagen`  | Psomagen deliveries (`DATASETS` in `config.R`) | EPICv2 | `scripts/01_build_sample_sheet_psomagen.R` |
+
+Input paths and the output directory for each source are set in `config.R`.
+
 ## Pipeline Order
 
-Run scripts in this order:
+Run scripts from the repository root, in this order:
 
-1. `scripts/01_build_sample_sheet.R` — builds sample sheet from metadata
-2. `scripts/02_qc.R` — QC, normalization, probe filtering
-3. `scripts/03_normalize.R` — batch correction, cell type deconvolution
-4. `scripts/04_differential_methylation.R` — DMPs and DMRs
+```bash
+Rscript scripts/01_build_sample_sheet_ppmi.R      # or _psomagen.R
+Rscript scripts/02_qc.R ppmi_p140                 # QC, normalization, probe filtering
+Rscript scripts/03_qc_plots.R ppmi_p140           # QC figures
+```
 
-Each script reads input files produced by the previous script.
-All file paths are defined in `scripts/00_config.R`.
+Each script reads input files produced by the previous script. In an
+interactive session, set `DATA_SOURCE <- "ppmi_p140"` (working directory = repo
+root) before sourcing a script.
+
+## Layout
+
+- `config.R` - shared settings: QC thresholds, figure settings, output file
+  names, and the paths for each data source
+- `R/array_profiles.R` - everything that differs by array type (annotation
+  package, cross-reactive probes, array detection from idat files)
+- `scripts/01_build_sample_sheet_*.R` - one per data source; each writes the
+  same columns (`SAMPLE_SHEET_COLUMNS` in `config.R`) so later scripts don't
+  depend on the source
+- `scripts/02_qc.R` - works for any array in `R/array_profiles.R`, one array
+  type per run
+- `scripts/03_qc_plots.R` - figures from the data saved by Script 02
+
+Outputs go to `<DIR_OUTPUT>/results` and `<DIR_OUTPUT>/figures`.
 
 ## Setup
 ```bash
@@ -35,5 +65,6 @@ BiocManager::install("preprocessCore",
 
 ## Batch variable derivation note
 
-### Batch is derived from idat folder name in Basename path
-### e.g. /mnt/output/.../idat/20190604_plate1/SENTRIXID/... -> batch = "20190604_plate1"
+`Batch` in the sample sheet is the Psomagen dataset (delivery) ID, or for PPMI
+the top-level idat folder name in the Basename path, e.g.
+`.../idat/20190604_plate1/SENTRIXID/... -> Batch = "20190604_plate1"`

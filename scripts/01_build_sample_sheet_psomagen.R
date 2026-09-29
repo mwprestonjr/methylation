@@ -1,19 +1,23 @@
 # =============================================================================
-# Building the sample sheet
+# Building the sample sheet - Psomagen deliveries
 # Author: GP2 Subtypes and Mechanisms - M.E., M.P.
 # Date: Sept 22, 2026
-# Updated: Sept 24, 2026
+# Updated: Sept 29, 2026
 # Description: merges the sample sheets of all datasets in DATASETS, constructs
 #              Basename column for minfi, detects array type per chip, merges
-#              clinical info from R12
+#              clinical info from R12, and writes the standard sample sheet
+#              (SAMPLE_SHEET_COLUMNS in config.R)
+# Usage:       Rscript scripts/01_build_sample_sheet_psomagen.R
 # =============================================================================
 
 # --- 0. Setup ----------------------------------------------------------------
 
 library(tidyverse)
 
-# Load shared configuration
-source("~/methylation/scripts/00_config.R")
+# Load shared configuration and array helpers
+DATA_SOURCE <- "psomagen"
+source("config.R")
+source("R/array_profiles.R")
 
 # --- 1. Load metadata --------------------------------------------------------
 
@@ -49,17 +53,21 @@ if (length(dup_ids) > 0) {
 }
 
 # Load R12 and combine (match 'GP2ID' in R12 to 'Sample_ID' in the sample sheet)
-r12 <- read.csv(file.path(FNAME_METADATA))
+r12 <- read.csv(file.path(FNAME_METADATA), colClasses = c(clinical_id = "character"))
 sample_sheet <- sample_sheet %>%
   left_join(r12, by = c("Sample_ID" = "GP2ID"), keep = TRUE)
 
-# keep columns of interest (GP2ID, GP2sampleID, GP2_phenotype, sex, race, age)
+# keep columns of interest, named as in SAMPLE_SHEET_COLUMNS. Methylation was
+# measured on the GP2 DNA sample, so age at its collection is the age to use
 sample_sheet <- sample_sheet %>%
-  select(GP2ID, GP2sampleID, GP2_phenotype,
-         sex  = biological_sex_for_qc,
-         race = race_for_qc,
-         age  = age_at_sample_collection,
-         Dataset, Sentrix_ID, Sentrix_Position, Basename)
+  transmute(GP2ID, GP2sampleID, clinical_id,
+            phenotype = GP2_phenotype,
+            sex       = biological_sex_for_qc,
+            race      = race_for_qc,
+            age       = age_at_sample_collection,
+            Dataset,
+            Batch     = Dataset,
+            Sentrix_ID, Sentrix_Position, Basename)
 
 # --- 2. Verify idat files exist ----------------------------------------------
 
@@ -71,7 +79,7 @@ sample_sheet <- sample_sheet %>%
     both_exist = red_exists & grn_exists
   )
 
-cat("Samples with both Red and Green idat files:", 
+cat("Samples with both Red and Green idat files:",
     sum(sample_sheet$both_exist), "/", nrow(sample_sheet), "\n")
 
 missing <- sample_sheet %>% filter(!both_exist)
@@ -84,22 +92,13 @@ if (nrow(missing) > 0) {
 
 # --- 2b. Detect array type ---------------------------------------------------
 
-# Arrays can't be told apart from the QC table, so read one idat per chip and
-# use the number of bead types (EPICv2: 1,105,209; EPICv1: 1,051,815-1,052,641;
-# 450k: 622,399). Anything else (e.g. a genotyping chip) is "Unknown"
+# Arrays can't be told apart from the QC table, so read one idat per chip
+# (detect_array in R/array_profiles.R)
 cat("\nDetecting array type per chip...\n")
-array_from_idat <- function(basename) {
-  n_beads <- nrow(illuminaio::readIDAT(paste0(basename, "_Grn.idat"))$Quants)
-  case_when(between(n_beads, 1100000, 1110000) ~ "EPICv2",
-            between(n_beads, 1045000, 1060000) ~ "EPICv1",
-            between(n_beads,  615000,  625000) ~ "450k",
-            TRUE                               ~ "Unknown")
-}
-
 chip_arrays <- sample_sheet %>%
   filter(both_exist) %>%
   distinct(Sentrix_ID, .keep_all = TRUE) %>%
-  transmute(Sentrix_ID, Array = map_chr(Basename, array_from_idat))
+  transmute(Sentrix_ID, Array = map_chr(Basename, detect_array))
 
 sample_sheet <- sample_sheet %>%
   left_join(chip_arrays, by = "Sentrix_ID")
@@ -109,7 +108,7 @@ print(table(sample_sheet$Dataset, sample_sheet$Array, useNA = "ifany"))
 
 if (any(sample_sheet$Array %in% "Unknown")) {
   cat("WARNING: some chips are not a recognised methylation array",
-      "(check DATASETS in 00_config.R):\n")
+      "(check DATASETS in config.R):\n")
   print(sample_sheet %>% filter(Array %in% "Unknown") %>% count(Dataset, Sentrix_ID))
 }
 
@@ -118,7 +117,7 @@ if (any(sample_sheet$Array %in% "Unknown")) {
 # Keep only samples with both idat files
 sample_sheet_final <- sample_sheet %>%
   filter(both_exist) %>%
-  select(-red_exists, -grn_exists, -both_exist)
+  select(all_of(SAMPLE_SHEET_COLUMNS))
 
 cat("\nFinal sample sheet:", nrow(sample_sheet_final), "samples ready for QC\n")
 
