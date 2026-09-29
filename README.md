@@ -34,6 +34,9 @@ root) before sourcing a script.
   names, and the paths for each data source
 - `R/array_profiles.R` - everything that differs by array type (annotation
   package, cross-reactive probes, array detection from idat files)
+- `R/idat_qc.R` - QC helpers used by Scripts 01 and 02 (idat file check,
+  SeSAMe QC stats, sex check, low bead count probes)
+- `R/density.R` - beta density curves and the density outlier score
 - `scripts/01_build_sample_sheet_*.R` - one per data source; each writes the
   same columns (`SAMPLE_SHEET_COLUMNS` in `config.R`) so later scripts don't
   depend on the source

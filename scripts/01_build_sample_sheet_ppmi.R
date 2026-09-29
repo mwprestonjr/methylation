@@ -15,10 +15,11 @@
 
 library(tidyverse)
 
-# Load shared configuration and array helpers
+# Load shared configuration, array and idat helpers
 DATA_SOURCE <- "ppmi_p140"
 source("config.R")
 source("R/array_profiles.R")
+source("R/idat_qc.R")
 
 # --- 1. Load link list -------------------------------------------------------
 
@@ -174,36 +175,12 @@ cat("Basename example:", sample_sheet$Basename[1], "\n")
 
 # --- 6. Verify idat files exist ----------------------------------------------
 
-cat("\nVerifying idat files exist on disk...\n")
-sample_sheet <- sample_sheet %>%
-  mutate(
-    red_exists = file.exists(paste0(Basename, "_Red.idat")),
-    grn_exists = file.exists(paste0(Basename, "_Grn.idat")),
-    both_exist = red_exists & grn_exists
-  )
-
-cat("Samples with both Red and Green idat files:",
-    sum(sample_sheet$both_exist), "/", nrow(sample_sheet), "\n")
-
-missing <- sample_sheet %>% filter(!both_exist)
-if (nrow(missing) > 0) {
-  cat("WARNING:", nrow(missing), "samples missing idat files:\n")
-  print(missing %>% select(PATNO, SENTRIXID, POSITION))
-} else {
-  cat("All idat files found!\n")
-}
+sample_sheet <- check_idats(sample_sheet, id_cols = c("PATNO", "SENTRIXID", "POSITION"))
 
 # --- 6b. Detect array type ---------------------------------------------------
 
-# One idat per chip (detect_array in R/array_profiles.R)
-cat("\nDetecting array type per chip...\n")
-chip_arrays <- sample_sheet %>%
-  filter(both_exist) %>%
-  distinct(SENTRIXID, .keep_all = TRUE) %>%
-  transmute(SENTRIXID, Array = map_chr(Basename, detect_array))
-
-sample_sheet <- sample_sheet %>%
-  left_join(chip_arrays, by = "SENTRIXID")
+# One idat per chip (detect_chip_arrays in R/array_profiles.R)
+sample_sheet <- detect_chip_arrays(sample_sheet, chip_col = "SENTRIXID")
 
 cat("Samples per array:\n")
 print(table(sample_sheet$Array, useNA = "ifany"))

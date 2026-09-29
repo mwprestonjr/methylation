@@ -3,7 +3,7 @@
 # Author: GP2 Subtypes and Mechanisms - M.E., M.P.
 # Date: Sept 29, 2026
 # Description: Everything in the pipeline that differs by array type. Script 01
-#              detects the array per chip (detect_array); Script 02 looks up
+#              detects the array per chip (detect_chip_arrays); Script 02 looks up
 #              the profile for the array in the sample sheet. Everything else
 #              (bead counts, sex probes, SNP probes, getSex, Funnorm) reads the
 #              annotation attached to the rgSet and works for any array here.
@@ -47,4 +47,17 @@ detect_array <- function(basename) {
                    dplyr::between(n_beads, 1045000, 1060000) ~ "EPICv1",
                    dplyr::between(n_beads,  615000,  625000) ~ "450k",
                    TRUE                                      ~ "Unknown")
+}
+
+# Adds Array to the sample sheet: every sample on a chip (chip_col, e.g.
+# Sentrix_ID) is on the same array, so read one idat per chip. Samples on
+# chips with no idat files (both_exist FALSE, from check_idats) get NA
+detect_chip_arrays <- function(sample_sheet, chip_col = "Sentrix_ID") {
+  cat("\nDetecting array type per chip...\n")
+  chips  <- sample_sheet[sample_sheet$both_exist, ]
+  chips  <- chips[!duplicated(chips[[chip_col]]), ]
+  arrays <- setNames(vapply(chips$Basename, detect_array, character(1)),
+                     chips[[chip_col]])
+  sample_sheet$Array <- unname(arrays[sample_sheet[[chip_col]]])
+  sample_sheet
 }

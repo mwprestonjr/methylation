@@ -18,9 +18,11 @@ library(minfi)
 library(tidyverse)
 library(maxprobes)
 
-# Load shared configuration and array profiles
+# Load shared configuration, array profiles and QC helpers
 source("config.R")
 source("R/array_profiles.R")
+source("R/idat_qc.R")
+source("R/density.R")
 
 # --- 0. Load sample sheet ----------------------------------------------------
 
@@ -55,41 +57,14 @@ cat("Array:", array_type, "- annotation:", profile$anno_pkg, "\n")
 
 # --- 1. SeSAMe QC stats ---------------------------------------------------
 
-# Per-sample detection (pOOBAH), intensity, dye bias and beta distribution.
-# Only runs when USE_SESAME_QC is TRUE (see config.R), and then its
-# detection rate is used for sample removal in 3b.
-# NOTE: sesame's bisulfite conversion score (bisConversionControl) fails on
-# EPICv2 in sesame 1.24, so it is not included
+# Per-sample detection (pOOBAH), intensity, dye bias and beta distribution
+# (sesame_qc_stats in R/idat_qc.R). Only runs when USE_SESAME_QC is TRUE
+# (see config.R), and then its detection rate is used for sample removal in 3d.
 if (USE_SESAME_QC) {
   cat("\nComputing SeSAMe QC stats \n")
-  # The idats are on a gcsfuse mount, where reads occasionally fail with
-  # "error reading from connection" under parallel load; retry those reads
-  read_idat_pair <- function(b, attempts = 3) {
-    for (i in seq_len(attempts)) {
-      sdf <- try(sesame::readIDATpair(b), silent = TRUE)
-      if (!inherits(sdf, "try-error")) return(sdf)
-      Sys.sleep(5 * i)
-    }
-    stop(sprintf("reading %s failed after %d attempts: %s", b, attempts, sdf))
-  }
-
-  # mc.preschedule = FALSE runs each sample as its own job, so one error
-  # only affects that sample instead of every sample on the same core
-  sesame_qc <- parallel::mclapply(targets$Basename, function(b) {
-    sdf <- read_idat_pair(b)
-    as.data.frame(sesame::sesameQC_getStats(sesame::sesameQC_calcStats(sdf)))
-  }, mc.cores = max(1, parallel::detectCores() - 1), mc.preschedule = FALSE)
-
-  # mclapply returns errors instead of stopping; report which samples failed
-  sesame_failed <- map_lgl(sesame_qc, inherits, "try-error")
-  if (any(sesame_failed)) {
-    stop("SeSAMe QC failed for: ", paste(targets$Basename[sesame_failed], collapse = ", "),
-         "\n", paste(unique(unlist(sesame_qc[sesame_failed])), collapse = "\n"))
-  }
-
   sesame_qc <- bind_cols(
     targets %>% select(GP2ID, GP2sampleID, clinical_id, Dataset, Sentrix_ID, Sentrix_Position),
-    bind_rows(sesame_qc)
+    sesame_qc_stats(targets$Basename)
   )
   write.csv(sesame_qc, file.path(DIR_RESULTS, "qc_sesame_stats.csv"), row.names = FALSE)
   cat("SeSAMe QC stats saved\n")
@@ -123,28 +98,11 @@ cat("\nRunning initial QC...\n")
 mSet <- preprocessRaw(rgSet)
 qc   <- getQC(mSet)
 
-# 3b. Sex prediction
+# 3b. Sex prediction: predicted vs reported sex (R12: "Female"/"Male";
+# check_sex in R/idat_qc.R)
 cat("\nPredicting sex from methylation data...\n")
-mSet_mapped   <- mapToGenome(mSet)
-sex_predicted <- getSex(mSet_mapped, cutoff = -2)
-
-# Compare predicted vs reported sex (R12: "Female"/"Male")
-sex_check <- data.frame(
-  GP2ID         = targets$GP2ID,
-  clinical_id   = targets$clinical_id,
-  Dataset       = targets$Dataset,
-  reported_sex  = targets$sex,
-  predicted_sex = sex_predicted$predictedSex
-) %>%
-  mutate(
-    reported_sex_label = case_when(
-      reported_sex == "Female" ~ "F",
-      reported_sex == "Male"   ~ "M",
-      TRUE                     ~ "Unknown"
-    ),
-    sex_discordant = reported_sex_label != predicted_sex &
-                     reported_sex_label != "Unknown"
-  )
+sex_check <- bind_cols(targets %>% select(GP2ID, clinical_id, Dataset),
+                       check_sex(mSet, targets$sex))
 
 cat("Sex discordant samples:", sum(sex_check$sex_discordant, na.rm = TRUE), "\n")
 if (sum(sex_check$sex_discordant, na.rm = TRUE) > 0) {
@@ -156,32 +114,11 @@ if (sum(sex_check$sex_discordant, na.rm = TRUE) > 0) {
 # minfi::densityPlot. Saved so the density figures can be redrawn without the
 # full beta matrices. Curves are per sample, so compute them for all samples
 # now and keep the QC-passed ones later; mSet can then be freed before the
-# detection p-values
-density_curves <- function(b) {
-  d <- apply(b, 2, function(x) density(as.vector(x), na.rm = TRUE))
-  list(x = sapply(d, `[[`, "x"), y = sapply(d, `[[`, "y"))
-}
-
-# Density outlier score per sample (see DENSITY_MID_PEAK_MAX in config.R):
-# prominence of the largest peak between beta 0.15 and 0.75, where a normal
-# curve has none. Prominence = a peak's height above the higher of the lowest
-# points on either side of it. Curves are put on a common beta grid first so
-# every sample is scored at the same resolution
-density_outlier_scores <- function(curves, grid = seq(0, 1, by = 0.005)) {
-  mid <- grid[grid > 0.15 & grid < 0.75]
-  peak <- sapply(seq_len(ncol(curves$x)), function(i) {
-    y <- approx(curves$x[, i], curves$y[, i], xout = mid, rule = 2)$y
-    peaks <- which(diff(sign(diff(y))) == -2) + 1
-    if (length(peaks) == 0) return(0)
-    max(sapply(peaks, function(j) y[j] - max(min(y[1:j]), min(y[j:length(y)]))))
-  })
-  data.frame(Sample           = colnames(curves$x),
-             density_mid_peak = peak)
-}
+# detection p-values (density_curves in R/density.R)
 density_before <- density_curves(getBeta(mSet))
 sample_names   <- colnames(mSet)   # idat basename, matches the beta matrix columns
 
-rm(mSet, mSet_mapped)
+rm(mSet)
 invisible(gc())
 
 # 3d. Detection p-values
@@ -244,9 +181,9 @@ qc_metrics <- data.frame(
   uMed               = qc$uMed,                 # qc_01
   mean_detP          = mean_detP,               # qc_02
   frac_dt_cg         = if (USE_SESAME_QC) sesame_qc$frac_dt_cg else NA,   # qc_02b
-  xMed               = sex_predicted$xMed,      # qc_03
-  yMed               = sex_predicted$yMed,      # qc_03
-  predicted_sex      = sex_predicted$predictedSex,
+  xMed               = sex_check$xMed,          # qc_03
+  yMed               = sex_check$yMed,          # qc_03
+  predicted_sex      = sex_check$predicted_sex,
   reported_sex_label = sex_check$reported_sex_label,
   sex_discordant     = sex_check$sex_discordant,
   failed_detection   = failed_samples,
@@ -269,17 +206,9 @@ density_before <- list(x = density_before$x[, keep, drop = FALSE],
 # Probe annotation (probe name, bead addresses, chr, ...) for the array
 ann <- getAnnotation(rgSet)
 
-# Low bead count probes (used in 6a).
-# getNBeads() rows are bead addresses, not probe names; map them to probes.
-# Type I probes use two addresses (A and B), so take the lower count of the two
-nbeads   <- getNBeads(rgSet)[, keep, drop = FALSE]
-nbeads_A <- nbeads[match(as.character(ann$AddressA), rownames(nbeads)), , drop = FALSE]
-nbeads_B <- nbeads[match(as.character(ann$AddressB), rownames(nbeads)), , drop = FALSE]
-nbeads_probe <- ifelse(is.na(nbeads_B), nbeads_A, pmin(nbeads_A, nbeads_B))
-rownames(nbeads_probe) <- ann$Name
-# Probes with < MIN_BEADS beads in > 5% of samples
-low_bead_probes <- rowSums(nbeads_probe < MIN_BEADS, na.rm = TRUE) > (0.05 * ncol(nbeads_probe))
-low_bead_probes <- names(low_bead_probes)[low_bead_probes]
+# Low bead count probes (used in 6a): < MIN_BEADS beads in > 5% of the kept
+# samples (find_low_bead_probes in R/idat_qc.R)
+low_bead_probes <- find_low_bead_probes(rgSet, ann, keep, min_beads = MIN_BEADS)
 
 # Failed detection probes (used in 6c): detection p > DETECTION_P_THRESHOLD
 # in more than FAILED_SAMPLE_CUTOFF of the kept samples
@@ -294,8 +223,7 @@ rgSet_clean <- RGChannelSet(Green      = getGreen(rgSet)[, keep, drop = FALSE],
                             colData    = colData(rgSet)[keep, ],
                             annotation = annotation(rgSet))
 
-rm(rgSet, qc, detP, detP_clean, failed,
-   nbeads, nbeads_A, nbeads_B, nbeads_probe)
+rm(rgSet, qc, detP, detP_clean, failed)
 invisible(gc())
 
 # Apply functional normalization
