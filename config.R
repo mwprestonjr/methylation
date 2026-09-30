@@ -48,6 +48,11 @@ if (DATA_SOURCE == "ppmi_p140") {
   PRIMARY_TIMEPOINT   <- "BL"     # Baseline only
   COHORTS_OF_INTEREST <- c(1, 2)  # PD vs Healthy Control
 
+  # ComBat batch variable (see Preprocessing below): plate. Project 140
+  # samples are spread over ~240 chips (median 2 samples per chip, many
+  # alone), too few per chip for ComBat; the 22 plates hold 4-40 each
+  COMBAT_BATCH_VAR <- "Batch"
+
   DIR_OUTPUT <- "/mnt/output/methylation/ppmi"
 }
 
@@ -58,6 +63,10 @@ if (DATA_SOURCE == "psomagen") {
   DATASETS     <- c("AB00000952",
                     "AB00000963")
   DIR_DELIVERY <- "/mnt/psomagen_delivery/nba-samples"
+
+  # ComBat batch variable (see Preprocessing below): chip. ~8 samples per
+  # chip, and chip explains more technical variation than delivery
+  COMBAT_BATCH_VAR <- "Sentrix_ID"
 
   DIR_OUTPUT <- "/mnt/output/methylation/psomagen"
 }
@@ -113,3 +122,26 @@ SAMPLE_SHEET_COLUMNS <- c("GP2ID", "GP2sampleID", "clinical_id",
                           "phenotype", "sex", "race", "age",
                           "Dataset", "Batch", "Sentrix_ID", "Sentrix_Position",
                           "Array", "Basename")
+
+# --- Preprocessing (preprocessing/ scripts) ----------------------------------
+# Run per data source after qc/: 1_cell_counts.R, 2_variation_sources.R (raw),
+# 3_combat.R, then 2_variation_sources.R again on the ComBat output
+
+# Blood cell types estimated with the IDOL reference (FlowSorted.Blood.EPIC)
+CELL_TYPES       <- c("CD8T", "CD4T", "NK", "Bcell", "Mono", "Neu")
+CELL_PROPORTIONS <- file.path(DIR_RESULTS, "cell_proportions.csv")
+
+# Sources of variation: SVD of the VARIATION_TOP_CPGS most variable CpGs,
+# testing the first VARIATION_N_PCS components against each sample variable
+VARIATION_TOP_CPGS <- 50000
+VARIATION_N_PCS    <- 10
+
+# ComBat: the batch variable is set per data source above (COMBAT_BATCH_VAR,
+# a sample sheet column: "Sentrix_ID" = chip, "Batch" = plate for PPMI /
+# delivery for Psomagen); choose it from 2_variation_sources.R. Every batch
+# needs at least 2 samples. COMBAT_PROTECT: variables whose variation ComBat
+# keeps (e.g. add "age", "sex", or the cell types)
+COMBAT_PROTECT   <- c("phenotype")
+
+COMBAT_MVALS       <- file.path(DIR_RESULTS, "combat_mVals.rds")
+SAMPLE_SHEET_FINAL <- file.path(DIR_RESULTS, "sample_sheet_final.csv")  # QC-passed sheet + cell proportions

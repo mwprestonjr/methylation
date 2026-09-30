@@ -16,11 +16,13 @@
 #              can't detect EPICv2 by itself
 #   xreactive  function(ann) returning cross-reactive probe names, where ann
 #              is getAnnotation(rgSet)
+#   genome     genome build of the annotation's probe coordinates
 ARRAY_PROFILES <- list(
   EPICv1 = list(
     anno_pkg   = "IlluminaHumanMethylationEPICanno.ilm10b4.hg19",
     annotation = c(array = "IlluminaHumanMethylationEPIC",
                    annotation = "ilm10b4.hg19"),
+    genome     = "hg19",
     xreactive  = function(ann) {
       unlist(maxprobes::xreactive_probes(array_type = "EPIC"))
     }
@@ -29,6 +31,7 @@ ARRAY_PROFILES <- list(
     anno_pkg   = "IlluminaHumanMethylationEPICv2anno.20a1.hg38",
     annotation = c(array = "IlluminaHumanMethylationEPICv2",
                    annotation = "20a1.hg38"),
+    genome     = "hg38",
     # maxprobes only has an EPICv1 list; map it to EPICv2 names via EPICv1_Loci.
     # NOTE: probes new on EPICv2 (no v1 equivalent) are not screened
     xreactive  = function(ann) {
