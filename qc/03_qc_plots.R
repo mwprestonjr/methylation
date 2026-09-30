@@ -19,7 +19,7 @@
 #   qc_05  Beta value densities after normalization (Funnorm), by phenotype
 #          (qc_04 to qc_05 include only samples that passed QC; density
 #          outliers flagged by Script 02 are drawn in black)
-# Usage:       Rscript scripts/03_qc_plots.R <data source>   (see config.R)
+# Usage:       Rscript qc/03_qc_plots.R <data source>   (see config.R)
 # =============================================================================
 
 # --- 0. Setup ----------------------------------------------------------------

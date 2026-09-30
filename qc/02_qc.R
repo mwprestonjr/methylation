@@ -10,7 +10,7 @@
 #              and saves QC-passed data plus the data for the QC figures
 #              (drawn by 03_qc_plots.R). Works for any array in
 #              R/array_profiles.R; one array type per run
-# Usage:       Rscript scripts/02_qc.R <data source>   (see config.R)
+# Usage:       Rscript qc/02_qc.R <data source>   (see config.R)
 # =============================================================================
 
 # --- 0. Setup ----------------------------------------------------------------

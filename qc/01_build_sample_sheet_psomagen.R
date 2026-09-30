@@ -7,7 +7,7 @@
 #              Basename column for minfi, detects array type per chip, merges
 #              clinical info from R12, and writes the standard sample sheet
 #              (SAMPLE_SHEET_COLUMNS in config.R)
-# Usage:       Rscript scripts/01_build_sample_sheet_psomagen.R
+# Usage:       Rscript qc/01_build_sample_sheet_psomagen.R
 # =============================================================================
 
 # --- 0. Setup ----------------------------------------------------------------
