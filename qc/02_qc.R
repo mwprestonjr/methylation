@@ -23,6 +23,7 @@ source("config.R")
 source("R/array_profiles.R")
 source("R/idat_qc.R")
 source("R/density.R")
+source("R/mvalues.R")
 
 # --- 0. Load sample sheet ----------------------------------------------------
 
@@ -336,7 +337,7 @@ cat("Final probe count:", n_after_sex, "\n")
 cat("\nSaving QC-passed data...\n")
 
 cat("\nCalculating M and Beta values...\n")
-mVals <- getM(mSetSq)
+mVals <- cap_infinite_m(getM(mSetSq))   # betas of 0/1 give -Inf/Inf (R/mvalues.R)
 bVals <- getBeta(mSetSq)
 
 cat("M values dimensions:", dim(mVals), "\n")
