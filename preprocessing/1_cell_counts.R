@@ -8,7 +8,7 @@
 #              Salas et al. 2018). Re-reads the idat files, since this needs
 #              noob-normalized raw intensities rather than the Funnorm output.
 #              Works for any array in R/array_profiles.R
-# Usage:       Rscript preprocessing/1_cell_couts.R <data source>   (see config.R)
+# Usage:       Rscript preprocessing/1_cell_counts.R <data source>   (see config.R)
 # =============================================================================
 
 # --- 0. Setup ----------------------------------------------------------------
