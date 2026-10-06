@@ -91,7 +91,20 @@ cell_long <- bind_cols(targets %>% select(phenotype), cell_proportions) %>%
                names_to  = "cell_type",
                values_to = "proportion")
 
+# plot boxplot of cell type proportions
 png(file.path(DIR_FIGURES, "cell_proportions.png"),
+    width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
+print(ggplot(cell_long, aes(x = cell_type, y = proportion)) +
+  geom_boxplot(outlier.size = 0.5) +
+  labs(title = "Cell Type Proportions",
+       x     = "Cell Type",
+       y     = "Estimated Proportion") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)))
+dev.off()
+
+# plot boxplot of cell type proportions by phenotype
+png(file.path(DIR_FIGURES, "cell_proportions_by_phenotype.png"),
     width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
 print(ggplot(cell_long, aes(x = cell_type, y = proportion, fill = phenotype)) +
   geom_boxplot(alpha = 0.7, outlier.size = 0.5) +
