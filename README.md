@@ -1,50 +1,112 @@
 # methylation
 methylation data and scripts 
 
-QC pipeline for Illumina EPIC methylation arrays (EPICv1 and EPICv2). Each data
-source is processed separately, with the same QC code; results from different
-sources can then be combined for downstream analyses.
+Analysis pipeline for Illumina EPIC methylation arrays (EPICv1 and EPICv2). Each data source is processed separately, with the same QC code; results from different sources can then be combined for downstream analyses.
 
 ## Data sources
 
-| `DATA_SOURCE` | Data | Array | Sample sheet script |
+| `SOURCE` | Data | Array | Sample sheet script |
 |---|---|---|---|
-| `ppmi_p140` | PPMI Project 140 | EPICv1 | `scripts/01_build_sample_sheet_ppmi.R` |
-| `psomagen`  | Psomagen deliveries (`DATASETS` in `config.R`) | EPICv2 | `scripts/01_build_sample_sheet_psomagen.R` |
+| `ppmi_p140` | PPMI Project 140 | EPICv1 | `qc/01_build_sample_sheet_ppmi.R` |
+| `psomagen`  | Psomagen deliveries (`DATASETS` in `config.R`) | EPICv2 | `qc/01_build_sample_sheet_psomagen.R` |
 
 Input paths and the output directory for each source are set in `config.R`.
 
-## Pipeline Order
+## Running the pipeline
 
-Run scripts from the repository root, in this order:
+The pipeline is run with `make` from the repository root, with the
+`methylation` conda environment active. Each data source is run separately:
 
 ```bash
-Rscript scripts/01_build_sample_sheet_ppmi.R      # or _psomagen.R
-Rscript scripts/02_qc.R ppmi_p140                 # QC, normalization, probe filtering
-Rscript scripts/03_qc_plots.R ppmi_p140           # QC figures
+make qc            SOURCE=ppmi_p140                # sample sheet, QC/normalization, QC plots
+make preprocessing SOURCE=ppmi_p140                # cell counts, sources of variation, ComBat
+make mqtl          SOURCE=ppmi_p140 ANCESTRY=EUR   # sample map, genotypes, cis-mQTLs
+make all           SOURCE=ppmi_p140                # qc and preprocessing
+make all           SOURCE=ppmi_p140 ANCESTRY=EUR   # qc, preprocessing, and mqtl
+make                                               # usage
 ```
 
-Each script reads input files produced by the previous script. In an
-interactive session, set `DATA_SOURCE <- "ppmi_p140"` (working directory = repo
-root) before sourcing a script.
+| Target | Steps, in order |
+|---|---|
+| `qc` | `qc/01_build_sample_sheet_<source>.R` → `qc/02_qc.R` → `qc/03_qc_plots.R` |
+| `preprocessing` | `1_cell_counts.R` → `2_variation_sources.R raw` → `3_combat.R` → `2_variation_sources.R combat` |
+| `mqtl` | `1_mqtl_sample_map.R` → `2_mqtl_genotypes.sh` (plink2) → `3_mqtl.R` |
+
+Each target needs the outputs of the one before it (`preprocessing` reads the
+`qc` outputs, `mqtl` reads the `preprocessing` outputs), so run them in this
+order the first time; afterwards a target can be rerun on its own.
+
+- **`SOURCE`** (required): one of the data sources above.
+- **`ANCESTRY`** (`mqtl` only): the GP2 master key ancestry label to analyse,
+  e.g. `EUR` for PPMI or `AFR` for Psomagen. The genotype file for that
+  ancestry is found from `GENO_PFILE_PATH`/`GENO_PFILE_NAME` in `config.R`, and
+  results go to `<results>/mqtl/<ANCESTRY>/`. Several labels (`EUR,AJ`) only
+  work if one genotype file covers all of them.
+- **Logs**: each step writes `logs/<step>_<SOURCE>_<timestamp>.log`; all steps
+  of one run share the timestamp. `make` itself prints one line per step.
+- **Failures**: `make` stops at the first step that fails; see that step's log.
+- **Steps never run in parallel**, even with `make -j`, because they are
+  memory-heavy and each depends on the previous one.
+- **Editing during a run**: the R steps are run through `source()`, which reads
+  the whole script before running it, so editing a script mid-run doesn't
+  affect the run. The mQTL step 2 shell script is read as it runs, so don't
+  edit it while it's running.
+- **Long runs**: run in the background so the run survives logging out:
+  ```bash
+  nohup make all SOURCE=ppmi_p140 > logs/make_ppmi_p140.log 2>&1 < /dev/null &
+  ```
+- **mQTL genotypes**: the genotype files must be readable from the VM (e.g. the
+  `gp2_release12` bucket mounted at `~/gp2_release12` with gcsfuse), and
+  `GENO_SOURCE` in `config.R` must match them (`nba` for the NBA array files).
+
+Every target reruns all of its steps, even if their outputs already exist; QC
+of a few hundred samples takes about 2 hours.
+
+### Running a single script
+
+Scripts can also be run directly from the repository root, with the data
+source (and, for some, a second argument) on the command line:
+
+```bash
+Rscript qc/02_qc.R ppmi_p140
+Rscript preprocessing/2_variation_sources.R ppmi_p140 combat
+Rscript mqtl/1_mqtl_sample_map.R psomagen AFR
+```
+
+In an interactive R session, set `DATA_SOURCE <- "ppmi_p140"` (and
+`MQTL_ANCESTRY <- "AFR"` for mQTL scripts) with the working directory at the
+repository root before sourcing a script.
 
 ## Layout
 
-- `config.R` - shared settings: QC thresholds, figure settings, output file
-  names, and the paths for each data source
-- `R/array_profiles.R` - everything that differs by array type (annotation
-  package, cross-reactive probes, array detection from idat files)
-- `R/idat_qc.R` - QC helpers used by Scripts 01 and 02 (idat file check,
-  SeSAMe QC stats, sex check, low bead count probes)
-- `R/density.R` - beta density curves and the density outlier score
-- `scripts/01_build_sample_sheet_*.R` - one per data source; each writes the
-  same columns (`SAMPLE_SHEET_COLUMNS` in `config.R`) so later scripts don't
-  depend on the source
-- `scripts/02_qc.R` - works for any array in `R/array_profiles.R`, one array
-  type per run
-- `scripts/03_qc_plots.R` - figures from the data saved by Script 02
+```
+config.R          settings: data sources and their paths, QC/preprocessing/mQTL parameters, output file names
+Makefile          runs the pipeline (see above)
+R/                shared functions, sourced by the scripts
+qc/               sample sheets, QC and normalization, QC plots
+preprocessing/    cell counts, sources of variation, ComBat batch correction
+mqtl/             cis-mQTL mapping against GP2 genotypes
+logs/             step logs from make
+```
 
-Outputs go to `<DIR_OUTPUT>/results` and `<DIR_OUTPUT>/figures`.
+- `R/array_profiles.R` - everything that differs by array type (annotation
+  package, genome build, cross-reactive probes, array detection from idat files)
+- `R/idat_qc.R` - QC helpers (idat file check, SeSAMe QC stats, sex check, low
+  bead count probes)
+- `R/density.R` - beta density curves and the density outlier score
+- `R/mvalues.R` - caps infinite M values (betas of exactly 0 or 1)
+- `R/mqtl_setup.R` - mQTL ancestry argument, genotype file and output paths
+- `qc/01_build_sample_sheet_*.R` - one per data source; each writes the same
+  columns (`SAMPLE_SHEET_COLUMNS` in `config.R`) so later scripts don't depend
+  on the source
+- `qc/02_qc.R` - works for any array in `R/array_profiles.R`, one array type
+  per run; `qc/03_qc_plots.R` draws its figures from the data it saves
+- `preprocessing/2_variation_sources.R` - run before ComBat to choose the batch
+  variable (`COMBAT_BATCH_VAR`) and after it to check the correction
+- `mqtl/` - steps 1-3 of the mQTL analysis, run per data source and ancestry
+
+Outputs go to `<DIR_OUTPUT>/results` and `<DIR_OUTPUT>/figures` for each data
+source (`DIR_OUTPUT` in `config.R`).
 
 ## Setup
 ```bash
