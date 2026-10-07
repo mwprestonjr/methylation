@@ -5,7 +5,7 @@
 # Description: Tests SNP-CpG associations within +/- MQTL_CIS_WINDOW using
 #              MatrixEQTL, one chromosome at a time. Methylation: ComBat
 #              M values, inverse-normal transformed per CpG. Covariates: age,
-#              sex, phenotype, cell proportions, genotype PCs and latent
+#              sex, phenotype, cell proportions, chip row, genotype PCs and latent
 #              methylation PCs. Probe coordinates come from the array's
 #              annotation (R/array_profiles.R) and are lifted hg19 -> hg38
 #              when needed (EPICv1) to match GP2 genotypes.
@@ -133,6 +133,17 @@ if (length(phenotypes) > 1) {
   }
 }
 cat("Phenotype reference group:", phenotypes[1], "\n")
+
+# Position on the chip (row R01-R08 of Sentrix_Position): ComBat corrects for
+# chip or plate but not for the row within a chip, which remains one of the
+# main technical effects (see preprocessing/2_variation_sources.R). Coded as
+# indicator columns against the first row
+chip_row <- substr(covs$Sentrix_Position, 1, 3)
+rows     <- sort(unique(chip_row))
+for (r in rows[-1]) {
+  known_covs[[paste0("chip_row_", r)]] <- as.integer(chip_row == r)
+}
+cat("Chip rows:", paste(rows, collapse = ", "), "(reference", rows[1], ")\n")
 
 # Latent methylation PCs from residuals after known covariates.
 # These soak up unmeasured technical/biological variation and boost power;
