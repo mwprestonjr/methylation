@@ -22,3 +22,6 @@ results/*.rds
 *.env
 *credentials*
 *password*
+
+# logs
+logs/*
