@@ -237,3 +237,21 @@ summarise_cis <- function(cis_results, n_tests, cpg_pos) {
     ungroup()
   list(cis = cis, lead = lead)
 }
+
+# The p-value threshold that FDR < fdr corresponds to: the largest p-value
+# among the saved pairs that passes. Only pairs with p < MQTL_P_CIS_SAVE are
+# saved, so if every saved pair passes, the true threshold lies at or beyond
+# MQTL_P_CIS_SAVE: significant pairs were discarded and the counts are
+# incomplete. Then this warns and returns NA; loosen MQTL_P_CIS_SAVE in
+# mqtl/config.R. cis is the cis table from summarise_cis()
+fdr_threshold <- function(cis, fdr = 0.05, label = "") {
+  passing <- cis$fdr < fdr
+  if (nrow(cis) > 0 && all(passing)) {
+    warning(label, "every saved pair passes FDR < ", fdr, ": the FDR threshold is ",
+            "at or beyond MQTL_P_CIS_SAVE (", MQTL_P_CIS_SAVE, "), so the counts are ",
+            "incomplete. Loosen MQTL_P_CIS_SAVE in mqtl/config.R", call. = FALSE)
+    return(NA_real_)
+  }
+  if (!any(passing)) return(NA_real_)
+  max(cis$p[passing])
+}

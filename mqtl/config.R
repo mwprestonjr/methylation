@@ -27,4 +27,4 @@ MQTL_MAF        <- 0.05
 MQTL_N_GENO_PCS <- 5
 MQTL_N_METH_PCS <- 10      # latent methylation PCs; choose with mqtl/tune_meth_pcs.R
 MQTL_N_METH_PCS_GRID <- c(0, 5, 10, 15, 20, 30)   # values tested by mqtl/tune_meth_pcs.R
-MQTL_P_CIS_SAVE <- 1e-5    # nominal p-value threshold to write cis results
+MQTL_P_CIS_SAVE <- 1e-3    # nominal p-value threshold to write cis results

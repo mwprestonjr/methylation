@@ -77,11 +77,15 @@ cat("Scan time:", round(as.numeric(difftime(Sys.time(), start_time, units = "min
 # --- 3. Counts per value -----------------------------------------------------
 
 tuning <- bind_rows(lapply(as.character(grid), function(k) {
-  lead <- summarise_cis(cis_results[[k]], n_tests, cpg_pos)$lead
-  data.frame(n_meth_pcs     = as.integer(k),
-             n_covariates   = ncol(prep$known_covs) + as.integer(k),
-             cpgs_fdr05     = sum(lead$fdr < 0.05),
-             cpgs_p1e8      = sum(lead$p < 1e-8))
+  summ <- summarise_cis(cis_results[[k]], n_tests, cpg_pos)
+  lead <- summ$lead
+  # NA (with a warning) if the FDR threshold is beyond the saved range
+  fdr_p <- fdr_threshold(summ$cis, label = paste0(k, " PCs: "))
+  data.frame(n_meth_pcs       = as.integer(k),
+             n_covariates     = ncol(prep$known_covs) + as.integer(k),
+             cpgs_fdr05       = sum(lead$fdr < 0.05),
+             cpgs_p1e8        = sum(lead$p < 1e-8),
+             fdr05_p_threshold = fdr_p)
 }))
 tuning$n_tests <- n_tests
 

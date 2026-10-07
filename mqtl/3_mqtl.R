@@ -77,6 +77,14 @@ sig_1e8 <- lead %>% filter(p < 1e-8)                  # GoDMC cis threshold
 cat("CpGs with a cis-mQTL at FDR < 5%:", nrow(sig_fdr), "\n")
 cat("CpGs with a cis-mQTL at p < 1e-8:", nrow(sig_1e8), "\n")
 
+# p-value that FDR < 5% corresponds to; warns if it lies beyond the saved
+# range (MQTL_P_CIS_SAVE), i.e. the counts above are incomplete
+fdr_p <- fdr_threshold(cis)
+if (!is.na(fdr_p)) {
+  cat("FDR 5% threshold: p <=", signif(fdr_p, 3),
+      "(within the saved range, p <", MQTL_P_CIS_SAVE, ")\n")
+}
+
 # Distance of lead SNPs from their CpG
 png(file.path(MQTL_DIR, "mqtl_01_lead_snp_distance.png"),
     width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
@@ -99,10 +107,12 @@ mqtl_summary <- data.frame(
   metric = c("Samples", "Ancestry", "CpGs tested", "Cis window (bp)",
              "Genotype PCs", "Methylation PCs", "Total cis tests",
              "CpGs with cis-mQTL (FDR < 0.05)",
-             "CpGs with cis-mQTL (p < 1e-8)"),
+             "CpGs with cis-mQTL (p < 1e-8)",
+             "Saved pairs: p <", "FDR 5% p-value threshold"),
   value  = c(ncol(meth_int), paste(MQTL_ANCESTRY, collapse = "+"), nrow(meth_int), MQTL_CIS_WINDOW,
              MQTL_N_GENO_PCS, MQTL_N_METH_PCS, n_tests,
-             nrow(sig_fdr), nrow(sig_1e8))
+             nrow(sig_fdr), nrow(sig_1e8), MQTL_P_CIS_SAVE,
+             if (is.na(fdr_p)) "beyond saved range (counts incomplete)" else signif(fdr_p, 3))
 )
 write.csv(mqtl_summary, file.path(MQTL_DIR, "mqtl_summary.csv"), row.names = FALSE)
 
