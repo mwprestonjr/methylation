@@ -25,6 +25,7 @@
 # --- 0. Setup ----------------------------------------------------------------
 # Load shared configuration
 source("config.R")
+source("qc/config.R")
 
 cat("Loading QC figure data...\n")
 fig_data <- readRDS(QC_FIGURE_DATA)

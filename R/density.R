@@ -14,7 +14,7 @@ density_curves <- function(b) {
   list(x = sapply(d, `[[`, "x"), y = sapply(d, `[[`, "y"))
 }
 
-# Density outlier score per sample (see DENSITY_MID_PEAK_MAX in config.R):
+# Density outlier score per sample (see DENSITY_MID_PEAK_MAX in qc/config.R):
 # prominence of the largest peak between beta 0.15 and 0.75, where a normal
 # curve has none. Prominence = a peak's height above the higher of the lowest
 # points on either side of it. Curves are put on a common beta grid first so

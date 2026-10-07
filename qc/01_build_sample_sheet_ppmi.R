@@ -18,6 +18,7 @@ library(tidyverse)
 # Load shared configuration, array and idat helpers
 DATA_SOURCE <- "ppmi_p140"
 source("config.R")
+source("qc/config.R")
 source("R/array_profiles.R")
 source("R/idat_qc.R")
 

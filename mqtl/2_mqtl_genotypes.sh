@@ -20,7 +20,7 @@ ANCESTRY=${2:?"usage: bash mqtl/2_mqtl_genotypes.sh <data source> <ancestry>"}
 # Pull paths/parameters from the shared R config so there is one source of
 # truth (capture.output hides the config's own messages)
 cfg() {
-  Rscript -e "DATA_SOURCE <- '${DATA_SOURCE}'; MQTL_ANCESTRY <- '${ANCESTRY}'; invisible(capture.output(suppressMessages({source('config.R'); source('R/mqtl_setup.R')}))); cat($1)"
+  Rscript -e "DATA_SOURCE <- '${DATA_SOURCE}'; MQTL_ANCESTRY <- '${ANCESTRY}'; invisible(capture.output(suppressMessages({source('config.R'); source('mqtl/config.R'); source('R/mqtl_setup.R')}))); cat($1)"
 }
 GENO_PFILE=$(cfg GENO_PFILE)
 MQTL_DIR=$(cfg MQTL_DIR)
@@ -34,7 +34,7 @@ mkdir -p "${GENO_DIR}"
 
 echo "Genotypes: ${GENO_PFILE}"
 if [ ! -f "${GENO_PFILE}.pgen" ]; then
-  echo "ERROR: ${GENO_PFILE}.pgen not found - check GENO_PFILE_PATH/GENO_PFILE_NAME in config.R"
+  echo "ERROR: ${GENO_PFILE}.pgen not found - check GENO_PFILE_PATH/GENO_PFILE_NAME in mqtl/config.R"
   exit 1
 fi
 echo "Keep file: ${KEEP} ($(($(wc -l < "${KEEP}") - 1)) samples)"

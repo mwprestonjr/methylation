@@ -19,6 +19,7 @@ library(sva)                      # ComBat
 
 # Load shared configuration and M value helpers
 source("config.R")
+source("preprocessing/config.R")
 source("R/mvalues.R")
 
 # --- 1. Load data ------------------------------------------------------------
@@ -58,7 +59,7 @@ cat("Batch sizes: min", min(batch_sizes), "/ median", median(batch_sizes),
 if (any(batch_sizes < 2)) {
   stop(sum(batch_sizes < 2), " of ", length(batch_sizes), " batches of ",
        COMBAT_BATCH_VAR, " have a single sample - choose a batch variable with ",
-       "larger batches (COMBAT_BATCH_VAR in config.R)")
+       "larger batches (COMBAT_BATCH_VAR in preprocessing/config.R)")
 }
 if (median(batch_sizes) < 4) {
   cat("WARNING: median batch size is", median(batch_sizes),

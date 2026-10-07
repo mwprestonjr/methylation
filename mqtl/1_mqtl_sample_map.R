@@ -16,6 +16,7 @@ library(tidyverse)
 
 # Load shared configuration and the mQTL ancestry/paths
 source("config.R")
+source("mqtl/config.R")
 source("R/mqtl_setup.R")
 
 dir.create(MQTL_DIR, showWarnings = FALSE, recursive = TRUE)

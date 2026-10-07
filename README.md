@@ -39,7 +39,7 @@ order the first time; afterwards a target can be rerun on its own.
 - **`SOURCE`** (required): one of the data sources above.
 - **`ANCESTRY`** (`mqtl` only): the GP2 master key ancestry label to analyse,
   e.g. `EUR` for PPMI or `AFR` for Psomagen. The genotype file for that
-  ancestry is found from `GENO_PFILE_PATH`/`GENO_PFILE_NAME` in `config.R`, and
+  ancestry is found from `GENO_PFILE_PATH`/`GENO_PFILE_NAME` in `mqtl/config.R`, and
   results go to `<results>/mqtl/<ANCESTRY>/`. Several labels (`EUR,AJ`) only
   work if one genotype file covers all of them.
 - **Logs**: each step writes `logs/<step>_<SOURCE>_<timestamp>.log`; all steps
@@ -57,7 +57,7 @@ order the first time; afterwards a target can be rerun on its own.
   ```
 - **mQTL genotypes**: the genotype files must be readable from the VM (e.g. the
   `gp2_release12` bucket mounted at `~/gp2_release12` with gcsfuse), and
-  `GENO_SOURCE` in `config.R` must match them (`nba` for the NBA array files).
+  `GENO_SOURCE` in `mqtl/config.R` must match them (`nba` for the NBA array files).
 
 Every target reruns all of its steps, even if their outputs already exist; QC
 of a few hundred samples takes about 2 hours.
@@ -80,12 +80,12 @@ repository root before sourcing a script.
 ## Layout
 
 ```
-config.R          settings: data sources and their paths, QC/preprocessing/mQTL parameters, output file names
+config.R          shared settings: data sources and their paths, output folders, files passed between modules
 Makefile          runs the pipeline (see above)
 R/                shared functions, sourced by the scripts
-qc/               sample sheets, QC and normalization, QC plots
-preprocessing/    cell counts, sources of variation, ComBat batch correction
-mqtl/             cis-mQTL mapping against GP2 genotypes
+qc/               sample sheets, QC and normalization, QC plots (settings: qc/config.R)
+preprocessing/    cell counts, sources of variation, ComBat batch correction (settings: preprocessing/config.R)
+mqtl/             cis-mQTL mapping against GP2 genotypes (settings: mqtl/config.R)
 logs/             step logs from make
 ```
 
@@ -104,6 +104,25 @@ logs/             step logs from make
 - `preprocessing/2_variation_sources.R` - run before ComBat to choose the batch
   variable (`COMBAT_BATCH_VAR`) and after it to check the correction
 - `mqtl/` - steps 1-3 of the mQTL analysis, run per data source and ancestry
+
+### Configuration
+
+Settings are split between a shared config and one config per module. Every
+script sources `config.R` first, then its own module's config:
+
+- **`config.R`** (repository root): anything more than one module uses - the
+  data sources (input paths, `DIR_OUTPUT`), figure settings, the files one
+  module writes and another reads (e.g. `SAMPLE_SHEET_QC`, `COMBAT_MVALS`,
+  `SAMPLE_SHEET_FINAL`), `SAMPLE_SHEET_COLUMNS` and `CELL_TYPES`
+- **`qc/config.R`**: QC thresholds, SeSAMe and density outlier settings, the
+  R12 master key used for the sample sheets
+- **`preprocessing/config.R`**: sources-of-variation settings, the ComBat batch
+  variable (per data source) and protected variables
+- **`mqtl/config.R`**: genotype files and source, liftover chain, cis window
+  and model settings
+
+Rule of thumb: a setting read by another module belongs in `config.R`;
+otherwise it goes in its module's config.
 
 Outputs go to `<DIR_OUTPUT>/results` and `<DIR_OUTPUT>/figures` for each data
 source (`DIR_OUTPUT` in `config.R`).

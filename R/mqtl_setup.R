@@ -9,11 +9,11 @@
 #                Rscript mqtl/1_mqtl_sample_map.R psomagen AFR
 #              Several labels separated by commas (e.g. EUR,AJ) only work
 #              with a single genotype file covering all of them (see
-#              GENO_PFILE_NAME in config.R)
+#              GENO_PFILE_NAME in mqtl/config.R)
 #              In an interactive session, set MQTL_ANCESTRY before sourcing.
 #              Each ancestry (set) gets its own output folder, so runs for
 #              different ancestries don't overwrite each other.
-#              Source after config.R
+#              Source after config.R and mqtl/config.R
 # =============================================================================
 
 if (!exists("MQTL_ANCESTRY")) MQTL_ANCESTRY <- commandArgs(trailingOnly = TRUE)[2]
@@ -25,7 +25,7 @@ MQTL_ANCESTRY <- unlist(strsplit(MQTL_ANCESTRY, ","))
 cat("mQTL ancestry:", paste(MQTL_ANCESTRY, collapse = "+"), "\n")
 
 # Genotype file prefix for the ancestry (GENO_PFILE_PATH/GENO_PFILE_NAME in
-# config.R). Genotypes are released one file set per ancestry, so several
+# mqtl/config.R). Genotypes are released one file set per ancestry, so several
 # ancestries would need their files merged first
 if (grepl("{ANCESTRY}", GENO_PFILE_NAME, fixed = TRUE) && length(MQTL_ANCESTRY) > 1) {
   stop("Genotypes are one file per ancestry (GENO_PFILE_NAME); run one ancestry ",

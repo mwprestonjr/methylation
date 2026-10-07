@@ -21,6 +21,7 @@ library(matrixStats)              # rowVars
 
 # Load shared configuration and M value helpers
 source("config.R")
+source("preprocessing/config.R")
 source("R/mvalues.R")
 
 # Which M values to analyse: second command-line argument (default "raw").
@@ -200,6 +201,6 @@ write.csv(data.frame(variable = rownames(assoc_p), assoc_p, row.names = NULL),
 write.csv(confounders, file.path(DIR_RESULTS, "confounder_summary.csv"), row.names = FALSE)
 cat("\nResults saved to:", DIR_RESULTS, "\n")
 if (VARIATION_INPUT == "raw") {
-  cat("Next: set COMBAT_BATCH_VAR in config.R, then Rscript preprocessing/3_combat.R",
+  cat("Next: set COMBAT_BATCH_VAR in preprocessing/config.R, then Rscript preprocessing/3_combat.R",
       DATA_SOURCE, "\n")
 }

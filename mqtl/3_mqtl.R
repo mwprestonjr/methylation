@@ -24,6 +24,7 @@ library(rtracklayer)                      # liftOver
 
 # Load shared configuration and array profiles
 source("config.R")
+source("mqtl/config.R")
 source("R/mqtl_setup.R")
 source("R/array_profiles.R")
 

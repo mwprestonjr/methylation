@@ -20,6 +20,7 @@ library(maxprobes)
 
 # Load shared configuration, array profiles and QC helpers
 source("config.R")
+source("qc/config.R")
 source("R/array_profiles.R")
 source("R/idat_qc.R")
 source("R/density.R")
@@ -60,7 +61,7 @@ cat("Array:", array_type, "- annotation:", profile$anno_pkg, "\n")
 
 # Per-sample detection (pOOBAH), intensity, dye bias and beta distribution
 # (sesame_qc_stats in R/idat_qc.R). Only runs when USE_SESAME_QC is TRUE
-# (see config.R), and then its detection rate is used for sample removal in 3d.
+# (see qc/config.R), and then its detection rate is used for sample removal in 3d.
 if (USE_SESAME_QC) {
   cat("\nComputing SeSAMe QC stats \n")
   sesame_qc <- bind_cols(
@@ -143,7 +144,7 @@ mean_detP <- colMeans(detP)
 cat("Mean detection p-value range:",
     round(min(mean_detP), 6), "to", round(max(mean_detP), 6), "\n")
 
-# Identify failed samples, using the method chosen by USE_SESAME_QC in config.R
+# Identify failed samples, using the method chosen by USE_SESAME_QC in qc/config.R
 # (sesame_qc rows are in the same order as targets and the rgSet columns)
 if (USE_SESAME_QC) {
   failed_samples <- sesame_qc$frac_dt_cg < SESAME_MIN_FRAC_DETECTED

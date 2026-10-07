@@ -19,6 +19,7 @@ library(FlowSorted.Blood.EPIC)    # IDOL reference: IDOLOptimizedCpGs(.compTable
 
 # Load shared configuration and array profiles
 source("config.R")
+source("preprocessing/config.R")
 source("R/array_profiles.R")
 
 # --- 1. Load QC-passed sample sheet ------------------------------------------
