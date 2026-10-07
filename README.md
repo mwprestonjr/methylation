@@ -21,6 +21,7 @@ The pipeline is run with `make` from the repository root, with the
 make qc            SOURCE=ppmi_p140                # sample sheet, QC/normalization, QC plots
 make preprocessing SOURCE=ppmi_p140                # cell counts, sources of variation, ComBat
 make mqtl          SOURCE=ppmi_p140 ANCESTRY=EUR   # sample map, genotypes, cis-mQTLs
+make mqtl-tune     SOURCE=ppmi_p140 ANCESTRY=EUR   # choose the number of latent PCs (after mqtl)
 make all           SOURCE=ppmi_p140                # qc and preprocessing
 make all           SOURCE=ppmi_p140 ANCESTRY=EUR   # qc, preprocessing, and mqtl
 make                                               # usage
@@ -31,6 +32,7 @@ make                                               # usage
 | `qc` | `qc/01_build_sample_sheet_<source>.R` → `qc/02_qc.R` → `qc/03_qc_plots.R` |
 | `preprocessing` | `1_cell_counts.R` → `2_variation_sources.R raw` → `3_combat.R` → `2_variation_sources.R combat` |
 | `mqtl` | `1_mqtl_sample_map.R` → `2_mqtl_genotypes.sh` (plink2) → `3_mqtl.R` |
+| `mqtl-tune` | `tune_meth_pcs.R` (needs the `mqtl` genotype outputs) |
 
 Each target needs the outputs of the one before it (`preprocessing` reads the
 `qc` outputs, `mqtl` reads the `preprocessing` outputs), so run them in this
@@ -55,6 +57,13 @@ order the first time; afterwards a target can be rerun on its own.
   ```bash
   nohup make all SOURCE=ppmi_p140 > logs/make_ppmi_p140.log 2>&1 < /dev/null &
   ```
+- **Latent PCs for mQTL**: `3_mqtl.R` adjusts for `MQTL_N_METH_PCS` latent
+  methylation PCs (unmeasured variation), whose best number depends on the
+  data. `make mqtl-tune` reruns the cis scan for each value in
+  `MQTL_N_METH_PCS_GRID` (`mqtl/config.R`), saves the counts of CpGs with a
+  cis-mQTL (`tune_meth_pcs.csv`) and plots them (`mqtl_tune_meth_pcs.png`).
+  Choose the value where the curve levels off, set `MQTL_N_METH_PCS`, and
+  rerun `3_mqtl.R`. Tune each data source/ancestry separately.
 - **mQTL genotypes**: the genotype files must be readable from the VM (e.g. the
   `gp2_release12` bucket mounted at `~/gp2_release12` with gcsfuse), and
   `GENO_SOURCE` in `mqtl/config.R` must match them (`nba` for the NBA array files).
@@ -96,6 +105,8 @@ logs/             step logs from make
 - `R/density.R` - beta density curves and the density outlier score
 - `R/mvalues.R` - caps infinite M values (betas of exactly 0 or 1)
 - `R/mqtl_setup.R` - mQTL ancestry argument, genotype file and output paths
+- `R/mqtl_functions.R` - mQTL steps shared by `3_mqtl.R` and `tune_meth_pcs.R`
+  (data preparation, latent PCs, per-chromosome cis scan)
 - `qc/01_build_sample_sheet_*.R` - one per data source; each writes the same
   columns (`SAMPLE_SHEET_COLUMNS` in `config.R`) so later scripts don't depend
   on the source
