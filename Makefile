@@ -1,45 +1,33 @@
-# =============================================================================
-# Methylation pipeline
-# Usage:   make <target> SOURCE=<data source>    (data sources: see config.R)
-#   make qc            SOURCE=ppmi_p140   sample sheet, QC/normalization, QC plots
-#   make preprocessing SOURCE=ppmi_p140   cell counts, sources of variation, ComBat
-#   make all           SOURCE=ppmi_p140   qc then preprocessing
-# Run from the repository root with the methylation conda environment active.
-# Each step logs to logs/<step>_<SOURCE>_<timestamp>.log, and make stops at the
-# first step that fails. For long runs:
-#   nohup make all SOURCE=ppmi_p140 > logs/make_ppmi_p140.log 2>&1 &
-# =============================================================================
+SOURCES  := ppmi_p140 psomagen
+SOURCE   ?=
+ANCESTRY ?=
+RSCRIPT  ?= Rscript
+LOG_DIR  := logs
+STAMP    := $(shell date +%m%d_%H%M)
+comma    := ,
+MQTL_LOG  = mqtl_$(subst $(comma),_,$(ANCESTRY))
 
-SOURCES := ppmi_p140 psomagen
-SOURCE  ?=
-RSCRIPT ?= Rscript
-LOG_DIR := logs
-STAMP   := $(shell date +%m%d_%H%M)
-
-# Sample sheet script for each data source
 SHEET_ppmi_p140 := qc/01_build_sample_sheet_ppmi.R
 SHEET_psomagen  := qc/01_build_sample_sheet_psomagen.R
 
-# Run an R script with the data source (and any extra arguments) and log it.
-# Scripts are run through source(), which reads the whole file before running
-# it, so editing a script during a run can't break the run
-#   $(call run_r,<script>,<log name>,<extra arguments>)
 define run_r
 	@echo "[$$(date +%H:%M)] $(1) $(SOURCE) $(3) -> $(LOG_DIR)/$(2)_$(SOURCE)_$(STAMP).log"
 	@$(RSCRIPT) -e 'source("$(1)")' $(SOURCE) $(3) > $(LOG_DIR)/$(2)_$(SOURCE)_$(STAMP).log 2>&1
 endef
 
-# Steps run one after another, never in parallel (they share memory-heavy data)
 .NOTPARALLEL:
-.PHONY: help all qc preprocessing check-source
+.PHONY: help all qc preprocessing mqtl check-source check-ancestry
 
-# Default target: show usage instead of starting a run
 help:
-	@sed -n '2,10p' Makefile | sed 's/^# \{0,1\}//'
+	@echo "Usage: make <qc|preprocessing|mqtl|all> SOURCE=<$(subst $() ,|,$(SOURCES))> [ANCESTRY=<label>]"
+	@echo "See 'Running the pipeline' in README.md"
 
 all: check-source
 	@$(MAKE) --no-print-directory qc SOURCE=$(SOURCE) STAMP=$(STAMP)
 	@$(MAKE) --no-print-directory preprocessing SOURCE=$(SOURCE) STAMP=$(STAMP)
+	@if [ -n "$(ANCESTRY)" ]; then \
+	  $(MAKE) --no-print-directory mqtl SOURCE=$(SOURCE) ANCESTRY=$(ANCESTRY) STAMP=$(STAMP); \
+	fi
 
 qc: check-source
 	$(call run_r,$(SHEET_$(SOURCE)),01_sample_sheet)
@@ -53,6 +41,18 @@ preprocessing: check-source
 	$(call run_r,preprocessing/3_combat.R,3_combat)
 	$(call run_r,preprocessing/2_variation_sources.R,2_variation_sources_combat,combat)
 	@echo "[$$(date +%H:%M)] preprocessing complete for $(SOURCE)"
+
+mqtl: check-source check-ancestry
+	$(call run_r,mqtl/1_mqtl_sample_map.R,$(MQTL_LOG)_1_sample_map,$(ANCESTRY))
+	@echo "[$$(date +%H:%M)] mqtl/2_mqtl_genotypes.sh $(SOURCE) $(ANCESTRY) -> $(LOG_DIR)/$(MQTL_LOG)_2_genotypes_$(SOURCE)_$(STAMP).log"
+	@bash mqtl/2_mqtl_genotypes.sh $(SOURCE) $(ANCESTRY) > $(LOG_DIR)/$(MQTL_LOG)_2_genotypes_$(SOURCE)_$(STAMP).log 2>&1
+	$(call run_r,mqtl/3_mqtl.R,$(MQTL_LOG)_3_mqtl,$(ANCESTRY))
+	@echo "[$$(date +%H:%M)] mqtl complete for $(SOURCE) $(ANCESTRY)"
+
+check-ancestry:
+	@if [ -z "$(ANCESTRY)" ]; then \
+	  echo "Set ANCESTRY for the mQTL analysis (e.g. make mqtl SOURCE=psomagen ANCESTRY=AFR)"; exit 1; \
+	fi
 
 check-source:
 	@if [ -z "$(filter $(SOURCE),$(SOURCES))" ] || [ -z "$(SOURCE)" ]; then \

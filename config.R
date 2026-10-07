@@ -77,7 +77,7 @@ DIR_FIGURES <- file.path(DIR_OUTPUT, "figures")
 dir.create(DIR_RESULTS, showWarnings = FALSE, recursive = TRUE)
 dir.create(DIR_FIGURES, showWarnings = FALSE, recursive = TRUE)
 
-# --- Analysis parameters -----------------------------------------------------
+# --- Quality Control (qc/ scripts) -----------------------------------------------------
 
 # QC thresholds
 DETECTION_P_THRESHOLD <- 0.01   # Max detection p-value
@@ -108,7 +108,6 @@ FIG_WIDTH  <- 6    # inches
 FIG_HEIGHT <- 4  # inches
 FIG_RES    <- 300  # dpi
 
-# --- Pipeline outputs --------------------------------------------------------
 # These files are created by one script and read by the next
 SAMPLE_SHEET        <- file.path(DIR_RESULTS, "sample_sheet.csv")
 SAMPLE_SHEET_QC     <- file.path(DIR_RESULTS, "sample_sheet_qc_passed.csv")
@@ -145,3 +144,25 @@ COMBAT_PROTECT   <- c("phenotype")
 
 COMBAT_MVALS       <- file.path(DIR_RESULTS, "combat_mVals.rds")
 SAMPLE_SHEET_FINAL <- file.path(DIR_RESULTS, "sample_sheet_final.csv")  # QC-passed sheet + cell proportions
+
+
+# --- mQTL analysis (mqtl/ scripts) ----------------------------------
+
+GP2_MASTER_KEY  <- "/mnt/output/metadata/R12_CURRENT_master_key_nba_wgs_20_06_2026.txt"
+
+# GP2 genotypes (plink2 .pgen/.pvar/.psam, hg38), one file set per ancestry:
+# folder, and file prefix with {ANCESTRY} where the ancestry label goes.
+# R/mqtl_setup.R fills in the ancestry given to the mqtl/ scripts to make
+# GENO_PFILE, e.g. .../gwas/GP2_r12_final_samples_related_removed_AFR
+GENO_PFILE_PATH <- "/home/Michael/gp2_release12/gwas"
+GENO_PFILE_NAME <- "GP2_r12_final_samples_related_removed_{ANCESTRY}"
+GENO_SOURCE     <- "nba"    # "wgs" or "nba" (imputed) - column in master key
+
+# hg19 -> hg38 liftover for EPIC probe coordinates
+CHAIN_HG19_HG38 <- "/mnt/expansion_working/chain_files/hg19ToHg38.chain.gz"
+
+MQTL_CIS_WINDOW <- 1e6     # +/- 1 Mb around each CpG
+MQTL_MAF        <- 0.05
+MQTL_N_GENO_PCS <- 5
+MQTL_N_METH_PCS <- 10      # latent methylation factors; tune (see 05c)
+MQTL_P_CIS_SAVE <- 1e-5    # nominal p-value threshold to write cis results
