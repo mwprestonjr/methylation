@@ -19,9 +19,6 @@ GENO_PFILE_PATH <- "/home/Michael/gp2_release12/gwas"
 GENO_PFILE_NAME <- "GP2_r12_final_samples_related_removed_{ANCESTRY}"
 GENO_SOURCE     <- "nba"    # "wgs" or "nba" (imputed) - column in master key; must match the genotype files
 
-# hg19 -> hg38 liftover for arrays whose annotation is hg19 (EPICv1)
-CHAIN_HG19_HG38 <- "/mnt/expansion_working/chain_files/hg19ToHg38.chain.gz"
-
 MQTL_CIS_WINDOW <- 1e6     # +/- 1 Mb around each CpG
 
 # Genotype QC (2_mqtl_genotypes.sh, plink2), applied to the samples in the
@@ -45,3 +42,8 @@ MQTL_N_METH_PCS_GRID <- c(0, 5, 10, 15, 20, 30)   # values tested by mqtl/tune_m
 MQTL_FDR        <- 0.05
 MQTL_P_STRICT   <- 1e-8
 MQTL_P_CIS_SAVE <- 1e-3    # pairs with p below this are saved; must be looser than the FDR threshold (3_mqtl.R checks)
+
+# Plots (4_mqtl_plots.R)
+MQTL_PLOT_N_TOP      <- 12      # top mQTLs (distinct loci) shown as genotype boxplots
+MQTL_PLOT_N_REGIONAL <- 4       # top loci shown as regional plots
+MQTL_PLOT_REGION     <- 250e3   # regional plot window: +/- 250 kb around the CpG
