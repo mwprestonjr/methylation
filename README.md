@@ -21,7 +21,6 @@ The pipeline is run with `make` from the repository root, with the
 make qc            SOURCE=ppmi_p140                # sample sheet, QC/normalization, QC plots
 make preprocessing SOURCE=ppmi_p140                # cell counts, sources of variation, ComBat
 make mqtl          SOURCE=ppmi_p140 ANCESTRY=EUR   # sample map, genotypes, cis-mQTLs
-make mqtl-tune     SOURCE=ppmi_p140 ANCESTRY=EUR   # choose the number of latent PCs (after mqtl)
 make all           SOURCE=ppmi_p140                # qc and preprocessing
 make all           SOURCE=ppmi_p140 ANCESTRY=EUR   # qc, preprocessing, and mqtl
 make                                               # usage
@@ -30,9 +29,8 @@ make                                               # usage
 | Target | Steps, in order |
 |---|---|
 | `qc` | `qc/01_build_sample_sheet_<source>.R` → `qc/02_qc.R` → `qc/03_qc_plots.R` |
-| `preprocessing` | `1_cell_counts.R` → `2_variation_sources.R raw` → `3_combat.R` → `2_variation_sources.R combat` |
-| `mqtl` | `1_mqtl_sample_map.R` → `2_mqtl_genotypes.sh` (plink2) → `3_mqtl.R` |
-| `mqtl-tune` | `tune_meth_pcs.R` (needs the `mqtl` genotype outputs) |
+| `preprocessing` | `1_cell_counts.R` → `2_variation_sources.R raw` → `3_combat.R` → `2_variation_sources.R combat` → `4_cpg_annotation.R` |
+| `mqtl` | `1_mqtl_sample_map.R` → `2_mqtl_genotypes.sh` (plink2) → `3_mqtl.R` → `4_mqtl_plots.R` |
 
 Each target needs the outputs of the one before it (`preprocessing` reads the
 `qc` outputs, `mqtl` reads the `preprocessing` outputs), so run them in this
@@ -59,11 +57,20 @@ order the first time; afterwards a target can be rerun on its own.
   ```
 - **Latent PCs for mQTL**: `3_mqtl.R` adjusts for `MQTL_N_METH_PCS` latent
   methylation PCs (unmeasured variation), whose best number depends on the
-  data. `make mqtl-tune` reruns the cis scan for each value in
+  data. `Rscript mqtl/tune_meth_pcs.R <source> <ancestry>` (after `make mqtl`)
+  reruns the cis scan for each value in
   `MQTL_N_METH_PCS_GRID` (`mqtl/config.R`), saves the counts of CpGs with a
   cis-mQTL (`tune_meth_pcs.csv`) and plots them (`mqtl_tune_meth_pcs.png`).
   Choose the value where the curve levels off, set `MQTL_N_METH_PCS`, and
   rerun `3_mqtl.R`. Tune each data source/ancestry separately.
+- **mQTL figures** (`4_mqtl_plots.R`, in `<results>/mqtl/<ANCESTRY>/`): genotype
+  boxplots of the top hits at distinct loci, regional (LocusZoom-style) plots
+  of the top loci, genome-wide lead p-values, lead SNP-CpG distance, effect
+  size by allele frequency, mQTLs by CpG island context, and
+  `mqtl_top_hits.csv`. Numbers of hits shown and the regional window are set in
+  `mqtl/config.R` (`MQTL_PLOT_*`). Regional plots recompute every SNP in the
+  window with the step 3 model, since step 3 saves only pairs with
+  p < `MQTL_P_CIS_SAVE`
 - **mQTL genotypes**: the genotype files must be readable from the VM (e.g. the
   `gp2_release12` bucket mounted at `~/gp2_release12` with gcsfuse), and
   `GENO_SOURCE` in `mqtl/config.R` must match them (`nba` for the NBA array files).
@@ -104,6 +111,11 @@ logs/             step logs from make
   bead count probes)
 - `R/density.R` - beta density curves and the density outlier score
 - `R/mvalues.R` - caps infinite M values (betas of exactly 0 or 1)
+- `R/cpg_annotation.R` - hg38 positions of array probes (liftover for EPICv1)
+  and their GENCODE gene annotation; `preprocessing/4_cpg_annotation.R` saves
+  the table for every probe on the array (`CPG_ANNOTATION`): gene, gene type,
+  promoter / gene body / intergenic (nearest gene), distances to the gene and
+  its TSS, and CpG island context
 - `R/mqtl_setup.R` - mQTL ancestry argument, genotype file and output paths
 - `R/mqtl_functions.R` - mQTL steps shared by `3_mqtl.R` and `tune_meth_pcs.R`
   (data preparation, latent PCs, per-chromosome cis scan)
@@ -124,13 +136,14 @@ script sources `config.R` first, then its own module's config:
 - **`config.R`** (repository root): anything more than one module uses - the
   data sources (input paths, `DIR_OUTPUT`), figure settings, the files one
   module writes and another reads (e.g. `SAMPLE_SHEET_QC`, `COMBAT_MVALS`,
-  `SAMPLE_SHEET_FINAL`), `SAMPLE_SHEET_COLUMNS` and `CELL_TYPES`
+  `SAMPLE_SHEET_FINAL`, `CPG_ANNOTATION`), `SAMPLE_SHEET_COLUMNS`, `CELL_TYPES`,
+  and the hg19->hg38 liftover chain and GENCODE gene settings
 - **`qc/config.R`**: QC thresholds, SeSAMe and density outlier settings, the
   R12 master key used for the sample sheets
 - **`preprocessing/config.R`**: sources-of-variation settings, the ComBat batch
   variable (per data source) and protected variables
-- **`mqtl/config.R`**: genotype files and source, liftover chain, cis window
-  and model settings
+- **`mqtl/config.R`**: genotype files and source, genotype QC, cis window,
+  model, multiple-testing and plot settings
 
 Rule of thumb: a setting read by another module belongs in `config.R`;
 otherwise it goes in its module's config.

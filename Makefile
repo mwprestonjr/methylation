@@ -16,10 +16,10 @@ define run_r
 endef
 
 .NOTPARALLEL:
-.PHONY: help all qc preprocessing mqtl mqtl-tune check-source check-ancestry
+.PHONY: help all qc preprocessing mqtl check-source check-ancestry
 
 help:
-	@echo "Usage: make <qc|preprocessing|mqtl|mqtl-tune|all> SOURCE=<$(subst $() ,|,$(SOURCES))> [ANCESTRY=<label>]"
+	@echo "Usage: make <qc|preprocessing|mqtl|all> SOURCE=<$(subst $() ,|,$(SOURCES))> [ANCESTRY=<label>]"
 	@echo "See 'Running the pipeline' in README.md"
 
 all: check-source
@@ -48,11 +48,8 @@ mqtl: check-source check-ancestry
 	@echo "[$$(date +%H:%M)] mqtl/2_mqtl_genotypes.sh $(SOURCE) $(ANCESTRY) -> $(LOG_DIR)/$(MQTL_LOG)_2_genotypes_$(SOURCE)_$(STAMP).log"
 	@bash mqtl/2_mqtl_genotypes.sh $(SOURCE) $(ANCESTRY) > $(LOG_DIR)/$(MQTL_LOG)_2_genotypes_$(SOURCE)_$(STAMP).log 2>&1
 	$(call run_r,mqtl/3_mqtl.R,$(MQTL_LOG)_3_mqtl,$(ANCESTRY))
+	$(call run_r,mqtl/4_mqtl_plots.R,$(MQTL_LOG)_4_plots,$(ANCESTRY))
 	@echo "[$$(date +%H:%M)] mqtl complete for $(SOURCE) $(ANCESTRY)"
-
-mqtl-tune: check-source check-ancestry
-	$(call run_r,mqtl/tune_meth_pcs.R,$(MQTL_LOG)_tune_meth_pcs,$(ANCESTRY))
-	@echo "[$$(date +%H:%M)] latent PC sweep complete for $(SOURCE) $(ANCESTRY)"
 
 check-ancestry:
 	@if [ -z "$(ANCESTRY)" ]; then \
