@@ -5,8 +5,8 @@
 # Description: Steps shared by mqtl/3_mqtl.R and mqtl/tune_meth_pcs.R:
 #              loading and preparing the methylation data and covariates,
 #              latent methylation PCs, and the per-chromosome cis-mQTL scan.
-#              Needs config.R, mqtl/config.R, R/mqtl_setup.R and
-#              R/array_profiles.R sourced first, and minfi, tidyverse,
+#              Needs config.R, mqtl/config.R, R/mqtl_setup.R,
+#              R/array_profiles.R and R/cpg_annotation.R sourced first, and minfi, tidyverse,
 #              data.table, matrixStats, MatrixEQTL, GenomicRanges, rtracklayer
 #              loaded
 # =============================================================================
@@ -58,47 +58,15 @@ mqtl_prepare <- function() {
   stopifnot(all(covs$meth_id == colnames(meth)))
 
   # --- CpG positions (hg38) ---
-  # Probe coordinates from the array's annotation (one array type per data source)
+  # From the array's annotation, lifted over for hg19 arrays (cpg_positions_hg38
+  # in R/cpg_annotation.R); one array type per data source
   array_type <- unique(targets$Array)
   stopifnot(length(array_type) == 1, array_type %in% names(ARRAY_PROFILES))
   profile <- ARRAY_PROFILES[[array_type]]
-  library(profile$anno_pkg, character.only = TRUE)
   cat("\nArray:", array_type, "- annotation:", profile$anno_pkg, "(", profile$genome, ")\n")
 
-  ann <- getAnnotation(get(profile$anno_pkg))
-  ann <- ann[rownames(meth), c("chr", "pos")]
-  gr  <- GRanges(ann$chr, IRanges(ann$pos, width = 1), cpg = rownames(ann))
-
-  if (profile$genome == "hg38") {
-    gr_hg38 <- gr
-  } else if (profile$genome == "hg19") {
-    cat("Lifting probe coordinates hg19 -> hg38...\n")
-    # import.chain() needs an uncompressed file
-    chain_file <- tempfile(fileext = ".chain")
-    system2("gunzip", c("-c", CHAIN_HG19_HG38), stdout = chain_file)
-    chain   <- import.chain(chain_file)
-    gr_hg38 <- liftOver(gr, chain)
-
-    # Keep probes that map to exactly one hg38 position on the same chromosome
-    # (compared without the "chr" prefix: the chain file may name chromosomes
-    # "19" where the annotation has "chr19")
-    one_hit  <- lengths(gr_hg38) == 1
-    gr_hg38  <- unlist(gr_hg38[one_hit])
-    same_chr <- sub("^chr", "", as.character(seqnames(gr_hg38))) ==
-                sub("^chr", "", ann$chr[one_hit])
-    gr_hg38  <- gr_hg38[same_chr]
-    cat("Probes lifted:", length(gr_hg38), "of", nrow(meth),
-        "(dropped", nrow(meth) - length(gr_hg38), ")\n")
-  } else {
-    stop("No hg38 conversion for genome build ", profile$genome)
-  }
-
-  cpg_pos <- data.frame(
-    geneid = gr_hg38$cpg,
-    chr    = sub("^chr", "", as.character(seqnames(gr_hg38))),
-    left   = start(gr_hg38),
-    right  = start(gr_hg38)
-  )
+  pos     <- cpg_positions_hg38(rownames(meth), profile, CHAIN_HG19_HG38)
+  cpg_pos <- data.frame(geneid = pos$cpg, chr = pos$chr, left = pos$pos, right = pos$pos)
   meth <- meth[cpg_pos$geneid, ]
 
   # --- Methylation transform ---

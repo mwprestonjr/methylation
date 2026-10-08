@@ -27,6 +27,7 @@ source("config.R")
 source("mqtl/config.R")
 source("R/mqtl_setup.R")
 source("R/array_profiles.R")
+source("R/cpg_annotation.R")
 source("R/mqtl_functions.R")
 
 # --- 1. Methylation data and known covariates (R/mqtl_functions.R) -----------

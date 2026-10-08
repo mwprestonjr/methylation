@@ -29,6 +29,7 @@ source("config.R")
 source("mqtl/config.R")
 source("R/mqtl_setup.R")
 source("R/array_profiles.R")
+source("R/cpg_annotation.R")
 source("R/mqtl_functions.R")
 
 # Values to test: third command-line argument (comma-separated), or

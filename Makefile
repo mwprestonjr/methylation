@@ -40,6 +40,7 @@ preprocessing: check-source
 	$(call run_r,preprocessing/2_variation_sources.R,2_variation_sources_raw,raw)
 	$(call run_r,preprocessing/3_combat.R,3_combat)
 	$(call run_r,preprocessing/2_variation_sources.R,2_variation_sources_combat,combat)
+	$(call run_r,preprocessing/4_cpg_annotation.R,4_cpg_annotation)
 	@echo "[$$(date +%H:%M)] preprocessing complete for $(SOURCE)"
 
 mqtl: check-source check-ancestry
