@@ -23,7 +23,9 @@ BiocManager::install(c(
     "sva",                    # ComBat batch correction
     "FlowSorted.Blood.EPIC",  # cell type deconvolution
     "sesame",                 # per-sample QC stats (Script 02)
-    "sesameData"              # sesame manifests and reference data
+    "sesameData",             # sesame manifests and reference data
+    "methylclock",            # epigenetic clocks (clocks/)
+    "methylclockData"         # clock coefficients (clocks/)
 ), ask = FALSE)
 
 # Download sesame reference data (manifests, idat signatures) into the
@@ -40,3 +42,6 @@ install.packages("remotes")
 
 # GitHub package for cross-reactive probe removal - depends on minfiData
 remotes::install_github("markgene/maxprobes")
+
+# GitHub package for DunedinPACE pace of aging (clocks/)
+remotes::install_github("danbelsky/DunedinPACE")
