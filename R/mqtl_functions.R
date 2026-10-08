@@ -244,7 +244,7 @@ summarise_cis <- function(cis_results, n_tests, cpg_pos) {
 # MQTL_P_CIS_SAVE: significant pairs were discarded and the counts are
 # incomplete. Then this warns and returns NA; loosen MQTL_P_CIS_SAVE in
 # mqtl/config.R. cis is the cis table from summarise_cis()
-fdr_threshold <- function(cis, fdr = 0.05, label = "") {
+fdr_threshold <- function(cis, fdr = MQTL_FDR, label = "") {
   passing <- cis$fdr < fdr
   if (nrow(cis) > 0 && all(passing)) {
     warning(label, "every saved pair passes FDR < ", fdr, ": the FDR threshold is ",

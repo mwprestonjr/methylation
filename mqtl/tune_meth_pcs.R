@@ -83,20 +83,20 @@ tuning <- bind_rows(lapply(as.character(grid), function(k) {
   fdr_p <- fdr_threshold(summ$cis, label = paste0(k, " PCs: "))
   data.frame(n_meth_pcs       = as.integer(k),
              n_covariates     = ncol(prep$known_covs) + as.integer(k),
-             cpgs_fdr05       = sum(lead$fdr < 0.05),
-             cpgs_p1e8        = sum(lead$p < 1e-8),
-             fdr05_p_threshold = fdr_p)
+             cpgs_fdr         = sum(lead$fdr < MQTL_FDR),
+             cpgs_p_strict    = sum(lead$p < MQTL_P_STRICT),
+             fdr_p_threshold  = fdr_p)
 }))
 tuning$n_tests <- n_tests
 
 # Where the curve levels off: the smallest value within 1% of the maximum
-# number of CpGs at FDR < 5%
-best      <- tuning$n_meth_pcs[which.max(tuning$cpgs_fdr05)]
-plateau   <- min(tuning$n_meth_pcs[tuning$cpgs_fdr05 >= 0.99 * max(tuning$cpgs_fdr05)])
+# number of CpGs at FDR < MQTL_FDR
+best      <- tuning$n_meth_pcs[which.max(tuning$cpgs_fdr)]
+plateau   <- min(tuning$n_meth_pcs[tuning$cpgs_fdr >= 0.99 * max(tuning$cpgs_fdr)])
 tuning$most_cpgs   <- tuning$n_meth_pcs == best
 tuning$plateau_99  <- tuning$n_meth_pcs == plateau
 print(tuning)
-cat("\nMost CpGs at FDR < 5%:", best, "PCs | smallest value within 1% of that:",
+cat("\nMost CpGs at FDR <", MQTL_FDR, ":", best, "PCs | smallest value within 1% of that:",
     plateau, "PCs | current MQTL_N_METH_PCS:", MQTL_N_METH_PCS, "\n")
 
 # --- 4. Save and plot --------------------------------------------------------
@@ -104,8 +104,11 @@ cat("\nMost CpGs at FDR < 5%:", best, "PCs | smallest value within 1% of that:",
 write.csv(tuning, file.path(MQTL_DIR, "tune_meth_pcs.csv"), row.names = FALSE)
 
 plot_df <- tuning %>%
-  select(n_meth_pcs, `FDR < 5%` = cpgs_fdr05, `p < 1e-8` = cpgs_p1e8) %>%
-  pivot_longer(-n_meth_pcs, names_to = "threshold", values_to = "cpgs")
+  select(n_meth_pcs, cpgs_fdr, cpgs_p_strict) %>%
+  pivot_longer(-n_meth_pcs, names_to = "threshold", values_to = "cpgs") %>%
+  mutate(threshold = recode(threshold,
+                            cpgs_fdr      = paste0("FDR < ", MQTL_FDR),
+                            cpgs_p_strict = paste0("p < ", MQTL_P_STRICT)))
 
 png(file.path(MQTL_DIR, "mqtl_tune_meth_pcs.png"),
     width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
