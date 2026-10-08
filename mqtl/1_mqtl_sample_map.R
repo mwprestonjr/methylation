@@ -19,7 +19,6 @@ source("config.R")
 source("mqtl/config.R")
 source("R/mqtl_setup.R")
 
-dir.create(MQTL_DIR, showWarnings = FALSE, recursive = TRUE)
 
 # --- 1. Load methylation sample sheet ----------------------------------------
 

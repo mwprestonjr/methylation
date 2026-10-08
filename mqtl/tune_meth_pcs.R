@@ -9,7 +9,8 @@
 #              are nested, so they are computed once, and each chromosome's
 #              genotypes are loaded once for all values. Needs steps 1 and 2
 #              (sample map, genotypes); doesn't change the step 3 outputs.
-#              Saves tune_meth_pcs.csv and mqtl_tune_meth_pcs.png in MQTL_DIR
+#              Saves tune_meth_pcs.csv in MQTL_DIR and mqtl_tune_meth_pcs.png
+#              in MQTL_FIG_DIR
 # Usage:       Rscript mqtl/tune_meth_pcs.R <data source> <ancestry> [values]
 #              e.g. psomagen AFR, or psomagen AFR 0,5,10 to override the grid
 # =============================================================================
@@ -111,7 +112,7 @@ plot_df <- tuning %>%
                             cpgs_fdr      = paste0("FDR < ", MQTL_FDR),
                             cpgs_p_strict = paste0("p < ", MQTL_P_STRICT)))
 
-png(file.path(MQTL_DIR, "mqtl_tune_meth_pcs.png"),
+png(file.path(MQTL_FIG_DIR, "mqtl_tune_meth_pcs.png"),
     width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
 print(ggplot(plot_df, aes(n_meth_pcs, cpgs, colour = threshold)) +
   geom_vline(xintercept = MQTL_N_METH_PCS, linetype = "dashed", colour = "grey50") +
@@ -127,5 +128,5 @@ print(ggplot(plot_df, aes(n_meth_pcs, cpgs, colour = threshold)) +
 dev.off()
 
 cat("\nResults saved to:", file.path(MQTL_DIR, "tune_meth_pcs.csv"), "\n")
-cat("Plot saved to:", file.path(MQTL_DIR, "mqtl_tune_meth_pcs.png"), "\n")
+cat("Plot saved to:", file.path(MQTL_FIG_DIR, "mqtl_tune_meth_pcs.png"), "\n")
 cat("Set MQTL_N_METH_PCS in mqtl/config.R, then rerun 3_mqtl.R\n")

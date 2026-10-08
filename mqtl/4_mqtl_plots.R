@@ -3,7 +3,7 @@
 # Author: GP2 Subtypes and Mechanisms - M.P.
 # Date: Oct 8, 2026
 # Description: Figures and a top-hits table from the step 3 results, saved in
-#              MQTL_DIR:
+#              MQTL_FIG_DIR (figures) and MQTL_DIR (table):
 #   mqtl_02_top_genotype_boxplots  methylation (beta) by genotype for the
 #                                  MQTL_PLOT_N_TOP strongest mQTLs at distinct loci
 #   mqtl_03_regional               -log10 p of every SNP within
@@ -36,7 +36,7 @@ source("R/array_profiles.R")
 source("R/cpg_annotation.R")
 source("R/mqtl_functions.R")
 
-fig      <- function(name) file.path(MQTL_DIR, paste0("mqtl_", name, ".png"))
+fig      <- function(name) file.path(MQTL_FIG_DIR, paste0("mqtl_", name, ".png"))
 geno_dir <- file.path(MQTL_DIR, "genotypes")
 fdr_label    <- paste0("FDR < ", MQTL_FDR)
 strict_label <- paste0("p < ", MQTL_P_STRICT)
@@ -312,4 +312,4 @@ top_out <- top[, .(cpg, gene, gene_type, gene_region, distance_to_gene, island,
                    chr, cpg_pos, snp, counted, alt, maf,
                    distance, beta, t_stat, p, fdr)]
 fwrite(top_out, file.path(MQTL_DIR, "mqtl_top_hits.csv"))
-cat("\nFigures and mqtl_top_hits.csv saved to:", MQTL_DIR, "\n")
+cat("\nFigures saved to:", MQTL_FIG_DIR, "\nmqtl_top_hits.csv saved to:", MQTL_DIR, "\n")

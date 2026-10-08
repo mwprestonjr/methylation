@@ -40,7 +40,8 @@ order the first time; afterwards a target can be rerun on its own.
 - **`ANCESTRY`** (`mqtl` only): the GP2 master key ancestry label to analyse,
   e.g. `EUR` for PPMI or `AFR` for Psomagen. The genotype file for that
   ancestry is found from `GENO_PFILE_PATH`/`GENO_PFILE_NAME` in `mqtl/config.R`, and
-  results go to `<results>/mqtl/<ANCESTRY>/`. Several labels (`EUR,AJ`) only
+  results go to `<DIR_OUTPUT>/<ANCESTRY>/results/` and figures to
+  `<DIR_OUTPUT>/<ANCESTRY>/figures/`. Several labels (`EUR,AJ`) only
   work if one genotype file covers all of them.
 - **Logs**: each step writes `logs/<step>_<SOURCE>_<timestamp>.log`; all steps
   of one run share the timestamp. `make` itself prints one line per step.
@@ -63,7 +64,7 @@ order the first time; afterwards a target can be rerun on its own.
   cis-mQTL (`tune_meth_pcs.csv`) and plots them (`mqtl_tune_meth_pcs.png`).
   Choose the value where the curve levels off, set `MQTL_N_METH_PCS`, and
   rerun `3_mqtl.R`. Tune each data source/ancestry separately.
-- **mQTL figures** (`4_mqtl_plots.R`, in `<results>/mqtl/<ANCESTRY>/`): genotype
+- **mQTL figures** (`4_mqtl_plots.R`, in `<DIR_OUTPUT>/<ANCESTRY>/figures/`): genotype
   boxplots of the top hits at distinct loci, regional (LocusZoom-style) plots
   of the top loci, genome-wide lead p-values, lead SNP-CpG distance, effect
   size by allele frequency, mQTLs by CpG island context, and
@@ -148,8 +149,16 @@ script sources `config.R` first, then its own module's config:
 Rule of thumb: a setting read by another module belongs in `config.R`;
 otherwise it goes in its module's config.
 
-Outputs go to `<DIR_OUTPUT>/results` and `<DIR_OUTPUT>/figures` for each data
-source (`DIR_OUTPUT` in `config.R`).
+Output folders, per data source (`DIR_OUTPUT` in `config.R`):
+
+```
+<DIR_OUTPUT>/                e.g. /mnt/output/methylation/psomagen
+├── results/                 qc + preprocessing, all samples (mVals, ComBat M values, sample sheets, cpg_annotation, ...)
+├── figures/                 qc + preprocessing figures
+└── <ANCESTRY>/              analyses within one genetic ancestry (mQTL)
+    ├── results/             sample map, genotypes/, cis-mQTL results, summary, top hits, tuning table
+    └── figures/             mQTL figures
+```
 
 ## Setup
 ```bash

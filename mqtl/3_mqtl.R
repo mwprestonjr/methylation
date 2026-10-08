@@ -90,7 +90,7 @@ if (!is.na(fdr_p)) {
 }
 
 # Distance of lead SNPs from their CpG
-png(file.path(MQTL_DIR, "mqtl_01_lead_snp_distance.png"),
+png(file.path(MQTL_FIG_DIR, "mqtl_01_lead_snp_distance.png"),
     width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
 print(ggplot(sig_fdr, aes(x = distance / 1e3)) +
   geom_histogram(bins = 100) +
@@ -121,4 +121,4 @@ mqtl_summary <- data.frame(
 write.csv(mqtl_summary, file.path(MQTL_DIR, "mqtl_summary.csv"), row.names = FALSE)
 
 cat("\nmQTL step 3 complete!\n")
-cat("Outputs saved to:", MQTL_DIR, "\n")
+cat("Results saved to:", MQTL_DIR, "| figure to:", MQTL_FIG_DIR, "\n")
