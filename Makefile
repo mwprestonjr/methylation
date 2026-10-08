@@ -16,15 +16,16 @@ define run_r
 endef
 
 .NOTPARALLEL:
-.PHONY: help all qc preprocessing mqtl check-source check-ancestry
+.PHONY: help all qc preprocessing clocks mqtl check-source check-ancestry
 
 help:
-	@echo "Usage: make <qc|preprocessing|mqtl|all> SOURCE=<$(subst $() ,|,$(SOURCES))> [ANCESTRY=<label>]"
+	@echo "Usage: make <qc|preprocessing|clocks|mqtl|all> SOURCE=<$(subst $() ,|,$(SOURCES))> [ANCESTRY=<label>]"
 	@echo "See 'Running the pipeline' in README.md"
 
 all: check-source
 	@$(MAKE) --no-print-directory qc SOURCE=$(SOURCE) STAMP=$(STAMP)
 	@$(MAKE) --no-print-directory preprocessing SOURCE=$(SOURCE) STAMP=$(STAMP)
+	@$(MAKE) --no-print-directory clocks SOURCE=$(SOURCE) STAMP=$(STAMP)
 	@if [ -n "$(ANCESTRY)" ]; then \
 	  $(MAKE) --no-print-directory mqtl SOURCE=$(SOURCE) ANCESTRY=$(ANCESTRY) STAMP=$(STAMP); \
 	fi
@@ -41,6 +42,12 @@ preprocessing: check-source
 	$(call run_r,preprocessing/3_combat.R,3_combat)
 	$(call run_r,preprocessing/2_variation_sources.R,2_variation_sources_combat,combat)
 	@echo "[$$(date +%H:%M)] preprocessing complete for $(SOURCE)"
+
+clocks: check-source
+	$(call run_r,clocks/1_estimate.R,clocks_1_estimate)
+	$(call run_r,clocks/2_compare.R,clocks_2_compare)
+	$(call run_r,clocks/3_plots.R,clocks_3_plots)
+	@echo "[$$(date +%H:%M)] clocks complete for $(SOURCE)"
 
 mqtl: check-source check-ancestry
 	$(call run_r,mqtl/1_mqtl_sample_map.R,$(MQTL_LOG)_1_sample_map,$(ANCESTRY))
