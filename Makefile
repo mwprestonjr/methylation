@@ -41,6 +41,7 @@ preprocessing: check-source
 	$(call run_r,preprocessing/2_variation_sources.R,2_variation_sources_raw,raw)
 	$(call run_r,preprocessing/3_combat.R,3_combat)
 	$(call run_r,preprocessing/2_variation_sources.R,2_variation_sources_combat,combat)
+	$(call run_r,preprocessing/4_cpg_annotation.R,4_cpg_annotation)
 	@echo "[$$(date +%H:%M)] preprocessing complete for $(SOURCE)"
 
 clocks: check-source
@@ -55,6 +56,7 @@ mqtl: check-source check-ancestry
 	@echo "[$$(date +%H:%M)] mqtl/2_mqtl_genotypes.sh $(SOURCE) $(ANCESTRY) -> $(LOG_DIR)/$(MQTL_LOG)_2_genotypes_$(SOURCE)_$(STAMP).log"
 	@bash mqtl/2_mqtl_genotypes.sh $(SOURCE) $(ANCESTRY) > $(LOG_DIR)/$(MQTL_LOG)_2_genotypes_$(SOURCE)_$(STAMP).log 2>&1
 	$(call run_r,mqtl/3_mqtl.R,$(MQTL_LOG)_3_mqtl,$(ANCESTRY))
+	$(call run_r,mqtl/4_mqtl_plots.R,$(MQTL_LOG)_4_plots,$(ANCESTRY))
 	@echo "[$$(date +%H:%M)] mqtl complete for $(SOURCE) $(ANCESTRY)"
 
 check-ancestry:

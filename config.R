@@ -99,3 +99,18 @@ SAMPLE_SHEET_FINAL <- file.path(DIR_RESULTS, "sample_sheet_final.csv")  # QC-pas
 # Blood cell types estimated with the IDOL reference (FlowSorted.Blood.EPIC);
 # their proportions are covariates in later analyses
 CELL_TYPES <- c("CD8T", "CD4T", "NK", "Bcell", "Mono", "Neu")
+
+# --- CpG positions and gene annotation (R/cpg_annotation.R) ------------------
+
+# hg19 -> hg38 liftover for arrays whose annotation is hg19 (EPICv1)
+CHAIN_HG19_HG38 <- "/mnt/expansion_working/chain_files/hg19ToHg38.chain.gz"
+
+# GENCODE genes (GRCh38) for annotating CpGs, built once per data source by
+# preprocessing/4_cpg_annotation.R into CPG_ANNOTATION: the gene whose
+# promoter (PROMOTER_UPSTREAM bp upstream to PROMOTER_DOWNSTREAM bp downstream
+# of the transcription start) or body contains the CpG, else the nearest gene
+GENCODE_GTF         <- "/mnt/expansion_working/methylation/gencode.v50.annotation.gtf.gz"
+GENE_TYPES          <- c("protein_coding", "lncRNA")
+PROMOTER_UPSTREAM   <- 1500
+PROMOTER_DOWNSTREAM <- 500
+CPG_ANNOTATION      <- file.path(DIR_RESULTS, "cpg_annotation.csv")

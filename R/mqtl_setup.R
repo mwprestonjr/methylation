@@ -11,8 +11,9 @@
 #              with a single genotype file covering all of them (see
 #              GENO_PFILE_NAME in mqtl/config.R)
 #              In an interactive session, set MQTL_ANCESTRY before sourcing.
-#              Each ancestry (set) gets its own output folder, so runs for
-#              different ancestries don't overwrite each other.
+#              Each ancestry (set) gets its own results/ and figures/
+#              folders (<DIR_OUTPUT>/<ancestry>/), so runs for different
+#              ancestries don't overwrite each other.
 #              Source after config.R and mqtl/config.R
 # =============================================================================
 
@@ -34,6 +35,13 @@ if (grepl("{ANCESTRY}", GENO_PFILE_NAME, fixed = TRUE) && length(MQTL_ANCESTRY) 
 GENO_PFILE <- file.path(GENO_PFILE_PATH,
                         gsub("{ANCESTRY}", MQTL_ANCESTRY, GENO_PFILE_NAME, fixed = TRUE))
 
-MQTL_DIR        <- file.path(DIR_RESULTS, "mqtl", paste(MQTL_ANCESTRY, collapse = "_"))
+# Outputs per ancestry, next to the dataset-wide results/ and figures/:
+#   <DIR_OUTPUT>/<ancestry>/results  sample map, genotypes, cis-mQTL results
+#   <DIR_OUTPUT>/<ancestry>/figures  mQTL figures
+MQTL_DIR     <- file.path(DIR_OUTPUT, paste(MQTL_ANCESTRY, collapse = "_"), "results")
+MQTL_FIG_DIR <- file.path(DIR_OUTPUT, paste(MQTL_ANCESTRY, collapse = "_"), "figures")
+dir.create(MQTL_DIR,     showWarnings = FALSE, recursive = TRUE)
+dir.create(MQTL_FIG_DIR, showWarnings = FALSE, recursive = TRUE)
+
 MQTL_SAMPLE_MAP <- file.path(MQTL_DIR, "mqtl_sample_map.csv")
 MQTL_KEEP       <- file.path(MQTL_DIR, "mqtl_keep.txt")

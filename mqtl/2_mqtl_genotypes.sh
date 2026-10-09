@@ -17,16 +17,13 @@ set -euo pipefail
 DATA_SOURCE=${1:?"usage: bash mqtl/2_mqtl_genotypes.sh <data source> <ancestry>"}
 ANCESTRY=${2:?"usage: bash mqtl/2_mqtl_genotypes.sh <data source> <ancestry>"}
 
-# Pull paths/parameters from the shared R config so there is one source of
-# truth (capture.output hides the config's own messages)
-cfg() {
-  Rscript -e "DATA_SOURCE <- '${DATA_SOURCE}'; MQTL_ANCESTRY <- '${ANCESTRY}'; invisible(capture.output(suppressMessages({source('config.R'); source('mqtl/config.R'); source('R/mqtl_setup.R')}))); cat($1)"
-}
-GENO_PFILE=$(cfg GENO_PFILE)
-MQTL_DIR=$(cfg MQTL_DIR)
-KEEP=$(cfg MQTL_KEEP)
-MAF=$(cfg MQTL_MAF)
-NPCS=$(cfg MQTL_N_GENO_PCS)
+# Pull paths/parameters from the R configs so there is one source of truth.
+# One R call prints them as shell assignments (VAR='value'), which are then
+# evaluated; capture.output hides the configs' own messages
+CFG_VARS="GENO_PFILE MQTL_DIR MQTL_KEEP MQTL_MAF MQTL_GENO_MISSING MQTL_SAMPLE_MISSING MQTL_HWE_P MQTL_PRUNE_WINDOW MQTL_PRUNE_R2 MQTL_N_GENO_PCS"
+CFG=$(Rscript -e "DATA_SOURCE <- '${DATA_SOURCE}'; MQTL_ANCESTRY <- '${ANCESTRY}'; invisible(capture.output(suppressMessages({source('config.R'); source('mqtl/config.R'); source('R/mqtl_setup.R')}))); for (v in strsplit('${CFG_VARS}', ' ')[[1]]) cat(v, '=', shQuote(as.character(get(v))), '\\n', sep = '')")
+eval "${CFG}"
+KEEP="${MQTL_KEEP}"
 THREADS=${THREADS:-8}
 
 GENO_DIR="${MQTL_DIR}/genotypes"
@@ -40,18 +37,25 @@ fi
 echo "Keep file: ${KEEP} ($(($(wc -l < "${KEEP}") - 1)) samples)"
 
 # --- 1. Sample subset + variant QC ------------------------------------------
-# Variants are renamed chr:pos:ref:alt; the NBA array assays some variants more
-# than once, so --rm-dup keeps one copy of each (removed IDs: geno_qc.rmdup.list)
+# Thresholds (--geno, --mind, --maf, --hwe) are set in mqtl/config.R. The other
+# options are fixed because later steps rely on them:
+#   --autosome, --max-alleles 2: genotypes are coded as 0/1/2 copies of one
+#     allele, which needs two copies of each chromosome and two alleles
+#   --snps-only just-acgt: single-base A/C/G/T variants only, so alleles match
+#     simply across datasets
+#   --set-all-var-ids: variants are named chr:pos:ref:alt (hg38); the NBA array
+#     assays some variants more than once, so --rm-dup keeps one copy of each
+#     (removed IDs: geno_qc.rmdup.list)
 echo "Running variant QC..."
 plink2 --pfile "${GENO_PFILE}" \
   --keep "${KEEP}" \
   --autosome \
   --snps-only just-acgt \
   --max-alleles 2 \
-  --geno 0.05 \
-  --mind 0.05 \
-  --maf "${MAF}" \
-  --hwe 1e-6 \
+  --geno "${MQTL_GENO_MISSING}" \
+  --mind "${MQTL_SAMPLE_MISSING}" \
+  --maf "${MQTL_MAF}" \
+  --hwe "${MQTL_HWE_P}" \
   --set-all-var-ids '@:#:$r:$a' --new-id-max-allele-len 50 \
   --rm-dup force-first list \
   --threads "${THREADS}" \
@@ -61,13 +65,13 @@ plink2 --pfile "${GENO_PFILE}" \
 # --- 2. Genotype PCs (population structure covariates) ----------------------
 echo "Computing genotype PCs..."
 plink2 --pfile "${GENO_DIR}/geno_qc" \
-  --indep-pairwise 500kb 0.1 \
+  --indep-pairwise "${MQTL_PRUNE_WINDOW}" "${MQTL_PRUNE_R2}" \
   --threads "${THREADS}" \
   --out "${GENO_DIR}/ld_prune"
 
 plink2 --pfile "${GENO_DIR}/geno_qc" \
   --extract "${GENO_DIR}/ld_prune.prune.in" \
-  --pca "${NPCS}" \
+  --pca "${MQTL_N_GENO_PCS}" \
   --threads "${THREADS}" \
   --out "${GENO_DIR}/geno_pcs"
 
