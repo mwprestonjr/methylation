@@ -20,7 +20,7 @@ The pipeline is run with `make` from the repository root, with the
 ```bash
 make qc            SOURCE=ppmi_p140                # sample sheet, QC/normalization, QC plots
 make preprocessing SOURCE=ppmi_p140                # cell counts, sources of variation, ComBat
-make clocks        SOURCE=ppmi_p140                # epigenetic clocks, age acceleration, group comparison
+make clocks        SOURCE=ppmi_p140                # epigenetic clocks, age acceleration, group comparison, clinical traits
 make mqtl          SOURCE=ppmi_p140 ANCESTRY=EUR   # sample map, genotypes, cis-mQTLs
 make all           SOURCE=ppmi_p140                # qc, preprocessing, and clocks
 make all           SOURCE=ppmi_p140 ANCESTRY=EUR   # qc, preprocessing, clocks, and mqtl
@@ -31,7 +31,7 @@ make                                               # usage
 |---|---|
 | `qc` | `qc/01_build_sample_sheet_<source>.R` → `qc/02_qc.R` → `qc/03_qc_plots.R` |
 | `preprocessing` | `1_cell_counts.R` → `2_variation_sources.R raw` → `3_combat.R` → `2_variation_sources.R combat` |
-| `clocks` | `1_estimate.R` → `2_compare.R` → `3_plots.R` |
+| `clocks` | `1_estimate.R` → `2_compare.R` → `3_associations.R` → `4_plots.R` |
 | `mqtl` | `1_mqtl_sample_map.R` → `2_mqtl_genotypes.sh` (plink2) → `3_mqtl.R` |
 
 Each target needs the outputs of the one before it (`preprocessing` reads the
@@ -87,7 +87,7 @@ Makefile          runs the pipeline (see above)
 R/                shared functions, sourced by the scripts
 qc/               sample sheets, QC and normalization, QC plots (settings: qc/config.R)
 preprocessing/    cell counts, sources of variation, ComBat batch correction (settings: preprocessing/config.R)
-clocks/           epigenetic clocks, age acceleration, group comparison (settings: clocks/config.R)
+clocks/           epigenetic clocks, age acceleration, group comparison, clinical traits (settings: clocks/config.R)
 mqtl/             cis-mQTL mapping against GP2 genotypes (settings: mqtl/config.R)
 logs/             step logs from make
 ```
@@ -99,6 +99,8 @@ logs/             step logs from make
 - `R/density.R` - beta density curves and the density outlier score
 - `R/mvalues.R` - caps infinite M values (betas of exactly 0 or 1)
 - `R/mqtl_setup.R` - mQTL ancestry argument, genotype file and output paths
+- `R/clock_models.R` - clock association models (group comparison, clinical traits)
+- `R/clock_traits.R` - clinical traits at the blood draw for the clock associations
 - `qc/01_build_sample_sheet_*.R` - one per data source; each writes the same
   columns (`SAMPLE_SHEET_COLUMNS` in `config.R`) so later scripts don't depend
   on the source
@@ -123,7 +125,8 @@ script sources `config.R` first, then its own module's config:
 - **`preprocessing/config.R`**: sources-of-variation settings, the ComBat batch
   variable (per data source) and protected variables
 - **`clocks/config.R`**: clock coverage thresholds, the clocks used per data
-  source, the groups compared and the model covariates
+  source, the groups compared, the model covariates, and the clinical traits
+  tested in cases
 - **`mqtl/config.R`**: genotype files and source, liftover chain, cis window
   and model settings
 
@@ -135,15 +138,17 @@ source (`DIR_OUTPUT` in `config.R`).
 
 ## Epigenetic clocks
 
-`make clocks` estimates epigenetic age and pace of aging per sample and
-compares them between diagnosis groups. Each data source is run separately:
+`make clocks` estimates epigenetic age and pace of aging per sample, compares
+them between diagnosis groups, and tests their association with clinical
+traits in cases. Each data source is run separately:
 the arrays measure different CpGs, so clock ages aren't comparable across them.
 
-| Step | What it does | Outputs (`<DIR_OUTPUT>/results`) |
+| Step | What it does | Outputs (`<DIR_OUTPUT>/results/clocks`) |
 |---|---|---|
 | `1_estimate.R` | Collapses EPICv2 probe names to 450K/EPIC IDs (replicate probes averaged), records each clock's CpG coverage, estimates the methylclock clocks and DunedinPACE from normalized, unfiltered betas, and computes age acceleration | `clock_age_acceleration.csv` (per sample, with the model covariates), `clock_accuracy.csv`, `clock_cpg_coverage.csv` |
 | `2_compare.R` | Compares age acceleration and DunedinPACE between `CLOCK_GROUPS` (first = reference), adjusted for `CLOCK_COVARIATES` | `clock_acceleration_by_diagnosis.csv` |
-| `3_plots.R` | Clock vs chronological age (with r, median absolute error, CpG coverage), acceleration by phenotype, adjusted group differences | `<DIR_OUTPUT>/figures/clock_*.png` |
+| `3_associations.R` | In cases (`CLOCK_CASE_GROUP`), tests each trait in `CLOCK_TRAITS` against age acceleration and DunedinPACE, adjusted for `CLOCK_COVARIATES`; FDR across all tests | `clock_case_traits.csv`, `clock_trait_summary.csv`, `clock_trait_associations.csv` |
+| `4_plots.R` | Clock vs chronological age (with r, median absolute error, CpG coverage), acceleration by phenotype, adjusted group differences, clinical trait effects | `<DIR_OUTPUT>/figures/clocks/clock_*.png` |
 
 - **Age acceleration** is the residual of clock age regressed on chronological
   age, in years. DunedinPACE is already a rate (years of aging per year; 1 =
@@ -155,7 +160,16 @@ the arrays measure different CpGs, so clock ages aren't comparable across them.
   covariates with one value among the compared samples are left out.
 - **Skipped comparison**: if a group in `CLOCK_GROUPS` has fewer than
   `CLOCK_MIN_GROUP_N` samples (e.g. Psomagen has no controls), `2_compare.R`
-  skips the comparison and `3_plots.R` skips the group effects figure.
+  skips the comparison and `4_plots.R` skips the group effects figure.
+- **Clinical traits** (`3_associations.R`): measured at the blood draw, from
+  the R12 master key (disease duration, family history), the GP2 extended
+  clinical data (`CLINICAL_DATA`; first of `CLOCK_CLINICAL_VISIT_MONTHS` with
+  a value, e.g. PPMI MoCA comes from screening), and for PPMI the monogenic PD
+  gene (`PPMI_GENETICS`). Each trait is its own model; continuous traits are
+  per unit (the figure shows per SD), categorical ones vs `ref`. Traits with
+  fewer than `CLOCK_MIN_TRAIT_N` cases are skipped and categorical levels with
+  fewer than `CLOCK_MIN_LEVEL_N` are left out; `clock_trait_summary.csv` says
+  which and why. Psomagen's clinical data only has Hoehn & Yahr.
 - **Chronological age**: PPMI uses age at the baseline visit (PPMI
   `Age_at_visit`, falling back to enrollment age); Psomagen uses R12
   `age_at_sample_collection`, the age at the GP2 DNA draw that was arrayed.

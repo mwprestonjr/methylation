@@ -9,7 +9,7 @@
 #              of aging (DunedinPACE), and computes age acceleration vs
 #              chronological age. Saves per-sample estimates with the model
 #              covariates for 2_compare.R, and the accuracy and coverage
-#              tables for 3_plots.R. Needs the preprocessing outputs (cell
+#              tables for 4_plots.R. Needs the preprocessing outputs (cell
 #              proportions, ComBat batch in SAMPLE_SHEET_FINAL)
 # Usage:       Rscript clocks/1_estimate.R <data source>   (see config.R)
 # =============================================================================
@@ -168,5 +168,5 @@ write.csv(clock_coverage, CLOCK_COVERAGE, row.names = FALSE)
 cat("Clock estimates, age acceleration, accuracy and coverage saved\n")
 
 cat("\nMethylation clock estimation complete!\n")
-cat("Results saved to:", DIR_RESULTS, "\n")
+cat("Results saved to:", CLOCK_DIR_RESULTS, "\n")
 cat("Next: Rscript clocks/2_compare.R", DATA_SOURCE, "\n")

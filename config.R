@@ -75,6 +75,11 @@ FIG_RES    <- 300  # dpi
 
 # --- Files and settings shared between modules -------------------------------
 
+# GP2 R12 master key: GP2ID, sex, race, phenotype, ages (sample collection,
+# onset, diagnosis), family history. Used for the sample sheets (qc/01
+# scripts) and clinical traits (clocks/)
+FNAME_METADATA <- "/mnt/output/metadata/INTERNAL_USE_ONLY_master_key_release12_final_vwb.csv"
+
 # Columns every qc/01 script writes to the sample sheet (source-specific
 # extras may follow). Later scripts only rely on these
 SAMPLE_SHEET_COLUMNS <- c("GP2ID", "GP2sampleID", "clinical_id",

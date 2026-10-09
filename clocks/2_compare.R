@@ -5,7 +5,7 @@
 # Description: Compares age acceleration and DunedinPACE between CLOCK_GROUPS
 #              (first = reference), adjusted for CLOCK_COVARIATES
 #              (clocks/config.R), using the per-sample table from
-#              1_estimate.R. Saves the group effect per outcome for 3_plots.R.
+#              1_estimate.R. Saves the group effect per outcome for 4_plots.R.
 #              Skipped if a group has fewer than CLOCK_MIN_GROUP_N samples
 #              (e.g. a data source without controls)
 # Usage:       Rscript clocks/2_compare.R <data source>   (see config.R)
@@ -17,6 +17,7 @@ library(tidyverse)
 # Load shared configuration
 source("config.R")
 source("clocks/config.R")
+source("R/clock_models.R")
 
 # combat_batch is a label (plate or chip number), not a number
 clocks <- read.csv(CLOCK_RESULTS,
@@ -42,10 +43,7 @@ if (all(group_sizes >= CLOCK_MIN_GROUP_N)) {
   # within this subset, and adjusting in the same model handles an age
   # difference between the groups correctly. Categorical covariates with a
   # single value here can't be estimated and are left out
-  usable <- CLOCK_COVARIATES[sapply(CLOCK_COVARIATES, function(v) {
-    x <- clocks_cmp[[v]]
-    is.numeric(x) || length(unique(na.omit(x))) > 1
-  })]
+  usable <- usable_covariates(clocks_cmp, CLOCK_COVARIATES)
   covars <- paste(c("phenotype", usable), collapse = " + ")
   cat("\nAge acceleration,", group_label, "- model: <outcome> ~", covars, "\n")
   if (length(setdiff(CLOCK_COVARIATES, usable))) {
@@ -54,23 +52,16 @@ if (all(group_sizes >= CLOCK_MIN_GROUP_N)) {
 
   # Outcomes not estimated on this array (all NA, below the coverage
   # threshold) are left out
-  outcomes <- c(paste0("AgeAccel_", ADULT_CLOCKS), "DunedinPACE")
-  outcomes <- outcomes[sapply(outcomes, function(o) any(!is.na(clocks_cmp[[o]])))]
-
-  group_effects <- map_dfr(outcomes, function(outcome) {
-    fit <- lm(as.formula(paste(outcome, "~", covars)), data = clocks_cmp)
-    broom::tidy(fit, conf.int = TRUE) %>%
-      filter(str_starts(term, "phenotype")) %>%
-      mutate(outcome = outcome, n = nobs(fit), covariates = covars, .before = 1)
-  })
+  outcomes <- estimated_outcomes(clocks_cmp, c(paste0("AgeAccel_", ADULT_CLOCKS), "DunedinPACE"))
+  group_effects <- fit_predictor(clocks_cmp, outcomes, "phenotype", usable)
   print(group_effects %>% select(outcome, n, term, estimate, std.error, p.value))
   write.csv(group_effects, CLOCK_GROUP_EFFECTS, row.names = FALSE)
   cat("Group comparison saved to:", CLOCK_GROUP_EFFECTS, "\n")
 } else {
   cat("\nFewer than", CLOCK_MIN_GROUP_N, "samples in a group; skipping",
       group_label, "comparison\n")
-  # Remove results from an earlier run so 3_plots.R doesn't draw stale ones
+  # Remove results from an earlier run so 4_plots.R doesn't draw stale ones
   if (file.exists(CLOCK_GROUP_EFFECTS)) file.remove(CLOCK_GROUP_EFFECTS)
 }
 
-cat("\nNext: Rscript clocks/3_plots.R", DATA_SOURCE, "\n")
+cat("\nNext: Rscript clocks/3_associations.R", DATA_SOURCE, "\n")

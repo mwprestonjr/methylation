@@ -46,7 +46,8 @@ preprocessing: check-source
 clocks: check-source
 	$(call run_r,clocks/1_estimate.R,clocks_1_estimate)
 	$(call run_r,clocks/2_compare.R,clocks_2_compare)
-	$(call run_r,clocks/3_plots.R,clocks_3_plots)
+	$(call run_r,clocks/3_associations.R,clocks_3_associations)
+	$(call run_r,clocks/4_plots.R,clocks_4_plots)
 	@echo "[$$(date +%H:%M)] clocks complete for $(SOURCE)"
 
 mqtl: check-source check-ancestry

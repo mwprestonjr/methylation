@@ -5,12 +5,6 @@
 # Description: Settings used only by the qc/ scripts. Source after config.R
 # =============================================================================
 
-# --- Inputs ------------------------------------------------------------------
-
-# GP2 R12 master key: GP2ID, sex, race, phenotype, age at sample collection
-# (sample sheets, qc/01 scripts)
-FNAME_METADATA <- "/mnt/output/metadata/INTERNAL_USE_ONLY_master_key_release12_final_vwb.csv"
-
 # --- Sample and probe QC thresholds (qc/02_qc.R) -----------------------------
 
 DETECTION_P_THRESHOLD <- 0.01   # Max detection p-value
