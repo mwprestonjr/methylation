@@ -33,7 +33,7 @@ cat("Input:", VARIATION_INPUT, "M values\n")
 
 # --- 1. Load data ------------------------------------------------------------
 
-mvals_file <- if (VARIATION_INPUT == "raw") file.path(DIR_RESULTS, "mVals.rds") else COMBAT_MVALS
+mvals_file <- if (VARIATION_INPUT == "raw") MVALS_QC else COMBAT_MVALS
 cat("Loading", mvals_file, "...\n")
 mVals <- cap_infinite_m(readRDS(mvals_file))   # see R/mvalues.R
 cat("M values dimensions:", dim(mVals), "\n")
@@ -107,7 +107,7 @@ print(signif(assoc_p, 2))
 
 # --- 3. Figures --------------------------------------------------------------
 
-fig <- function(name) file.path(DIR_FIGURES, paste0("variation_", VARIATION_INPUT, "_", name, ".png"))
+fig <- function(name) file.path(DIR_FIGURES_PREPROCESSING, paste0("variation_", VARIATION_INPUT, "_", name, ".png"))
 input_label <- if (VARIATION_INPUT == "raw") "before ComBat" else "after ComBat"
 
 # 3a. SVD association heatmap (-log10 p, binned as in champ.SVD)
@@ -163,7 +163,7 @@ for (v in intersect(c("Chip", "Batch", "phenotype", "sex", "age"), variables)) {
   print(p)
   dev.off()
 }
-cat("Figures saved to:", DIR_FIGURES, "\n")
+cat("Figures saved to:", DIR_FIGURES_PREPROCESSING, "\n")
 
 # --- 4. Tests of age, sex and batch against phenotype ------------------------
 
@@ -194,12 +194,12 @@ saveRDS(list(input         = VARIATION_INPUT,
              assoc_p       = assoc_p,
              variables     = variables,
              confounders   = confounders),
-        file.path(DIR_RESULTS, paste0("variation_sources_", VARIATION_INPUT, ".rds")))
+        file.path(DIR_RESULTS_PREPROCESSING, paste0("variation_sources_", VARIATION_INPUT, ".rds")))
 write.csv(data.frame(variable = rownames(assoc_p), assoc_p, row.names = NULL),
-          file.path(DIR_RESULTS, paste0("variation_svd_pvalues_", VARIATION_INPUT, ".csv")),
+          file.path(DIR_RESULTS_PREPROCESSING, paste0("variation_svd_pvalues_", VARIATION_INPUT, ".csv")),
           row.names = FALSE)
-write.csv(confounders, file.path(DIR_RESULTS, "confounder_summary.csv"), row.names = FALSE)
-cat("\nResults saved to:", DIR_RESULTS, "\n")
+write.csv(confounders, file.path(DIR_RESULTS_PREPROCESSING, "confounder_summary.csv"), row.names = FALSE)
+cat("\nResults saved to:", DIR_RESULTS_PREPROCESSING, "\n")
 if (VARIATION_INPUT == "raw") {
   cat("Next: set COMBAT_BATCH_VAR in preprocessing/config.R, then Rscript preprocessing/3_combat.R",
       DATA_SOURCE, "\n")

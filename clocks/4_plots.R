@@ -3,7 +3,7 @@
 # Author: GP2 Subtypes and Mechanisms - M.P.
 # Date: Oct 8, 2026
 # Description: Figures from the tables saved by 1_estimate.R,
-#              2_compare.R and 3_associations.R, in CLOCK_DIR_FIGURES:
+#              2_compare.R and 3_associations.R, in DIR_FIGURES_CLOCKS:
 #   clock_01_vs_chronological_age   clock age vs chronological age per clock,
 #                                   with r, median absolute error and the
 #                                   share of the clock's CpGs on the array
@@ -25,7 +25,7 @@ library(tidyverse)
 source("config.R")
 source("clocks/config.R")
 
-fig <- function(name) file.path(CLOCK_DIR_FIGURES, paste0("clock_", name, ".png"))
+fig <- function(name) file.path(DIR_FIGURES_CLOCKS, paste0("clock_", name, ".png"))
 
 clocks         <- read.csv(CLOCK_RESULTS)
 clock_accuracy <- read.csv(CLOCK_ACCURACY)
@@ -149,4 +149,4 @@ if (file.exists(CLOCK_TRAIT_EFFECTS)) {
       "); skipping the trait effects plot\n")
 }
 
-cat("\nClock plots saved to:", CLOCK_DIR_FIGURES, "\n")
+cat("\nClock plots saved to:", DIR_FIGURES_CLOCKS, "\n")

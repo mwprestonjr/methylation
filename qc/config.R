@@ -32,5 +32,5 @@ DETP_CHUNK_SIZE <- 50
 
 # --- Files passed between qc/ scripts ----------------------------------------
 
-SAMPLE_SHEET   <- file.path(DIR_RESULTS, "sample_sheet.csv")      # 01 -> 02
-QC_FIGURE_DATA <- file.path(DIR_RESULTS, "qc_figure_data.rds")    # 02 -> 03: everything needed to redraw the QC figures
+SAMPLE_SHEET   <- file.path(DIR_RESULTS_QC, "sample_sheet.csv")      # 01 -> 02
+QC_FIGURE_DATA <- file.path(DIR_RESULTS_QC, "qc_figure_data.rds")    # 02 -> 03: everything needed to redraw the QC figures

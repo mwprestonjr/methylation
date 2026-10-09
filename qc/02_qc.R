@@ -68,7 +68,7 @@ if (USE_SESAME_QC) {
     targets %>% select(GP2ID, GP2sampleID, clinical_id, Dataset, Sentrix_ID, Sentrix_Position),
     sesame_qc_stats(targets$Basename)
   )
-  write.csv(sesame_qc, file.path(DIR_RESULTS, "qc_sesame_stats.csv"), row.names = FALSE)
+  write.csv(sesame_qc, file.path(DIR_RESULTS_QC, "qc_sesame_stats.csv"), row.names = FALSE)
   cat("SeSAMe QC stats saved\n")
 } else {
   cat("\nSkipping SeSAMe QC (USE_SESAME_QC = FALSE); using minfi detection p-values\n")
@@ -267,7 +267,7 @@ if (REMOVE_DENSITY_OUTLIERS && length(density_outliers) > 0) {
   cat("Samples remaining:", ncol(mSetSq), "\n")
 }
 
-write.csv(qc_metrics, file.path(DIR_RESULTS, "qc_sample_metrics.csv"), row.names = FALSE)
+write.csv(qc_metrics, file.path(DIR_RESULTS_QC, "qc_sample_metrics.csv"), row.names = FALSE)
 cat("Per-sample QC metrics saved\n")
 
 # Save unfiltered betas for methylation clocks (clock CpGs may be removed by probe filters)
@@ -345,8 +345,8 @@ cat("M values dimensions:", dim(mVals), "\n")
 cat("Beta values dimensions:", dim(bVals), "\n")
 
 # Save as RDS
-saveRDS(mVals, file.path(DIR_RESULTS, "mVals.rds"))
-saveRDS(bVals, file.path(DIR_RESULTS, "bVals.rds"))
+saveRDS(mVals, MVALS_QC)
+saveRDS(bVals, file.path(DIR_RESULTS_QC, "bVals.rds"))
 cat("M and Beta values saved\n")
 
 # Save normalized filtered GenomicRatioSet
@@ -384,9 +384,9 @@ qc_summary <- data.frame(
 )
 
 write.csv(qc_summary,
-          file.path(DIR_RESULTS, "qc_summary.csv"),
+          file.path(DIR_RESULTS_QC, "qc_summary.csv"),
           row.names = FALSE)
 
 cat("QC summary saved\n")
 cat("\nQC pipeline complete!\n")
-cat("Results saved to:", DIR_RESULTS, "\n")
+cat("Results saved to:", DIR_RESULTS_QC, "\n")

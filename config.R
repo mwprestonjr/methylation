@@ -60,11 +60,23 @@ if (DATA_SOURCE == "psomagen") {
   DIR_OUTPUT <- "/mnt/output/methylation/psomagen"
 }
 
-# Define/create derivative paths
+# Output folders: one per module under results/ and figures/
+#   <DIR_OUTPUT>/results/<module>   (mqtl: one subfolder per ancestry,
+#   <DIR_OUTPUT>/figures/<module>    set in R/mqtl_setup.R)
 DIR_RESULTS <- file.path(DIR_OUTPUT, "results")
 DIR_FIGURES <- file.path(DIR_OUTPUT, "figures")
-dir.create(DIR_RESULTS, showWarnings = FALSE, recursive = TRUE)
-dir.create(DIR_FIGURES, showWarnings = FALSE, recursive = TRUE)
+DIR_RESULTS_QC            <- file.path(DIR_RESULTS, "qc")
+DIR_RESULTS_PREPROCESSING <- file.path(DIR_RESULTS, "preprocessing")
+DIR_RESULTS_CLOCKS        <- file.path(DIR_RESULTS, "clocks")
+DIR_RESULTS_MQTL          <- file.path(DIR_RESULTS, "mqtl")
+DIR_FIGURES_QC            <- file.path(DIR_FIGURES, "qc")
+DIR_FIGURES_PREPROCESSING <- file.path(DIR_FIGURES, "preprocessing")
+DIR_FIGURES_CLOCKS        <- file.path(DIR_FIGURES, "clocks")
+DIR_FIGURES_MQTL          <- file.path(DIR_FIGURES, "mqtl")
+for (d in c(DIR_RESULTS_QC, DIR_RESULTS_PREPROCESSING, DIR_RESULTS_CLOCKS, DIR_RESULTS_MQTL,
+            DIR_FIGURES_QC, DIR_FIGURES_PREPROCESSING, DIR_FIGURES_CLOCKS, DIR_FIGURES_MQTL)) {
+  dir.create(d, showWarnings = FALSE, recursive = TRUE)
+}
 
 # --- Figures -----------------------------------------------------------------
 
@@ -87,14 +99,15 @@ SAMPLE_SHEET_COLUMNS <- c("GP2ID", "GP2sampleID", "clinical_id",
                           "Dataset", "Batch", "Sentrix_ID", "Sentrix_Position",
                           "Array", "Basename")
 
-# qc/ outputs (also <DIR_RESULTS>/mVals.rds and bVals.rds)
-SAMPLE_SHEET_QC  <- file.path(DIR_RESULTS, "sample_sheet_qc_passed.csv")
-MSET_QC          <- file.path(DIR_RESULTS, "mSetSq_qc_passed.rds")
-BVALS_UNFILTERED <- file.path(DIR_RESULTS, "bVals_unfiltered.rds")  # normalized, no probe filtering (for clocks)
+# qc/ outputs (also <DIR_RESULTS_QC>/bVals.rds)
+SAMPLE_SHEET_QC  <- file.path(DIR_RESULTS_QC, "sample_sheet_qc_passed.csv")
+MSET_QC          <- file.path(DIR_RESULTS_QC, "mSetSq_qc_passed.rds")
+MVALS_QC         <- file.path(DIR_RESULTS_QC, "mVals.rds")              # normalized, probe-filtered
+BVALS_UNFILTERED <- file.path(DIR_RESULTS_QC, "bVals_unfiltered.rds")  # normalized, no probe filtering (for clocks)
 
-# preprocessing/ outputs
-COMBAT_MVALS       <- file.path(DIR_RESULTS, "combat_mVals.rds")
-SAMPLE_SHEET_FINAL <- file.path(DIR_RESULTS, "sample_sheet_final.csv")  # QC-passed sheet + cell proportions
+# preprocessing/ outputs (also CPG_ANNOTATION below)
+COMBAT_MVALS       <- file.path(DIR_RESULTS_PREPROCESSING, "combat_mVals.rds")
+SAMPLE_SHEET_FINAL <- file.path(DIR_RESULTS_PREPROCESSING, "sample_sheet_final.csv")  # QC-passed sheet + cell proportions
 
 # Blood cell types estimated with the IDOL reference (FlowSorted.Blood.EPIC);
 # their proportions are covariates in later analyses
@@ -113,4 +126,4 @@ GENCODE_GTF         <- "/mnt/expansion_working/methylation/gencode.v50.annotatio
 GENE_TYPES          <- c("protein_coding", "lncRNA")
 PROMOTER_UPSTREAM   <- 1500
 PROMOTER_DOWNSTREAM <- 500
-CPG_ANNOTATION      <- file.path(DIR_RESULTS, "cpg_annotation.csv")
+CPG_ANNOTATION      <- file.path(DIR_RESULTS_PREPROCESSING, "cpg_annotation.csv")

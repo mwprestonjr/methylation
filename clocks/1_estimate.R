@@ -168,5 +168,5 @@ write.csv(clock_coverage, CLOCK_COVERAGE, row.names = FALSE)
 cat("Clock estimates, age acceleration, accuracy and coverage saved\n")
 
 cat("\nMethylation clock estimation complete!\n")
-cat("Results saved to:", CLOCK_DIR_RESULTS, "\n")
+cat("Results saved to:", DIR_RESULTS_CLOCKS, "\n")
 cat("Next: Rscript clocks/2_compare.R", DATA_SOURCE, "\n")

@@ -3,7 +3,7 @@
 # Author: GP2 Subtypes and Mechanisms - M.P.
 # Date: Oct 8, 2026
 # Description: Settings used only by the clocks/ scripts. Source after config.R.
-#              Outputs go to <DIR_RESULTS>/clocks and <DIR_FIGURES>/clocks
+#              Outputs go to DIR_RESULTS_CLOCKS and DIR_FIGURES_CLOCKS (config.R)
 # =============================================================================
 
 # --- Estimation (1_estimate.R) -----------------------------------------------
@@ -106,19 +106,14 @@ CLOCK_MIN_LEVEL_N <- 10   # categorical levels with fewer cases are left out (e.
 
 # --- Outputs -----------------------------------------------------------------
 
-# <DIR_RESULTS>/clocks and <DIR_FIGURES>/clocks
-CLOCK_DIR_RESULTS <- file.path(DIR_RESULTS, "clocks")
-CLOCK_DIR_FIGURES <- file.path(DIR_FIGURES, "clocks")
-dir.create(CLOCK_DIR_RESULTS, showWarnings = FALSE, recursive = TRUE)
-dir.create(CLOCK_DIR_FIGURES, showWarnings = FALSE, recursive = TRUE)
-
+# In DIR_RESULTS_CLOCKS; figures in DIR_FIGURES_CLOCKS (config.R)
 # 1_estimate.R
-CLOCK_RESULTS  <- file.path(CLOCK_DIR_RESULTS, "clock_age_acceleration.csv")      # per sample: clock ages, pace, acceleration, covariates
-CLOCK_ACCURACY <- file.path(CLOCK_DIR_RESULTS, "clock_accuracy.csv")              # per clock: r, MAE, mean offset vs chronological age
-CLOCK_COVERAGE <- file.path(CLOCK_DIR_RESULTS, "clock_cpg_coverage.csv")          # per clock: CpGs on the array, whether estimated
+CLOCK_RESULTS  <- file.path(DIR_RESULTS_CLOCKS, "clock_age_acceleration.csv")      # per sample: clock ages, pace, acceleration, covariates
+CLOCK_ACCURACY <- file.path(DIR_RESULTS_CLOCKS, "clock_accuracy.csv")              # per clock: r, MAE, mean offset vs chronological age
+CLOCK_COVERAGE <- file.path(DIR_RESULTS_CLOCKS, "clock_cpg_coverage.csv")          # per clock: CpGs on the array, whether estimated
 # 2_compare.R
-CLOCK_GROUP_EFFECTS <- file.path(CLOCK_DIR_RESULTS, "clock_acceleration_by_diagnosis.csv")  # per outcome: group effect from the models
+CLOCK_GROUP_EFFECTS <- file.path(DIR_RESULTS_CLOCKS, "clock_acceleration_by_diagnosis.csv")  # per outcome: group effect from the models
 # 3_associations.R
-CLOCK_TRAIT_VALUES  <- file.path(CLOCK_DIR_RESULTS, "clock_case_traits.csv")         # per case: trait values
-CLOCK_TRAIT_SUMMARY <- file.path(CLOCK_DIR_RESULTS, "clock_trait_summary.csv")       # per trait: n, distribution, tested or why skipped
-CLOCK_TRAIT_EFFECTS <- file.path(CLOCK_DIR_RESULTS, "clock_trait_associations.csv")  # per outcome x trait: effect, CI, p, FDR
+CLOCK_TRAIT_VALUES  <- file.path(DIR_RESULTS_CLOCKS, "clock_case_traits.csv")         # per case: trait values
+CLOCK_TRAIT_SUMMARY <- file.path(DIR_RESULTS_CLOCKS, "clock_trait_summary.csv")       # per trait: n, distribution, tested or why skipped
+CLOCK_TRAIT_EFFECTS <- file.path(DIR_RESULTS_CLOCKS, "clock_trait_associations.csv")  # per outcome x trait: effect, CI, p, FDR

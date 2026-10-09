@@ -4,7 +4,7 @@
 # Date: Sept 25, 2026
 # Updated: Sept 29, 2026
 # Description: Plots the QC results of Script 02 from its saved figure data
-#              (QC_FIGURE_DATA) and saves the figures to DIR_FIGURES:
+#              (QC_FIGURE_DATA) and saves the figures to DIR_FIGURES_QC:
 #   qc_01  Median methylated vs unmethylated intensity per sample (minfi
 #          plotQC); low-intensity samples are flagged in red
 #   qc_02  Mean detection p-value per sample, sorted, log scale, with the
@@ -35,7 +35,7 @@ cat("Samples loaded:", nrow(qc_metrics), "\n")
 
 # --- 1. Median intensities (qc_01) -------------------------------------------
 
-png(file.path(DIR_FIGURES, "qc_01_median_intensities.png"), width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
+png(file.path(DIR_FIGURES_QC, "qc_01_median_intensities.png"), width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
 minfi::plotQC(qc_metrics[, c("mMed", "uMed")])
 dev.off()
 cat("QC plot saved\n")
@@ -53,7 +53,7 @@ y_lim    <- c(10^floor(log10(min(detP_ord))),
               10 * max(detP_ord, DETECTION_P_THRESHOLD))
 y_ticks  <- 10^seq(log10(y_lim[1]), log10(y_lim[2]))
 
-png(file.path(DIR_FIGURES, "qc_02_detection_pvalues.png"), width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
+png(file.path(DIR_FIGURES_QC, "qc_02_detection_pvalues.png"), width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
 par(mar = c(3, 5.5, 3, 1), las = 1)
 plot(detP_ord,
      log  = "y",
@@ -91,7 +91,7 @@ if (params$USE_SESAME_QC) {
   datasets  <- sort(unique(qc_metrics$Dataset))
   ds_colors <- setNames(palette.colors(length(datasets) + 1, "Okabe-Ito")[-1], datasets)
 
-  png(file.path(DIR_FIGURES, "qc_02b_sesame_detection.png"), width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
+  png(file.path(DIR_FIGURES_QC, "qc_02b_sesame_detection.png"), width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
   par(mar = c(3, 4.5, 3, 1), las = 1)
   plot(frac_ord,
        ylim = range(c(frac_ord, SESAME_MIN_FRAC_DETECTED, 1)),
@@ -126,7 +126,7 @@ fill_col   <- sex_colors[qc_metrics$predicted_sex]
 border_col <- sex_colors[qc_metrics$reported_sex_label]
 discordant_on_top <- order(!is.na(qc_metrics$sex_discordant) & qc_metrics$sex_discordant)
 
-png(file.path(DIR_FIGURES, "qc_03_sex_prediction.png"), width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
+png(file.path(DIR_FIGURES_QC, "qc_03_sex_prediction.png"), width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
 plot(qc_metrics$xMed[discordant_on_top], qc_metrics$yMed[discordant_on_top],
      pch  = 21,
      cex  = 1.4,
@@ -191,20 +191,20 @@ flagged_for <- function(curves) {
   groups_for(curves, "density_outlier") %in% TRUE
 }
 
-png(file.path(DIR_FIGURES, "qc_04_density_before_normalization.png"), width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
+png(file.path(DIR_FIGURES_QC, "qc_04_density_before_normalization.png"), width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
 density_plot(fig_data$density_before,
              sampGroups = groups_for(fig_data$density_before, "phenotype"),
              flagged    = flagged_for(fig_data$density_before),
              main       = "Beta Values - Before Normalization")
 dev.off()
 
-png(file.path(DIR_FIGURES, "qc_04b_density_by_dataset.png"), width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
+png(file.path(DIR_FIGURES_QC, "qc_04b_density_by_dataset.png"), width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
 density_plot(fig_data$density_before,
              sampGroups = groups_for(fig_data$density_before, "Dataset"),
              main       = "Beta Values by Dataset - Before Normalization")
 dev.off()
 
-png(file.path(DIR_FIGURES, "qc_05_density_after_normalization.png"), width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
+png(file.path(DIR_FIGURES_QC, "qc_05_density_after_normalization.png"), width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
 density_plot(fig_data$density_after,
              sampGroups = groups_for(fig_data$density_after, "phenotype"),
              flagged    = flagged_for(fig_data$density_after),
@@ -213,4 +213,4 @@ dev.off()
 cat("Density plots saved\n")
 
 cat("\nQC plots complete!\n")
-cat("Figures saved to:", DIR_FIGURES, "\n")
+cat("Figures saved to:", DIR_FIGURES_QC, "\n")

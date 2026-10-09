@@ -27,7 +27,7 @@ source("R/mvalues.R")
 cat("Loading QC-passed M values...\n")
 # ComBat can't handle infinite values; files from before Script 02 capped
 # them may still contain some (R/mvalues.R)
-mVals <- cap_infinite_m(readRDS(file.path(DIR_RESULTS, "mVals.rds")))
+mVals <- cap_infinite_m(readRDS(MVALS_QC))
 cat("M values dimensions:", dim(mVals), "\n")
 
 targets <- read.csv(SAMPLE_SHEET_QC,
@@ -119,6 +119,6 @@ combat_summary <- data.frame(
              length(batch_sizes), min(batch_sizes),
              paste(protect_cols, collapse = ", "))
 )
-write.csv(combat_summary, file.path(DIR_RESULTS, "combat_summary.csv"), row.names = FALSE)
+write.csv(combat_summary, file.path(DIR_RESULTS_PREPROCESSING, "combat_summary.csv"), row.names = FALSE)
 
 cat("\nNext: Rscript preprocessing/2_variation_sources.R", DATA_SOURCE, "combat\n")

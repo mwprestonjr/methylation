@@ -42,11 +42,12 @@ them in this order the first time; afterwards a target can be rerun on its own.
 - **`ANCESTRY`** (`mqtl` only): the GP2 master key ancestry label to analyse,
   e.g. `EUR` for PPMI or `AFR` for Psomagen. The genotype file for that
   ancestry is found from `GENO_PFILE_PATH`/`GENO_PFILE_NAME` in `mqtl/config.R`, and
-  results go to `<DIR_OUTPUT>/<ANCESTRY>/results/` and figures to
-  `<DIR_OUTPUT>/<ANCESTRY>/figures/`. Several labels (`EUR,AJ`) only
+  results go to `results/mqtl/<ANCESTRY>/` and figures to
+  `figures/mqtl/<ANCESTRY>/`. Several labels (`EUR,AJ`) only
   work if one genotype file covers all of them.
-- **Logs**: each step writes `logs/<step>_<SOURCE>_<timestamp>.log`; all steps
-  of one run share the timestamp. `make` itself prints one line per step.
+- **Logs**: each step writes `logs/<module>/<step>_<SOURCE>_<timestamp>.log`
+  (mQTL steps start with the ancestry); all steps of one run share the
+  timestamp. `make` itself prints one line per step.
 - **Failures**: `make` stops at the first step that fails; see that step's log.
 - **Steps never run in parallel**, even with `make -j`, because they are
   memory-heavy and each depends on the previous one.
@@ -66,7 +67,7 @@ them in this order the first time; afterwards a target can be rerun on its own.
   cis-mQTL (`tune_meth_pcs.csv`) and plots them (`mqtl_tune_meth_pcs.png`).
   Choose the value where the curve levels off, set `MQTL_N_METH_PCS`, and
   rerun `3_mqtl.R`. Tune each data source/ancestry separately.
-- **mQTL figures** (`4_mqtl_plots.R`, in `<DIR_OUTPUT>/<ANCESTRY>/figures/`): genotype
+- **mQTL figures** (`4_mqtl_plots.R`, in `figures/mqtl/<ANCESTRY>/`): genotype
   boxplots of the top hits at distinct loci, regional (LocusZoom-style) plots
   of the top loci, genome-wide lead p-values, lead SNP-CpG distance, effect
   size by allele frequency, mQTLs by CpG island context, and
@@ -158,15 +159,21 @@ script sources `config.R` first, then its own module's config:
 Rule of thumb: a setting read by another module belongs in `config.R`;
 otherwise it goes in its module's config.
 
-Output folders, per data source (`DIR_OUTPUT` in `config.R`):
+Output folders, per data source (`DIR_OUTPUT` in `config.R`), one per module
+(`DIR_RESULTS_<MODULE>` and `DIR_FIGURES_<MODULE>` in `config.R`):
 
 ```
 <DIR_OUTPUT>/                e.g. /mnt/output/methylation/psomagen
-├── results/                 qc + preprocessing, all samples (mVals, ComBat M values, sample sheets, cpg_annotation, ...)
-├── figures/                 qc + preprocessing figures
-└── <ANCESTRY>/              analyses within one genetic ancestry (mQTL)
-    ├── results/             sample map, genotypes/, cis-mQTL results, summary, top hits, tuning table
-    └── figures/             mQTL figures
+├── results/
+│   ├── qc/                  sample sheets, normalized mSet, M and beta values, QC metrics
+│   ├── preprocessing/       cell proportions, ComBat M values, final sample sheet, CpG annotation, variation sources
+│   ├── clocks/              clock estimates, accuracy, coverage, group comparison, clinical trait associations
+│   └── mqtl/<ANCESTRY>/     sample map, genotypes/, cis-mQTL results, summary, top hits, tuning table
+└── figures/
+    ├── qc/
+    ├── preprocessing/
+    ├── clocks/
+    └── mqtl/<ANCESTRY>/
 ```
 
 ## Epigenetic clocks
@@ -176,12 +183,12 @@ them between diagnosis groups, and tests their association with clinical
 traits in cases. Each data source is run separately:
 the arrays measure different CpGs, so clock ages aren't comparable across them.
 
-| Step | What it does | Outputs (`<DIR_OUTPUT>/results/clocks`) |
+| Step | What it does | Outputs (`results/clocks/`) |
 |---|---|---|
 | `1_estimate.R` | Collapses EPICv2 probe names to 450K/EPIC IDs (replicate probes averaged), records each clock's CpG coverage, estimates the methylclock clocks and DunedinPACE from normalized, unfiltered betas, and computes age acceleration | `clock_age_acceleration.csv` (per sample, with the model covariates), `clock_accuracy.csv`, `clock_cpg_coverage.csv` |
 | `2_compare.R` | Compares age acceleration and DunedinPACE between `CLOCK_GROUPS` (first = reference), adjusted for `CLOCK_COVARIATES` | `clock_acceleration_by_diagnosis.csv` |
 | `3_associations.R` | In cases (`CLOCK_CASE_GROUP`), tests each trait in `CLOCK_TRAITS` against age acceleration and DunedinPACE, adjusted for `CLOCK_COVARIATES`; FDR across all tests | `clock_case_traits.csv`, `clock_trait_summary.csv`, `clock_trait_associations.csv` |
-| `4_plots.R` | Clock vs chronological age (with r, median absolute error, CpG coverage), acceleration by phenotype, adjusted group differences, clinical trait effects | `<DIR_OUTPUT>/figures/clocks/clock_*.png` |
+| `4_plots.R` | Clock vs chronological age (with r, median absolute error, CpG coverage), acceleration by phenotype, adjusted group differences, clinical trait effects | `figures/clocks/clock_*.png` |
 
 - **Age acceleration** is the residual of clock age regressed on chronological
   age, in years. DunedinPACE is already a rate (years of aging per year; 1 =

@@ -23,7 +23,7 @@ source("R/mqtl_setup.R")
 # --- 1. Load methylation sample sheet ----------------------------------------
 
 cat("Loading final sample sheet from preprocessing/3_combat.R...\n")
-targets <- read.csv(file.path(DIR_RESULTS, "sample_sheet_final.csv"),
+targets <- read.csv(SAMPLE_SHEET_FINAL,
                     colClasses = c(GP2ID       = "character",
                                    clinical_id = "character",
                                    Sentrix_ID  = "character",

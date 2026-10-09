@@ -5,14 +5,17 @@ RSCRIPT  ?= Rscript
 LOG_DIR  := logs
 STAMP    := $(shell date +%m%d_%H%M)
 comma    := ,
-MQTL_LOG  = mqtl_$(subst $(comma),_,$(ANCESTRY))
+MODULES  := qc preprocessing clocks mqtl
+MQTL_LOG  = $(subst $(comma),_,$(ANCESTRY))
 
 SHEET_ppmi_p140 := qc/01_build_sample_sheet_ppmi.R
 SHEET_psomagen  := qc/01_build_sample_sheet_psomagen.R
 
+log_file = $(LOG_DIR)/$(firstword $(subst /, ,$(1)))/$(2)_$(SOURCE)_$(STAMP).log
+
 define run_r
-	@echo "[$$(date +%H:%M)] $(1) $(SOURCE) $(3) -> $(LOG_DIR)/$(2)_$(SOURCE)_$(STAMP).log"
-	@$(RSCRIPT) -e 'source("$(1)")' $(SOURCE) $(3) > $(LOG_DIR)/$(2)_$(SOURCE)_$(STAMP).log 2>&1
+	@echo "[$$(date +%H:%M)] $(1) $(SOURCE) $(3) -> $(call log_file,$(1),$(2))"
+	@$(RSCRIPT) -e 'source("$(1)")' $(SOURCE) $(3) > $(call log_file,$(1),$(2)) 2>&1
 endef
 
 .NOTPARALLEL:
@@ -45,16 +48,16 @@ preprocessing: check-source
 	@echo "[$$(date +%H:%M)] preprocessing complete for $(SOURCE)"
 
 clocks: check-source
-	$(call run_r,clocks/1_estimate.R,clocks_1_estimate)
-	$(call run_r,clocks/2_compare.R,clocks_2_compare)
-	$(call run_r,clocks/3_associations.R,clocks_3_associations)
-	$(call run_r,clocks/4_plots.R,clocks_4_plots)
+	$(call run_r,clocks/1_estimate.R,1_estimate)
+	$(call run_r,clocks/2_compare.R,2_compare)
+	$(call run_r,clocks/3_associations.R,3_associations)
+	$(call run_r,clocks/4_plots.R,4_plots)
 	@echo "[$$(date +%H:%M)] clocks complete for $(SOURCE)"
 
 mqtl: check-source check-ancestry
 	$(call run_r,mqtl/1_mqtl_sample_map.R,$(MQTL_LOG)_1_sample_map,$(ANCESTRY))
-	@echo "[$$(date +%H:%M)] mqtl/2_mqtl_genotypes.sh $(SOURCE) $(ANCESTRY) -> $(LOG_DIR)/$(MQTL_LOG)_2_genotypes_$(SOURCE)_$(STAMP).log"
-	@bash mqtl/2_mqtl_genotypes.sh $(SOURCE) $(ANCESTRY) > $(LOG_DIR)/$(MQTL_LOG)_2_genotypes_$(SOURCE)_$(STAMP).log 2>&1
+	@echo "[$$(date +%H:%M)] mqtl/2_mqtl_genotypes.sh $(SOURCE) $(ANCESTRY) -> $(call log_file,mqtl/,$(MQTL_LOG)_2_genotypes)"
+	@bash mqtl/2_mqtl_genotypes.sh $(SOURCE) $(ANCESTRY) > $(call log_file,mqtl/,$(MQTL_LOG)_2_genotypes) 2>&1
 	$(call run_r,mqtl/3_mqtl.R,$(MQTL_LOG)_3_mqtl,$(ANCESTRY))
 	$(call run_r,mqtl/4_mqtl_plots.R,$(MQTL_LOG)_4_plots,$(ANCESTRY))
 	@echo "[$$(date +%H:%M)] mqtl complete for $(SOURCE) $(ANCESTRY)"
@@ -68,4 +71,4 @@ check-source:
 	@if [ -z "$(filter $(SOURCE),$(SOURCES))" ] || [ -z "$(SOURCE)" ]; then \
 	  echo "Set SOURCE to one of: $(SOURCES)  (e.g. make qc SOURCE=ppmi_p140)"; exit 1; \
 	fi
-	@mkdir -p $(LOG_DIR)
+	@mkdir -p $(addprefix $(LOG_DIR)/,$(MODULES))

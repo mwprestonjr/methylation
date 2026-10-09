@@ -10,7 +10,7 @@
 
 # Cell type proportions (1_cell_counts.R -> 2, 3; cell types: CELL_TYPES in
 # config.R)
-CELL_PROPORTIONS <- file.path(DIR_RESULTS, "cell_proportions.csv")
+CELL_PROPORTIONS <- file.path(DIR_RESULTS_PREPROCESSING, "cell_proportions.csv")
 
 # Sources of variation: SVD of the VARIATION_TOP_CPGS most variable CpGs,
 # testing the first VARIATION_N_PCS components against each sample variable
