@@ -114,7 +114,7 @@ if (nrow(tested) > 0) {
                         mutate(across(c(estimate), ~ signif(.x, 3)),
                                across(c(p.value, fdr), ~ signif(.x, 2)))),
         right = FALSE)
-  cat("\nFDR < 0.05:", sum(effects$fdr < 0.05), "of", nrow(effects), "\n")
+  cat("\nFDR <", CLOCK_FDR, ":", sum(effects$fdr < CLOCK_FDR), "of", nrow(effects), "\n")
   write.csv(effects, CLOCK_TRAIT_EFFECTS, row.names = FALSE)
   cat("Associations saved to:", CLOCK_TRAIT_EFFECTS, "\n")
 } else {

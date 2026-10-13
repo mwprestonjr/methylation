@@ -2,10 +2,12 @@
 # Clocks 2: compare age acceleration between groups
 # Author: GP2 Subtypes and Mechanisms - M.P.
 # Date: Oct 8, 2026
+# Updated: Oct 13, 2026
 # Description: Compares age acceleration and DunedinPACE between CLOCK_GROUPS
 #              (first = reference), adjusted for CLOCK_COVARIATES
 #              (clocks/config.R), using the per-sample table from
-#              1_estimate.R. Saves the group effect per outcome for 4_plots.R.
+#              1_estimate.R, with FDR (BH) across the outcomes. Saves the
+#              group effect per outcome for 4_plots.R.
 #              Skipped if a group has fewer than CLOCK_MIN_GROUP_N samples
 #              (e.g. a data source without controls)
 # Usage:       Rscript clocks/2_compare.R <data source>   (see config.R)
@@ -53,8 +55,11 @@ if (all(group_sizes >= CLOCK_MIN_GROUP_N)) {
   # Outcomes not estimated on this array (all NA, below the coverage
   # threshold) are left out
   outcomes <- estimated_outcomes(clocks_cmp, c(paste0("AgeAccel_", ADULT_CLOCKS), "DunedinPACE"))
-  group_effects <- fit_predictor(clocks_cmp, outcomes, "phenotype", usable)
-  print(group_effects %>% select(outcome, n, term, estimate, std.error, p.value))
+  # FDR across all outcomes (and group terms, if CLOCK_GROUPS has more than 2)
+  group_effects <- fit_predictor(clocks_cmp, outcomes, "phenotype", usable) %>%
+    mutate(fdr = p.adjust(p.value, method = "BH"))
+  print(group_effects %>% select(outcome, n, term, estimate, std.error, p.value, fdr))
+  cat("FDR <", CLOCK_FDR, ":", sum(group_effects$fdr < CLOCK_FDR), "of", nrow(group_effects), "\n")
   write.csv(group_effects, CLOCK_GROUP_EFFECTS, row.names = FALSE)
   cat("Group comparison saved to:", CLOCK_GROUP_EFFECTS, "\n")
 } else {

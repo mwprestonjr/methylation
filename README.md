@@ -186,7 +186,7 @@ the arrays measure different CpGs, so clock ages aren't comparable across them.
 | Step | What it does | Outputs (`results/clocks/`) |
 |---|---|---|
 | `1_estimate.R` | Collapses EPICv2 probe names to 450K/EPIC IDs (replicate probes averaged), records each clock's CpG coverage, estimates the methylclock clocks and DunedinPACE from normalized, unfiltered betas, and computes age acceleration | `clock_age_acceleration.csv` (per sample, with the model covariates), `clock_accuracy.csv`, `clock_cpg_coverage.csv` |
-| `2_compare.R` | Compares age acceleration and DunedinPACE between `CLOCK_GROUPS` (first = reference), adjusted for `CLOCK_COVARIATES` | `clock_acceleration_by_diagnosis.csv` |
+| `2_compare.R` | Compares age acceleration and DunedinPACE between `CLOCK_GROUPS` (first = reference), adjusted for `CLOCK_COVARIATES`; FDR across outcomes | `clock_acceleration_by_diagnosis.csv` |
 | `3_associations.R` | In cases (`CLOCK_CASE_GROUP`), tests each trait in `CLOCK_TRAITS` against age acceleration and DunedinPACE, adjusted for `CLOCK_COVARIATES`; FDR across all tests | `clock_case_traits.csv`, `clock_trait_summary.csv`, `clock_trait_associations.csv` |
 | `4_plots.R` | Clock vs chronological age (with r, median absolute error, CpG coverage), acceleration by phenotype, adjusted group differences, clinical trait effects | `figures/clocks/clock_*.png` |
 
@@ -210,6 +210,11 @@ the arrays measure different CpGs, so clock ages aren't comparable across them.
   fewer than `CLOCK_MIN_TRAIT_N` cases are skipped and categorical levels with
   fewer than `CLOCK_MIN_LEVEL_N` are left out; `clock_trait_summary.csv` says
   which and why. Psomagen's clinical data only has Hoehn & Yahr.
+- **Multiple testing**: Benjamini-Hochberg FDR, across outcomes in
+  `2_compare.R` and across all outcome x trait tests in `3_associations.R`;
+  results with FDR < `CLOCK_FDR` are called significant (filled points in the
+  figures). Clocks are correlated, so agreement across clocks matters more
+  than any single FDR value.
 - **Chronological age**: PPMI uses age at the baseline visit (PPMI
   `Age_at_visit`, falling back to enrollment age); Psomagen uses R12
   `age_at_sample_collection`, the age at the GP2 DNA draw that was arrayed.

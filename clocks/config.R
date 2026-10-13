@@ -29,6 +29,11 @@ ADULT_CLOCKS <- switch(DATA_SOURCE,
 
 # --- Group comparison (2_compare.R; covariates also 3_associations.R) --------
 
+# FDR (Benjamini-Hochberg) threshold for calling results significant, in
+# 2_compare.R (across outcomes), 3_associations.R (across outcome x trait
+# tests) and the 4_plots.R figures
+CLOCK_FDR <- 0.05
+
 # Phenotypes compared; the first is the reference group. The comparison is
 # skipped if either group has fewer than CLOCK_MIN_GROUP_N samples (e.g. a
 # data source without controls)

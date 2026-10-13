@@ -10,7 +10,7 @@
 #   clock_02_acceleration_by_group  age acceleration and DunedinPACE by
 #                                   phenotype (all phenotypes in the data)
 #   clock_03_group_effects          adjusted group difference (CLOCK_GROUPS)
-#                                   per outcome with 95% CI; only if
+#                                   per outcome with 95% CI, p and FDR; only if
 #                                   2_compare.R ran the comparison
 #   clock_04_trait_effects          associations with clinical traits in
 #                                   cases, per outcome with 95% CI; only if
@@ -26,6 +26,7 @@ source("config.R")
 source("clocks/config.R")
 
 fig <- function(name) file.path(DIR_FIGURES_CLOCKS, paste0("clock_", name, ".png"))
+fdr_labels <- paste(c("FDR <", "FDR >="), CLOCK_FDR)
 
 clocks         <- read.csv(CLOCK_RESULTS)
 clock_accuracy <- read.csv(CLOCK_ACCURACY)
@@ -92,18 +93,20 @@ if (file.exists(CLOCK_GROUP_EFFECTS)) {
     mutate(outcome = factor(sub("^AgeAccel_", "", outcome),
                             levels = rev(c(ADULT_CLOCKS, "DunedinPACE"))),
            unit    = ifelse(outcome == "DunedinPACE", "DunedinPACE (years per year)",
-                            "Age acceleration (years)"))
+                            "Age acceleration (years)"),
+           fdr_sig = factor(ifelse(fdr < CLOCK_FDR, fdr_labels[1], fdr_labels[2]), levels = fdr_labels))
   png(fig("03_group_effects"), width = FIG_WIDTH * 1.4, height = FIG_HEIGHT,
       units = "in", res = FIG_RES)
   print(ggplot(effects, aes(estimate, outcome)) +
     geom_vline(xintercept = 0, linetype = "dashed", colour = "grey50") +
     geom_errorbar(aes(xmin = conf.low, xmax = conf.high), orientation = "y", width = 0.2) +
-    geom_point(size = 2) +
-    geom_text(aes(label = sprintf("p = %.2g", p.value)), vjust = -0.8, size = 2.5) +
+    geom_point(aes(shape = fdr_sig), size = 2, show.legend = TRUE) +
+    scale_shape_manual(values = setNames(c(16, 1), fdr_labels), drop = FALSE) +
+    geom_text(aes(label = sprintf("p = %.2g, FDR = %.2g", p.value, fdr)), vjust = -0.8, size = 2.5) +
     facet_wrap(~ unit, scales = "free") +
     labs(title = paste0(paste(rev(CLOCK_GROUPS), collapse = " vs "), " - ", DATA_SOURCE),
          subtitle = paste("Adjusted difference (95% CI); model:", effects$covariates[1]),
-         x = paste("Difference,", CLOCK_GROUPS[2], "minus", CLOCK_GROUPS[1]), y = NULL) +
+         x = paste("Difference,", CLOCK_GROUPS[2], "minus", CLOCK_GROUPS[1]), y = NULL, shape = NULL) +
     theme_bw(base_size = 8))
   dev.off()
 } else {
@@ -126,7 +129,7 @@ if (file.exists(CLOCK_TRAIT_EFFECTS)) {
                              levels = c(ADULT_CLOCKS, "DunedinPACE")),
            unit     = ifelse(outcome == "DunedinPACE", "DunedinPACE (years per year)",
                              "Age acceleration (years)"),
-           fdr_sig  = ifelse(fdr < 0.05, "FDR < 0.05", "FDR >= 0.05"))
+           fdr_sig  = factor(ifelse(fdr < CLOCK_FDR, fdr_labels[1], fdr_labels[2]), levels = fdr_labels))
 
   png(fig("04_trait_effects"), width = FIG_WIDTH * 1.6,
       height = max(FIG_HEIGHT, 0.35 * n_distinct(trait_effects$row) + 1.5),
@@ -135,8 +138,9 @@ if (file.exists(CLOCK_TRAIT_EFFECTS)) {
     geom_vline(xintercept = 0, linetype = "dashed", colour = "grey50") +
     geom_errorbar(aes(xmin = conf.low, xmax = conf.high), orientation = "y", width = 0,
                    position = position_dodge(width = 0.7), alpha = 0.6) +
-    geom_point(aes(shape = fdr_sig), position = position_dodge(width = 0.7), size = 1.6) +
-    scale_shape_manual(values = c("FDR < 0.05" = 16, "FDR >= 0.05" = 1), drop = FALSE) +
+    geom_point(aes(shape = fdr_sig), position = position_dodge(width = 0.7), size = 1.6,
+               show.legend = TRUE) +
+    scale_shape_manual(values = setNames(c(16, 1), fdr_labels), drop = FALSE) +
     facet_wrap(~ unit, scales = "free_x") +
     labs(title = paste0("Clinical traits in ", CLOCK_CASE_GROUP, " - ", DATA_SOURCE),
          subtitle = paste("Adjusted for", paste(CLOCK_COVARIATES, collapse = ", ")),
