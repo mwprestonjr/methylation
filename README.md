@@ -12,6 +12,50 @@ Analysis pipeline for Illumina EPIC methylation arrays (EPICv1 and EPICv2). Each
 
 Input paths and the output directory for each source are set in `config.R`.
 
+### Input files and versions
+
+External files and reference data the pipeline reads. Each path is set by the
+variable under "Name in code", in the file under "Set in"; update this table
+when a file is replaced.
+
+- **Source**: who provides the file and where it comes from
+- **Version**: the release or version of the data (for R packages, the
+  package version, and the GitHub commit for packages installed from GitHub)
+- "-": not applicable or not recorded
+
+**Methylation data and sample metadata**
+
+| File | Name in code | Set in | Source | Version |
+|---|---|---|---|---|
+| PPMI Project 140 idat files | `IDAT_DIR` | `config.R` | PPMI (LONI), Project 140 | - |
+| PPMI Project 140 link list (SENTRIXID to PATNO) | `LINK_LIST` | `config.R` | PPMI (LONI), Project 140 documentation | - |
+| PPMI participant status (cohort, enrollment age) | `PARTICIPANT_STATUS` | `config.R` | PPMI (LONI) study data | - |
+| PPMI age at visit | `AGE_AT_VISIT` | `config.R` | PPMI (LONI) study data | - |
+| PPMI genetic status (LRRK2, GBA, ... carriers) | `PPMI_GENETICS` | `clocks/config.R` | PPMI (LONI) study data, Indiana University genetic consensus | 2025-10-25 consensus |
+| Psomagen deliveries (idat files and QC tables) | `DATASETS`, `DIR_DELIVERY` | `config.R` | Psomagen, GP2 deliveries (`gp2-psomagen` bucket) | Deliveries AB00000952, AB00000963 |
+
+**GP2 data**
+
+| File | Name in code | Set in | Source | Version |
+|---|---|---|---|---|
+| GP2 master key (IDs, sex, race, phenotype, ages, family history) | `FNAME_METADATA` | `config.R` | GP2, internal-use master key | Release 12 (final) |
+| GP2 master key with genotype availability, QC and ancestry labels | `GP2_MASTER_KEY` | `mqtl/config.R` | GP2 | Release 12 |
+| GP2 extended clinical data (MDS-UPDRS, MoCA, H&Y, ...) | `CLINICAL_DATA` | `clocks/config.R` | GP2 | Release 12 |
+| GP2 genotypes, plink2 files per ancestry, related individuals removed | `GENO_PFILE_PATH`, `GENO_PFILE_NAME`, `GENO_SOURCE` | `mqtl/config.R` | GP2 release bucket (`gp2_release12`) | Release 12, NBA array (imputed), hg38 |
+
+**Reference data and annotation**
+
+| File | Name in code | Set in | Source | Version |
+|---|---|---|---|---|
+| EPICv1 probe annotation (hg19) | `anno_pkg` | `R/array_profiles.R` | Bioconductor, `IlluminaHumanMethylationEPICanno.ilm10b4.hg19` | ilm10b4 (package 0.6.0) |
+| EPICv2 probe annotation (hg38) | `anno_pkg` | `R/array_profiles.R` | Bioconductor, `IlluminaHumanMethylationEPICv2anno.20a1.hg38` | 20a1 (package 1.0.0) |
+| Cross-reactive probe list (EPICv1, mapped to EPICv2) | `xreactive` | `R/array_profiles.R` | GitHub, `markgene/maxprobes` | 0.0.2 (commit `c2120db`) |
+| Blood cell reference (IDOL) | `CELL_TYPES` | `config.R` | Bioconductor, `FlowSorted.Blood.EPIC` | 2.10.0 |
+| hg19 to hg38 liftover chain (EPICv1 positions) | `CHAIN_HG19_HG38` | `config.R` | UCSC, `hg19ToHg38.chain.gz` | - |
+| Gene annotation (GRCh38) | `GENCODE_GTF` | `config.R` | GENCODE, `gencode.v50.annotation.gtf.gz` | v50 |
+| Epigenetic clock coefficients | `ADULT_CLOCKS` | `clocks/config.R` | Bioconductor, `methylclock` and `methylclockData` | 1.12.0 and 1.14.0 |
+| DunedinPACE model | - | `clocks/1_estimate.R` | GitHub, `danbelsky/DunedinPACE` | 0.99.0 (commit `4b56998`) |
+
 ## Running the pipeline
 
 The pipeline is run with `make` from the repository root, with the
