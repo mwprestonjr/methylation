@@ -110,32 +110,6 @@ mqtl/             cis-mQTL mapping against GP2 genotypes (settings: mqtl/config.
 logs/             step logs from make
 ```
 
-- `R/array_profiles.R` - everything that differs by array type (annotation
-  package, genome build, cross-reactive probes, array detection from idat files)
-- `R/idat_qc.R` - QC helpers (idat file check, SeSAMe QC stats, sex check, low
-  bead count probes)
-- `R/density.R` - beta density curves and the density outlier score
-- `R/mvalues.R` - caps infinite M values (betas of exactly 0 or 1)
-- `R/cpg_annotation.R` - hg38 positions of array probes (liftover for EPICv1)
-  and their GENCODE gene annotation; `preprocessing/4_cpg_annotation.R` saves
-  the table for every probe on the array (`CPG_ANNOTATION`): gene, gene type,
-  promoter / gene body / intergenic (nearest gene), distances to the gene and
-  its TSS, and CpG island context
-- `R/mqtl_setup.R` - mQTL ancestry argument, genotype file and output paths
-- `R/clock_models.R` - clock association models (group comparison, clinical traits)
-- `R/clock_traits.R` - clinical traits at the blood draw for the clock associations
-- `R/mqtl_functions.R` - mQTL steps shared by `3_mqtl.R` and `tune_meth_pcs.R`
-  (data preparation, latent PCs, per-chromosome cis scan)
-- `qc/01_build_sample_sheet_*.R` - one per data source; each writes the same
-  columns (`SAMPLE_SHEET_COLUMNS` in `config.R`) so later scripts don't depend
-  on the source
-- `qc/02_qc.R` - works for any array in `R/array_profiles.R`, one array type
-  per run; `qc/03_qc_plots.R` draws its figures from the data it saves
-- `preprocessing/2_variation_sources.R` - run before ComBat to choose the batch
-  variable (`COMBAT_BATCH_VAR`) and after it to check the correction
-- `clocks/` - epigenetic clocks, run per data source (see below)
-- `mqtl/` - steps 1-4 of the mQTL analysis, run per data source and ancestry
-
 ### Configuration
 
 Settings are split between a shared config and one config per module. Every
@@ -175,6 +149,102 @@ Output folders, per data source (`DIR_OUTPUT` in `config.R`), one per module
     ├── clocks/
     └── mqtl/<ANCESTRY>/
 ```
+
+### Script inventory
+
+**Pipeline and shared configuration**
+
+- `Makefile` - runs the module workflows in order and writes step logs.
+- `config.R` - shared data-source paths, output paths, and settings.
+- `requirements.R` - installs the R package dependencies.
+
+**QC (`qc/`)**
+
+- `01_build_sample_sheet_ppmi.R` - builds the PPMI sample sheet.
+- `01_build_sample_sheet_psomagen.R` - builds the Psomagen sample sheet. Both sample-sheet scripts write the common `SAMPLE_SHEET_COLUMNS` from `config.R`, so downstream scripts work independently of data source.
+- `02_qc.R` - performs sample and probe QC and normalization. It supports any array in `R/array_profiles.R`, with one array type processed per run.
+- `03_qc_plots.R` - generates QC figures from the figure data saved by `02_qc.R`.
+- `config.R` - QC thresholds and method settings.
+
+**Preprocessing (`preprocessing/`)**
+
+- `1_cell_counts.R` - estimates blood cell proportions.
+- `2_variation_sources.R` - tests sources of variation before ComBat to choose `COMBAT_BATCH_VAR`, then reruns after ComBat to check the correction.
+- `3_combat.R` - applies ComBat batch correction.
+- `4_cpg_annotation.R` - creates `CPG_ANNOTATION`, an annotation for every array probe with hg38 position (liftover for EPICv1), GENCODE gene and gene type, promoter/gene-body/intergenic context (nearest gene for intergenic probes), distances to the gene and its TSS, and CpG island context.
+- `config.R` - variation-analysis and ComBat settings.
+
+**Epigenetic clocks (`clocks/`)**
+
+- `1_estimate.R` - estimates clock ages, pace of aging, and age acceleration. Run the clock pipeline separately for each data source.
+- `2_compare.R` - compares clock outcomes between diagnosis groups.
+- `3_associations.R` - tests clock outcomes against clinical traits in cases.
+- `4_plots.R` - generates clock, group-comparison, and trait-association figures.
+- `config.R` - clock selection, model, and clinical-trait settings.
+
+**mQTL (`mqtl/`)**
+
+Run steps 1-4 separately for each data source and ancestry.
+
+- `1_mqtl_sample_map.R` - creates the ancestry-specific methylation/genotype sample map.
+- `2_mqtl_genotypes.sh` - prepares and QC-filters genotypes with PLINK 2.
+- `3_mqtl.R` - performs the cis-mQTL scan.
+- `4_mqtl_plots.R` - summarizes and plots mQTL results.
+- `tune_meth_pcs.R` - reruns scans across methylation-PC counts to support PC selection.
+- `config.R` - genotype, QC, scan, and plot settings.
+
+**Shared R helpers (`R/`)**
+
+- `array_profiles.R` - array-specific annotation packages, genome builds, cross-reactive probes, and array detection from IDAT files.
+- `idat_qc.R` - QC helpers for IDAT file checks, SeSAMe QC statistics, sex checks, and low-bead-count probes.
+- `density.R` - computes beta-value density curves and the density outlier score.
+- `mvalues.R` - caps infinite M values from beta values of exactly 0 or 1.
+- `cpg_annotation.R` - provides hg38 positions for array probes (with EPICv1 liftover) and GENCODE gene annotations; `preprocessing/4_cpg_annotation.R` saves `CPG_ANNOTATION` for every array probe, including gene and gene type, promoter/gene-body/intergenic context (nearest gene for intergenic probes), distances to the gene and its TSS, and CpG island context.
+- `mqtl_setup.R` - handles the mQTL ancestry argument and configures ancestry-specific genotype inputs and output paths.
+- `clock_models.R` - shared clock association models for diagnosis-group comparisons and clinical-trait associations.
+- `clock_traits.R` - derives clinical traits at the blood draw for clock association analyses.
+- `mqtl_functions.R` - functions shared by `3_mqtl.R` and `tune_meth_pcs.R` for data preparation, latent methylation PCs, and per-chromosome cis scans.
+
+### Figure inventory
+
+Figures are saved under `<DIR_OUTPUT>/figures/` for the data source being
+processed (`DIR_OUTPUT` in `config.R`).
+
+**QC (`figures/qc/`, generated by `qc/03_qc_plots.R`)**
+
+- `qc_01_median_intensities.png` - methylated vs unmethylated median intensity per sample.
+- `qc_02_detection_pvalues.png` - mean detection p-value per sample and the QC threshold.
+- `qc_02b_sesame_detection.png` - fraction of detected CpG probes per sample; generated only when SeSAMe QC is enabled.
+- `qc_03_sex_prediction.png` - predicted vs reported sex from X/Y intensities.
+- `qc_04_density_before_normalization.png` - beta-value densities before normalization, by phenotype.
+- `qc_04b_density_by_dataset.png` - beta-value densities before normalization, by dataset.
+- `qc_05_density_after_normalization.png` - beta-value densities after normalization, by phenotype.
+
+**Preprocessing (`figures/preprocessing/`)**
+
+- `cell_proportions.png` - estimated blood-cell proportions across samples.
+- `cell_proportions_by_phenotype.png` - estimated blood-cell proportions by phenotype.
+- `variation_<raw|combat>_svd_heatmap.png` - associations between sample variables and SVD components, before (`raw`) or after (`combat`) ComBat.
+- `variation_<raw|combat>_scree.png` - variance explained by SVD components, before or after ComBat.
+- `variation_<raw|combat>_pca_by_<variable>.png` - PC1 vs PC2, colored by each available variable among `Chip`, `Batch`, `phenotype`, `sex`, and `age`; generated only for variables with usable variation in the data.
+
+**Epigenetic clocks (`figures/clocks/`, generated by `clocks/4_plots.R`)**
+
+- `clock_01_vs_chronological_age.png` - clock age vs chronological age, with accuracy and CpG coverage.
+- `clock_02_acceleration_by_group.png` - age acceleration and DunedinPACE by phenotype.
+- `clock_03_group_effects.png` - adjusted differences between diagnosis groups; generated when a group comparison is available.
+- `clock_04_trait_effects.png` - adjusted clinical-trait associations in cases; generated when traits were tested.
+
+**mQTL (`figures/mqtl/<ANCESTRY>/`)**
+
+- `mqtl_01_lead_snp_distance.png` - distance between each significant lead SNP and its CpG; generated by `mqtl/3_mqtl.R`.
+- `mqtl_02_top_genotype_boxplots.png` - methylation by genotype for top mQTLs at distinct loci.
+- `mqtl_03_regional.png` - regional association plots around top CpGs, with points colored by LD to the lead SNP.
+- `mqtl_04_genome.png` - lead association p-values across the genome.
+- `mqtl_05_distance_zoom.png` - lead SNP-to-CpG distances within 50 kb.
+- `mqtl_06_effect_vs_maf.png` - lead-SNP effect size by minor allele frequency.
+- `mqtl_07_island_context.png` - cis-mQTL share by CpG island context.
+- `mqtl_tune_meth_pcs.png` - significant CpG counts across tested methylation-PC counts; generated separately by `mqtl/tune_meth_pcs.R`.
 
 ## Epigenetic clocks
 
