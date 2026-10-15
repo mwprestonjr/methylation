@@ -21,6 +21,25 @@ the root [`config.R`](../config.R).
 - `3_qc_plots.R` - generates QC figures from the figure data saved by `2_qc.R`.
 - `config.R` - QC thresholds and method settings.
 
+## Outputs
+
+In `<DIR_OUTPUT>/results/qc/`. The config name is the variable other scripts
+use to find the file (root `config.R`, or `qc/config.R` for files used only
+within qc).
+
+| Step | File | Config name | Contents | Read by |
+|---|---|---|---|---|
+| 1 | `sample_sheet.csv` | `SAMPLE_SHEET` | One row per array sample: `SAMPLE_SHEET_COLUMNS` (IDs, phenotype, sex, race, age, batch, chip/position, array, idat path) | `2_qc.R` |
+| 2 | `qc_sample_metrics.csv` | | Every input sample: median intensities, mean detection p, predicted vs reported sex, density score, and why it was removed | |
+| 2 | `qc_sesame_stats.csv` | | SeSAMe per-sample stats (detection, intensity, dye bias); only when `USE_SESAME_QC = TRUE` | |
+| 2 | `qc_summary.csv` | | Number of samples and probes removed at each QC step | |
+| 2 | `qc_figure_data.rds` | `QC_FIGURE_DATA` | Sample metrics, density curves and thresholds behind the QC figures | `3_qc_plots.R` |
+| 2 | `sample_sheet_qc_passed.csv` | `SAMPLE_SHEET_QC` | Sample sheet of the samples that passed QC | preprocessing (all steps) |
+| 2 | `mVals.rds` | `MVALS_QC` | M values: QC-passed samples, Funnorm-normalized, probe-filtered, infinite values capped | `preprocessing/2_variation_sources.R`, `3_combat.R` |
+| 2 | `bVals.rds` | | Beta values, same samples and probes as `mVals.rds` | not read by the pipeline |
+| 2 | `bVals_unfiltered.rds` | `BVALS_UNFILTERED` | Beta values: QC-passed samples, normalized, **no probe filtering** (filters can remove clock CpGs) | `clocks/1_estimate.R` |
+| 2 | `mSetSq_qc_passed.rds` | `MSET_QC` | Normalized, filtered `GenomicRatioSet` (minfi object with annotation) | not read by the pipeline |
+
 ## Sample sheet
 
 Both sample sheet scripts write the same columns (`SAMPLE_SHEET_COLUMNS` in the

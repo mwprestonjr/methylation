@@ -30,6 +30,28 @@ Run steps 1-4 separately for each data source and ancestry.
 - `tune_meth_pcs.R` - reruns scans across methylation-PC counts to support PC selection.
 - `config.R` - genotype, QC, scan, and plot settings.
 
+## Outputs
+
+In `<DIR_OUTPUT>/results/mqtl/<ANCESTRY>/` (`MQTL_DIR`, set in
+`R/mqtl_setup.R`), so each ancestry has its own set.
+
+| Step | File | Contents | Read by |
+|---|---|---|---|
+| 1 | `mqtl_sample_map.csv` (`MQTL_SAMPLE_MAP`) | Methylation samples with genotypes for this ancestry: GP2ID, clinical ID, methylation sample ID, phenotype, ancestry | steps 3, 4, `tune_meth_pcs.R` |
+| 1 | `mqtl_keep.txt` (`MQTL_KEEP`) | plink2 `--keep` file (FID, IID) of those samples | step 2 |
+| 2 | `genotypes/geno_qc.{pgen,pvar,psam}` | Genotypes after variant and sample QC (autosomal biallelic SNPs; `MQTL_MAF`, `MQTL_GENO_MISSING`, `MQTL_SAMPLE_MISSING`, `MQTL_HWE_P`), variant IDs `chr:pos:ref:alt` (hg38) | step 2 |
+| 2 | `genotypes/geno_qc.rmdup.list` | Duplicate variant IDs removed | |
+| 2 | `genotypes/ld_prune.prune.{in,out}` | LD-pruned variant list used for the genotype PCs | step 2 |
+| 2 | `genotypes/geno_pcs.{eigenvec,eigenval}` | `MQTL_N_GENO_PCS` genotype PCs (ancestry covariates) | step 3, `tune_meth_pcs.R` |
+| 2 | `genotypes/geno_chr<N>.traw` | Genotypes per chromosome, SNPs x samples, as 0/1/2 copies of the `COUNTED` allele (hard calls) | steps 3, 4, `tune_meth_pcs.R` |
+| 2 | `genotypes/*.log` | plink2 logs | |
+| 3 | `cis_mqtl_all_saved.tsv.gz` | Every SNP-CpG pair with p < `MQTL_P_CIS_SAVE`: effect, t, p, positions, distance, FDR | step 4 |
+| 3 | `cis_mqtl_lead_per_cpg.tsv` | Lead (strongest) SNP per CpG, same columns; one row per CpG with any saved pair | step 4 |
+| 3 | `mqtl_covariates.csv` | Covariates used in the model, per sample in model order (known covariates, genotype PCs, latent methylation PCs) | step 4 |
+| 3 | `mqtl_summary.csv` | Samples, CpGs tested, window, PCs, number of tests, CpGs with a cis-mQTL (FDR and strict thresholds), FDR p-value cut-off | |
+| 4 | `mqtl_top_hits.csv` | Top mQTLs at distinct loci with gene, island context and MAF | |
+| tune | `tune_meth_pcs.csv` | CpGs with a cis-mQTL for each number of latent methylation PCs in `MQTL_N_METH_PCS_GRID` | |
+
 ## Figures
 
 Saved in `<DIR_OUTPUT>/figures/mqtl/<ANCESTRY>/` for the data source being processed
@@ -44,11 +66,9 @@ Saved in `<DIR_OUTPUT>/figures/mqtl/<ANCESTRY>/` for the data source being proce
 - `mqtl_07_island_context.png` - cis-mQTL share by CpG island context.
 - `mqtl_tune_meth_pcs.png` - significant CpG counts across tested methylation-PC counts; generated separately by `mqtl/tune_meth_pcs.R`.
 
-`4_mqtl_plots.R` also writes `mqtl_top_hits.csv` (results folder): the top mQTLs
-with gene, island context and MAF. Numbers of hits shown and the regional window
-are set in `mqtl/config.R` (`MQTL_PLOT_*`). Regional plots recompute every SNP
-in the window with the step 3 model, since step 3 saves only pairs with p <
-`MQTL_P_CIS_SAVE`.
+The number of hits shown and the regional window are set in `mqtl/config.R`
+(`MQTL_PLOT_*`). Regional plots recompute every SNP in the window with the
+step 3 model, since step 3 saves only pairs with p < `MQTL_P_CIS_SAVE`.
 
 ## Choosing the number of latent methylation PCs
 
