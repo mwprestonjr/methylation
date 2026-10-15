@@ -3,7 +3,7 @@
 # Author: GP2 Subtypes and Mechanisms - M.P.
 # Date: Sept 23, 2026
 # Updated: Oct 8, 2026
-# Description: Loads normalized, unfiltered beta values from qc/02_qc.R,
+# Description: Loads normalized, unfiltered beta values from qc/2_qc.R,
 #              collapses EPICv2 probe names to 450K/EPIC IDs, records each clock's
 #              CpG coverage, estimates epigenetic age (methylclock) and pace
 #              of aging (DunedinPACE), and computes age acceleration vs
@@ -110,7 +110,7 @@ clock_coverage <- imap_dfr(clock_cpgs, function(cpgs, clock) {
 # --- 4. Estimate epigenetic age ----------------------------------------------
 
 cat("\nEstimating epigenetic age with methylclock...\n")
-# normalize = FALSE: data are already Funnorm-normalized in qc/02_qc.R
+# normalize = FALSE: data are already Funnorm-normalized in qc/2_qc.R
 # cell.count = FALSE: cell proportions come from preprocessing/1_cell_counts.R
 dnam_age <- DNAmAge(bVals_cg,
                     clocks     = "all",

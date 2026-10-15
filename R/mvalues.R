@@ -2,7 +2,7 @@
 # M value helpers
 # Author: GP2 Subtypes and Mechanisms - M.P.
 # Date: Sept 30, 2026
-# Description: Helpers for M value matrices, used by Script 02 and the
+# Description: Helpers for M value matrices, used by qc/2_qc.R and the
 #              preprocessing scripts
 # =============================================================================
 

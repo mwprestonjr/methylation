@@ -3,14 +3,14 @@
 # Author: GP2 Subtypes and Mechanisms - M.E., M.P.
 # Date: April 29, 2026
 # Updated: Sept 29, 2026
-# Description: Reads the idat files in the sample sheet from Script 01 into
+# Description: Reads the idat files in the sample sheet (qc/1 scripts) into
 #              minfi, runs QC following the minfi user guide, optionally
 #              computes SeSAMe per-sample QC stats (USE_SESAME_QC), filters
 #              failed samples and probes, normalizes using preprocessFunnorm,
 #              and saves QC-passed data plus the data for the QC figures
-#              (drawn by 03_qc_plots.R). Works for any array in
+#              (drawn by 3_qc_plots.R). Works for any array in
 #              R/array_profiles.R; one array type per run
-# Usage:       Rscript qc/02_qc.R <data source>   (see config.R)
+# Usage:       Rscript qc/2_qc.R <data source>   (see config.R)
 # =============================================================================
 
 # --- 0. Setup ----------------------------------------------------------------
@@ -51,7 +51,7 @@ array_type <- unique(targets$Array)
 if (length(array_type) != 1 || !array_type %in% names(ARRAY_PROFILES)) {
   stop("Sample sheet must contain exactly one supported array type (",
        paste(names(ARRAY_PROFILES), collapse = ", "), "); found: ",
-       paste(array_type, collapse = ", "), " - see the array table from Script 01")
+       paste(array_type, collapse = ", "), " - see the array table from the qc/1 sample sheet script")
 }
 profile <- ARRAY_PROFILES[[array_type]]
 library(profile$anno_pkg, character.only = TRUE)
@@ -96,7 +96,7 @@ cat("First few GP2IDs:", head(pData(rgSet)$GP2ID), "\n")
 
 cat("\nRunning initial QC...\n")
 
-# 3a. Median methylated vs unmethylated intensity per sample (plotted in Script 03)
+# 3a. Median methylated vs unmethylated intensity per sample (plotted in qc/3_qc_plots.R)
 mSet <- preprocessRaw(rgSet)
 qc   <- getQC(mSet)
 

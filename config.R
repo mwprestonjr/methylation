@@ -10,26 +10,26 @@
 #              mqtl/config.R). Scripts source this file, then their module's:
 #                source("config.R"); source("qc/config.R")
 #              and are run from the repository root, e.g.
-#                Rscript qc/02_qc.R ppmi_p140
+#                Rscript qc/2_qc.R ppmi_p140
 # =============================================================================
 
 # --- Data source -------------------------------------------------------------
 
-# Which data source this run processes. The 01 scripts set DATA_SOURCE
+# Which data source this run processes. The qc/1 scripts set DATA_SOURCE
 # themselves; the other scripts take it as the first command-line argument. In
 # an interactive session, set DATA_SOURCE before sourcing this file
 DATA_SOURCES <- c("ppmi_p140", "psomagen")
 if (!exists("DATA_SOURCE")) DATA_SOURCE <- commandArgs(trailingOnly = TRUE)[1]
 if (is.na(DATA_SOURCE) || !DATA_SOURCE %in% DATA_SOURCES) {
   stop("Set the data source, one of: ", paste(DATA_SOURCES, collapse = ", "),
-       "\n  e.g. Rscript qc/02_qc.R ", DATA_SOURCES[1])
+       "\n  e.g. Rscript qc/2_qc.R ", DATA_SOURCES[1])
 }
 cat("Data source:", DATA_SOURCE, "\n")
 
 # --- Source-specific paths ---------------------------------------------------
 
 if (DATA_SOURCE == "ppmi_p140") {
-  # PPMI Project 140 (EPICv1). Sample sheet: qc/01_build_sample_sheet_ppmi.R
+  # PPMI Project 140 (EPICv1). Sample sheet: qc/1_build_sample_sheet_ppmi.R
   PPMI_DIR           <- "/mnt/expansion_working/methylation/ppmi"
   P140_DIR           <- file.path(PPMI_DIR, "project_140")
   IDAT_DIR           <- file.path(P140_DIR, "idat")
@@ -50,7 +50,7 @@ if (DATA_SOURCE == "ppmi_p140") {
 }
 
 if (DATA_SOURCE == "psomagen") {
-  # Psomagen deliveries (EPICv2). Sample sheet: qc/01_build_sample_sheet_psomagen.R
+  # Psomagen deliveries (EPICv2). Sample sheet: qc/1_build_sample_sheet_psomagen.R
   # Datasets to process together; each has <DIR_DELIVERY>/<ID>/<ID>_QC_table.csv
   # and its idat files under <DIR_DELIVERY>/<ID>/<Sentrix_ID>/
   DATASETS     <- c("AB00000952",
@@ -88,11 +88,11 @@ FIG_RES    <- 300  # dpi
 # --- Files and settings shared between modules -------------------------------
 
 # GP2 R12 master key: GP2ID, sex, race, phenotype, ages (sample collection,
-# onset, diagnosis), family history. Used for the sample sheets (qc/01
+# onset, diagnosis), family history. Used for the sample sheets (qc/1
 # scripts) and clinical traits (clocks/)
 FNAME_METADATA <- "/mnt/output/metadata/INTERNAL_USE_ONLY_master_key_release12_final_vwb.csv"
 
-# Columns every qc/01 script writes to the sample sheet (source-specific
+# Columns every qc/1 script writes to the sample sheet (source-specific
 # extras may follow). Later scripts only rely on these
 SAMPLE_SHEET_COLUMNS <- c("GP2ID", "GP2sampleID", "clinical_id",
                           "phenotype", "sex", "race", "age",

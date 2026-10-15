@@ -8,8 +8,8 @@ comma    := ,
 MODULES  := qc preprocessing clocks mqtl
 MQTL_LOG  = $(subst $(comma),_,$(ANCESTRY))
 
-SHEET_ppmi_p140 := qc/01_build_sample_sheet_ppmi.R
-SHEET_psomagen  := qc/01_build_sample_sheet_psomagen.R
+SHEET_ppmi_p140 := qc/1_build_sample_sheet_ppmi.R
+SHEET_psomagen  := qc/1_build_sample_sheet_psomagen.R
 
 log_file = $(LOG_DIR)/$(firstword $(subst /, ,$(1)))/$(2)_$(SOURCE)_$(STAMP).log
 
@@ -34,9 +34,9 @@ all: check-source
 	fi
 
 qc: check-source
-	$(call run_r,$(SHEET_$(SOURCE)),01_sample_sheet)
-	$(call run_r,qc/02_qc.R,02_qc)
-	$(call run_r,qc/03_qc_plots.R,03_qc_plots)
+	$(call run_r,$(SHEET_$(SOURCE)),1_sample_sheet)
+	$(call run_r,qc/2_qc.R,2_qc)
+	$(call run_r,qc/3_qc_plots.R,3_qc_plots)
 	@echo "[$$(date +%H:%M)] qc complete for $(SOURCE)"
 
 preprocessing: check-source

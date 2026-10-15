@@ -2,8 +2,9 @@
 # Array profiles
 # Author: GP2 Subtypes and Mechanisms - M.E., M.P.
 # Date: Sept 29, 2026
-# Description: Everything in the pipeline that differs by array type. Script 01
-#              detects the array per chip (detect_chip_arrays); Script 02 looks up
+# Description: Everything in the pipeline that differs by array type. The
+#              qc/1 sample sheet scripts detect the array per chip
+#              (detect_chip_arrays); qc/2_qc.R looks up
 #              the profile for the array in the sample sheet. Everything else
 #              (bead counts, sex probes, SNP probes, getSex, Funnorm) reads the
 #              annotation attached to the rgSet and works for any array here.

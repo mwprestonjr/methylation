@@ -3,7 +3,7 @@
 # Author: GP2 Subtypes and Mechanisms - M.P.
 # Date: Sept 25, 2026
 # Updated: Sept 29, 2026
-# Description: Plots the QC results of Script 02 from its saved figure data
+# Description: Plots the QC results of qc/2_qc.R from its saved figure data
 #              (QC_FIGURE_DATA) and saves the figures to DIR_FIGURES_QC:
 #   qc_01  Median methylated vs unmethylated intensity per sample (minfi
 #          plotQC); low-intensity samples are flagged in red
@@ -11,15 +11,15 @@
 #          DETECTION_P_THRESHOLD line
 #   qc_02b Fraction of cg probes detected (SeSAMe pOOBAH) per sample, sorted,
 #          coloured by dataset, with the SESAME_MIN_FRAC_DETECTED line
-#          (only if Script 02 ran with USE_SESAME_QC)
+#          (only if qc/2_qc.R ran with USE_SESAME_QC)
 #   qc_03  Sex prediction: X vs Y chromosome median intensity, fill =
 #          predicted sex, border = reported sex
 #   qc_04  Beta value densities before normalization, by phenotype
 #   qc_04b Beta value densities before normalization, by dataset
 #   qc_05  Beta value densities after normalization (Funnorm), by phenotype
 #          (qc_04 to qc_05 include only samples that passed QC; density
-#          outliers flagged by Script 02 are drawn in black)
-# Usage:       Rscript qc/03_qc_plots.R <data source>   (see config.R)
+#          outliers flagged by qc/2_qc.R are drawn in black)
+# Usage:       Rscript qc/3_qc_plots.R <data source>   (see config.R)
 # =============================================================================
 
 # --- 0. Setup ----------------------------------------------------------------
@@ -83,7 +83,7 @@ cat("Detection p-value plot saved\n")
 # --- 3. SeSAMe detection (qc_02b) --------------------------------------------
 
 # Fraction of cg probes detected per sample, sorted, coloured by dataset.
-# Only available if Script 02 ran with USE_SESAME_QC
+# Only available if qc/2_qc.R ran with USE_SESAME_QC
 if (params$USE_SESAME_QC) {
   SESAME_MIN_FRAC_DETECTED <- params$SESAME_MIN_FRAC_DETECTED
   ord       <- order(qc_metrics$frac_dt_cg)
@@ -115,7 +115,7 @@ if (params$USE_SESAME_QC) {
   dev.off()
   cat("SeSAMe detection plot saved\n")
 } else {
-  cat("Skipping SeSAMe detection plot (Script 02 ran with USE_SESAME_QC = FALSE)\n")
+  cat("Skipping SeSAMe detection plot (qc/2_qc.R ran with USE_SESAME_QC = FALSE)\n")
 }
 
 # --- 4. Sex prediction (qc_03) -----------------------------------------------
@@ -152,7 +152,7 @@ cat("Sex prediction plot saved\n")
 
 # Same drawing as minfi::densityPlot, but from the saved density curves
 # (x and y matrices, one column per sample) instead of the beta matrix
-# Density outliers (flagged in Script 02) are drawn last, in black
+# Density outliers (flagged in qc/2_qc.R) are drawn last, in black
 density_plot <- function(curves, sampGroups, main, flagged = NULL,
                          pal = RColorBrewer::brewer.pal(8, "Dark2")) {
   sampGroups <- as.factor(sampGroups)
@@ -185,7 +185,7 @@ density_plot <- function(curves, sampGroups, main, flagged = NULL,
 groups_for <- function(curves, var) {
   qc_metrics[[var]][match(colnames(curves$x), qc_metrics$Sample)]
 }
-# density_outlier is missing in figure data from before it was added to Script 02
+# density_outlier is missing in figure data from before it was added to qc/2_qc.R
 flagged_for <- function(curves) {
   if (is.null(qc_metrics$density_outlier)) return(NULL)
   groups_for(curves, "density_outlier") %in% TRUE

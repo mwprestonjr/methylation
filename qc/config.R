@@ -5,7 +5,7 @@
 # Description: Settings used only by the qc/ scripts. Source after config.R
 # =============================================================================
 
-# --- Sample and probe QC thresholds (qc/02_qc.R) -----------------------------
+# --- Sample and probe QC thresholds (qc/2_qc.R) ------------------------------
 
 DETECTION_P_THRESHOLD <- 0.01   # Max detection p-value
 MIN_BEADS             <- 3      # Minimum beads per probe
@@ -32,5 +32,5 @@ DETP_CHUNK_SIZE <- 50
 
 # --- Files passed between qc/ scripts ----------------------------------------
 
-SAMPLE_SHEET   <- file.path(DIR_RESULTS_QC, "sample_sheet.csv")      # 01 -> 02
-QC_FIGURE_DATA <- file.path(DIR_RESULTS_QC, "qc_figure_data.rds")    # 02 -> 03: everything needed to redraw the QC figures
+SAMPLE_SHEET   <- file.path(DIR_RESULTS_QC, "sample_sheet.csv")      # 1 -> 2
+QC_FIGURE_DATA <- file.path(DIR_RESULTS_QC, "qc_figure_data.rds")    # 2 -> 3: everything needed to redraw the QC figures

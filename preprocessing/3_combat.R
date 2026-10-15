@@ -25,7 +25,7 @@ source("R/mvalues.R")
 # --- 1. Load data ------------------------------------------------------------
 
 cat("Loading QC-passed M values...\n")
-# ComBat can't handle infinite values; files from before Script 02 capped
+# ComBat can't handle infinite values; files from before qc/2_qc.R capped
 # them may still contain some (R/mvalues.R)
 mVals <- cap_infinite_m(readRDS(MVALS_QC))
 cat("M values dimensions:", dim(mVals), "\n")

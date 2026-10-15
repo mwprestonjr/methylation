@@ -2,8 +2,8 @@
 # Beta density curves
 # Author: GP2 Subtypes and Mechanisms - M.P.
 # Date: Sept 29, 2026
-# Description: Per-sample beta density curves (as saved by Script 02 and
-#              drawn by Script 03) and the density outlier score computed
+# Description: Per-sample beta density curves (as saved by qc/2_qc.R and
+#              drawn by qc/3_qc_plots.R) and the density outlier score computed
 #              from them
 # =============================================================================
 

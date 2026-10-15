@@ -15,14 +15,14 @@ BiocManager::install(c(
     "minfiData",
     "IlluminaHumanMethylationEPICanno.ilm10b4.hg19",
     "IlluminaHumanMethylationEPICmanifest",
-    "IlluminaHumanMethylationEPICv2anno.20a1.hg38",   # EPICv2 annotation (Scripts 02, 03)
+    "IlluminaHumanMethylationEPICv2anno.20a1.hg38",   # EPICv2 annotation (qc/2_qc.R, qc/3_qc_plots.R)
     "IlluminaHumanMethylationEPICv2manifest",          # EPICv2 manifest, loaded by minfi
     "DMRcate",
     "limma",
     "bumphunter",
     "sva",                    # ComBat batch correction
     "FlowSorted.Blood.EPIC",  # cell type deconvolution
-    "sesame",                 # per-sample QC stats (Script 02)
+    "sesame",                 # per-sample QC stats (qc/2_qc.R)
     "sesameData",             # sesame manifests and reference data
     "methylclock",            # epigenetic clocks (clocks/)
     "methylclockData"         # clock coefficients (clocks/)

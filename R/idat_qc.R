@@ -2,7 +2,7 @@
 # IDAT and sample QC helpers
 # Author: GP2 Subtypes and Mechanisms - M.E., M.P.
 # Date: Sept 30, 2026
-# Description: QC steps used by the 01 and 02 scripts that work on idat files
+# Description: QC steps used by qc/1 and qc/2 that work on idat files
 #              or the raw minfi objects: checking idat files exist, SeSAMe
 #              per-sample QC stats, sex check, and low bead count probes
 # =============================================================================
