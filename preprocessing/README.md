@@ -49,6 +49,13 @@ run directly, the same way for both arrays; EPICv2 replicate probes are
 averaged per CpG first. In later models, neutrophils are left out because the
 proportions sum to about 1.
 
+**EPICv2 coverage of the cell reference**: the IDOL CpGs were selected for
+EPICv1, and 30 of the 450 aren't on EPICv2, so Psomagen's cell proportions are
+estimated from 420 CpGs (PPMI: all 450). `1_cell_counts.R` prints the number
+found. The estimates still work, but they may be somewhat less precise on
+EPICv2, and cell proportions aren't directly comparable between the two
+arrays.
+
 **Sources of variation** (`2_variation_sources.R`): SVD of the
 `VARIATION_TOP_CPGS` (50,000) most variable CpGs; each of the first
 `VARIATION_N_PCS` (10) components is tested against each sample variable
