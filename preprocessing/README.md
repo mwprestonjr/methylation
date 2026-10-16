@@ -42,11 +42,11 @@ other scripts use to find the file (root `config.R`, or
 
 **Cell proportions** (`1_cell_counts.R`): CD8T, CD4T, NK, B cells, monocytes
 and neutrophils (`CELL_TYPES`), estimated with the IDOL reference
-(`FlowSorted.Blood.EPIC`, Salas et al. 2018). The idat files are re-read and
-noob-normalized, as the method needs, rather than using the Funnorm output.
-minfi's `estimateCellCounts2` only supports 450K/EPICv1, so its IDOL steps are
-run directly, the same way for both arrays; EPICv2 replicate probes are
-averaged per CpG first. In later models, neutrophils are left out because the
+(`FlowSorted.Blood.EPIC`, Salas et al. 2018), from the noob-normalized betas
+saved by `qc/2_qc.R` (`BVALS_NOOB`), since the method needs noob rather than
+Funnorm values. minfi's `estimateCellCounts2` only supports 450K/EPICv1, so its
+IDOL steps are run directly, the same way for both arrays; EPICv2 replicate
+probes are averaged per CpG first. In later models, neutrophils are left out because the
 proportions sum to about 1.
 
 **EPICv2 coverage of the cell reference**: the IDOL CpGs were selected for

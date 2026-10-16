@@ -228,6 +228,16 @@ rgSet_clean <- RGChannelSet(Green      = getGreen(rgSet)[, keep, drop = FALSE],
 rm(rgSet, qc, detP, detP_clean, failed)
 invisible(gc())
 
+# Noob-normalized betas, all probes, for cell type deconvolution
+# (preprocessing/1_cell_counts.R): the IDOL reference needs noob, not Funnorm,
+# values. Noob works on each sample on its own, so it can run on the QC-passed
+# samples here; all probes are kept so a different reference (other CpGs)
+# doesn't need QC rerun
+cat("\nNoob-normalizing for cell type deconvolution...\n")
+saveRDS(getBeta(preprocessNoob(rgSet_clean)), BVALS_NOOB)
+invisible(gc())
+cat("Noob betas saved to:", BVALS_NOOB, "\n")
+
 # Apply functional normalization
 cat("\nNormalizing with preprocessFunnorm...\n")
 mSetSq <- preprocessFunnorm(rgSet_clean)
