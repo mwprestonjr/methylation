@@ -36,9 +36,9 @@ within qc).
 | 2 | `qc_figure_data.rds` | `QC_FIGURE_DATA` | Sample metrics, density curves and thresholds behind the QC figures | `3_qc_plots.R` |
 | 2 | `sample_sheet_qc_passed.csv` | `SAMPLE_SHEET_QC` | Sample sheet of the samples that passed QC | preprocessing (all steps) |
 | 2 | `mVals.rds` | `MVALS_QC` | M values: QC-passed samples, Funnorm-normalized, probe-filtered, infinite values capped | `preprocessing/2_variation_sources.R`, `3_combat.R` |
-| 2 | `bVals.rds` | | Beta values, same samples and probes as `mVals.rds` | not read by the pipeline |
+| 2 | `bVals.rds` | | Beta values, same samples and probes as `mVals.rds`; only if `SAVE_BVALS = TRUE` | not read by the pipeline |
 | 2 | `bVals_unfiltered.rds` | `BVALS_UNFILTERED` | Beta values: QC-passed samples, normalized, **no probe filtering** (filters can remove clock CpGs) | `clocks/1_estimate.R` |
-| 2 | `mSetSq_qc_passed.rds` | `MSET_QC` | Normalized, filtered `GenomicRatioSet` (minfi object with annotation) | not read by the pipeline |
+| 2 | `mSetSq_qc_passed.rds` | `MSET_QC` | Normalized, filtered `GenomicRatioSet` (minfi object with annotation); only if `SAVE_MSET_QC = TRUE` | not read by the pipeline |
 
 ## Methods and decisions
 

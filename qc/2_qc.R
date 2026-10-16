@@ -337,20 +337,21 @@ cat("Final probe count:", n_after_sex, "\n")
 
 cat("\nSaving QC-passed data...\n")
 
-cat("\nCalculating M and Beta values...\n")
+cat("\nCalculating M values...\n")
 mVals <- cap_infinite_m(getM(mSetSq))   # betas of 0/1 give -Inf/Inf (R/mvalues.R)
-bVals <- getBeta(mSetSq)
-
 cat("M values dimensions:", dim(mVals), "\n")
-cat("Beta values dimensions:", dim(bVals), "\n")
-
-# Save as RDS
 saveRDS(mVals, MVALS_QC)
-saveRDS(bVals, file.path(DIR_RESULTS_QC, "bVals.rds"))
-cat("M and Beta values saved\n")
+cat("M values saved\n")
 
-# Save normalized filtered GenomicRatioSet
-saveRDS(mSetSq, MSET_QC)
+# Outputs no later step reads (SAVE_BVALS, SAVE_MSET_QC in qc/config.R)
+if (SAVE_BVALS) {
+  saveRDS(getBeta(mSetSq), file.path(DIR_RESULTS_QC, "bVals.rds"))
+  cat("Beta values saved\n")
+}
+if (SAVE_MSET_QC) {
+  saveRDS(mSetSq, MSET_QC)
+  cat("Normalized, filtered GenomicRatioSet saved\n")
+}
 
 # Save cleaned sample sheet
 write.csv(targets_clean, SAMPLE_SHEET_QC, row.names = FALSE)

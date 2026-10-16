@@ -30,6 +30,13 @@ SESAME_MIN_FRAC_DETECTED <- 0.90   # Min fraction of cg probes detected (pOOBAH 
 # memory than the VM has for a few hundred EPIC samples
 DETP_CHUNK_SIZE <- 50
 
+# --- Optional outputs (qc/2_qc.R) --------------------------------------------
+
+# Outputs no later step reads; large (for ~400 EPICv1 samples about 2.3 GB and
+# 4.6 GB). Keep them for ad-hoc analyses, or set FALSE to save space and time
+SAVE_BVALS    <- TRUE   # bVals.rds: beta values, same samples/probes as mVals.rds
+SAVE_MSET_QC  <- TRUE   # mSetSq_qc_passed.rds (MSET_QC): normalized, filtered GenomicRatioSet
+
 # --- Files passed between qc/ scripts ----------------------------------------
 
 SAMPLE_SHEET   <- file.path(DIR_RESULTS_QC, "sample_sheet.csv")      # 1 -> 2
