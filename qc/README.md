@@ -40,6 +40,67 @@ within qc).
 | 2 | `bVals_unfiltered.rds` | `BVALS_UNFILTERED` | Beta values: QC-passed samples, normalized, **no probe filtering** (filters can remove clock CpGs) | `clocks/1_estimate.R` |
 | 2 | `mSetSq_qc_passed.rds` | `MSET_QC` | Normalized, filtered `GenomicRatioSet` (minfi object with annotation) | not read by the pipeline |
 
+## Methods and decisions
+
+**Samples**
+- **PPMI**: samples come from the Project 140 link list (the only map from
+  idat to participant and visit), restricted to one visit
+  (`PRIMARY_TIMEPOINT`, baseline) and the enrollment cohorts in
+  `COHORTS_OF_INTEREST` (PD and healthy control). Phenotype comes from the PPMI
+  enrollment cohort, not from R12 `GP2_phenotype`, which labels
+  genetic-cohort unaffected carriers "Control" and later converters "PD".
+- **PPMI duplicates**: participants with more than two arrays at the visit are
+  removed (likely batch controls or mislabelled visits); for two arrays
+  (technical replicates), the more recent chip (higher Sentrix ID) is kept.
+- **Psomagen**: all samples in the deliveries listed in `DATASETS`, with
+  phenotype, sex, race and age from the R12 master key, matched on GP2ID.
+  Samples appearing in more than one delivery are reported.
+- **Age**: PPMI uses age at the methylation visit (falling back to enrollment
+  age); Psomagen uses R12 `age_at_sample_collection`, the age at the GP2 DNA
+  draw that was arrayed.
+- **Array type** is read from one idat per chip (number of bead types), not
+  taken from the delivery files. `2_qc.R` processes one array type per run.
+
+**Sample QC** (`2_qc.R`), in order:
+1. **Detection**: with `USE_SESAME_QC = TRUE` (default), samples with fewer
+   than `SESAME_MIN_FRAC_DETECTED` (90%) of cg probes detected by SeSAMe
+   pOOBAH are removed; otherwise samples with mean minfi detection p >
+   `DETECTION_P_THRESHOLD` (0.01).
+2. **Sex**: predicted sex (minfi `getSex`, X/Y intensities) is compared with
+   reported sex; discordant samples are removed (`REMOVE_SEX_DISCORDANT`).
+   Samples with unknown reported sex are never called discordant.
+3. **Beta density outliers**: samples with a third peak in the beta
+   distribution between 0.15 and 0.75 (e.g. a mixed sample) are scored after
+   normalization and flagged above `DENSITY_MID_PEAK_MAX`. They are **flagged,
+   not removed** (`REMOVE_DENSITY_OUTLIERS = FALSE`); see
+   `qc_sample_metrics.csv`.
+
+**Normalization**: functional normalization (minfi `preprocessFunnorm`) of the
+samples passing steps 1-2. Density outliers are part of the normalization even
+when removed afterwards.
+
+**Probe filters**, applied after normalization:
+- low bead count: fewer than `MIN_BEADS` (3) beads in more than 5% of samples
+- cross-reactive: the `maxprobes` EPICv1 list; for EPICv2, mapped through the
+  EPICv1 probe IDs, so **probes new on EPICv2 aren't screened**
+- failed detection: detection p > `DETECTION_P_THRESHOLD` (0.01) in more than
+  `FAILED_SAMPLE_CUTOFF` (10%, the ChAMP default) of samples
+- SNP-overlapping: minfi `dropLociWithSnps` with its defaults: any probe
+  with a known SNP (allele frequency > 0 in the annotation) at the CpG or the
+  single-base extension site. SNPs elsewhere in the probe aren't filtered
+- sex chromosomes (X and Y)
+
+**Two versions of the normalized data are saved**: probe-filtered M values
+(`mVals.rds`), used by preprocessing and mQTL, and unfiltered betas
+(`bVals_unfiltered.rds`) for the clocks, because the probe filters can remove
+CpGs that clocks use.
+
+**M values**: betas of exactly 0 or 1 give infinite M values; these are capped
+(`R/mvalues.R`) so ComBat and other models can use them.
+
+**EPICv2**: replicate probes for the same CpG (e.g. `cg00000029_TC21`,
+`_BC21`) are kept as separate probes here.
+
 ## Sample sheet
 
 Both sample sheet scripts write the same columns (`SAMPLE_SHEET_COLUMNS` in the

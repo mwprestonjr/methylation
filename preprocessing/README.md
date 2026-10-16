@@ -38,11 +38,57 @@ other scripts use to find the file (root `config.R`, or
 | 3 | `combat_summary.csv` | | Samples, CpGs, batch variable, number and smallest size of batches, protected variables | |
 | 4 | `cpg_annotation.csv` | `CPG_ANNOTATION` | Every probe on the array: hg38 position, island context, GENCODE gene and type, promoter/body/intergenic, distances to gene and TSS | `mqtl/4_mqtl_plots.R` |
 
-## Batch variable
+## Methods and decisions
 
-`COMBAT_BATCH_VAR` (`config.R`) is `Batch` (processing plate) for PPMI and
-`Sentrix_ID` (chip) for Psomagen, chosen with `2_variation_sources.R`. How
-`Batch` is defined: see [qc/README.md](../qc/README.md#sample-sheet).
+**Cell proportions** (`1_cell_counts.R`): CD8T, CD4T, NK, B cells, monocytes
+and neutrophils (`CELL_TYPES`), estimated with the IDOL reference
+(`FlowSorted.Blood.EPIC`, Salas et al. 2018). The idat files are re-read and
+noob-normalized, as the method needs, rather than using the Funnorm output.
+minfi's `estimateCellCounts2` only supports 450K/EPICv1, so its IDOL steps are
+run directly, the same way for both arrays; EPICv2 replicate probes are
+averaged per CpG first. In later models, neutrophils are left out because the
+proportions sum to about 1.
+
+**Sources of variation** (`2_variation_sources.R`): SVD of the
+`VARIATION_TOP_CPGS` (50,000) most variable CpGs; each of the first
+`VARIATION_N_PCS` (10) components is tested against each sample variable
+(Kruskal-Wallis for categorical variables, linear regression for numeric ones,
+as in ChAMP's `champ.SVD`). It also tests whether age, sex, batch and chip
+differ between phenotypes: a batch variable confounded with phenotype can't be
+corrected without removing phenotype signal. Run before ComBat (`raw`) to
+choose the batch variable, and after (`combat`) to check the correction.
+
+**Batch correction** (`3_combat.R`): ComBat (`sva`) on the probe-filtered M
+values, with parametric priors.
+- **Batch variable** (`COMBAT_BATCH_VAR`): `Batch` (processing plate) for
+  PPMI and `Sentrix_ID` (chip) for Psomagen. PPMI samples are spread over about
+  240 chips, often one per chip, too few for ComBat (a batch of one sample
+  would have its own signal removed); its 22 plates hold 4-40 samples each.
+  Psomagen has about 8 samples per chip, and chip explains more technical
+  variation than delivery. How `Batch` is defined: see
+  [qc/README.md](../qc/README.md#sample-sheet).
+- **Protected variables** (`COMBAT_PROTECT`): phenotype, so ComBat keeps
+  phenotype differences. If batch and phenotype overlap strongly, protecting
+  phenotype can inflate phenotype differences (Nygaard et al. 2016); check
+  `confounder_summary.csv`.
+- **Not corrected**: position on the chip (row R01-R08). Later analyses adjust
+  for it as a covariate (`chip_row`).
+- **Not ComBat-corrected**: the unfiltered betas used by the clocks; the clock
+  models adjust for the ComBat batch (`combat_batch` in the final sample
+  sheet) instead.
+
+**CpG annotation** (`4_cpg_annotation.R`), for every probe on the array,
+independent of QC:
+- **Position**: hg38. EPICv1 positions (hg19 annotation) are lifted over with
+  the UCSC chain; probes that don't map to exactly one hg38 position on the
+  same chromosome are dropped.
+- **Gene**: one GENCODE gene per CpG (`GENE_TYPES`: protein-coding and lncRNA),
+  chosen in this order: promoter (`PROMOTER_UPSTREAM` 1,500 bp upstream to
+  `PROMOTER_DOWNSTREAM` 500 bp downstream of the transcription start), gene
+  body, otherwise the nearest gene (intergenic). Within a category,
+  protein-coding genes come first, then the gene with the closest start.
+- **Island context**: from the Illumina annotation (`Relation_to_Island`);
+  EPICv1's north/south shores and shelves are merged to match EPICv2.
 
 ## Figures
 

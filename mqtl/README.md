@@ -52,6 +52,70 @@ In `<DIR_OUTPUT>/results/mqtl/<ANCESTRY>/` (`MQTL_DIR`, set in
 | 4 | `mqtl_top_hits.csv` | Top mQTLs at distinct loci with gene, island context and MAF | |
 | tune | `tune_meth_pcs.csv` | CpGs with a cis-mQTL for each number of latent methylation PCs in `MQTL_N_METH_PCS_GRID` | |
 
+## Methods and decisions
+
+**Samples** (`1_mqtl_sample_map.R`): methylation samples are linked to GP2
+genotypes by GP2ID through the GP2 master key (`GP2_MASTER_KEY`), keeping
+samples genotyped on `GENO_SOURCE` (NBA array) that passed GP2 genotype QC and
+have the requested ancestry label. The genotype files have related
+individuals removed.
+
+**Genotype QC** (`2_mqtl_genotypes.sh`, PLINK 2), on the analysed samples:
+- autosomal, biallelic, single-base (A/C/G/T) SNPs only
+- minor allele frequency >= `MQTL_MAF` (5%), variant missingness <=
+  `MQTL_GENO_MISSING` (5%), sample missingness <= `MQTL_SAMPLE_MISSING` (5%),
+  Hardy-Weinberg p >= `MQTL_HWE_P` (1e-6)
+- variants renamed `chr:pos:ref:alt` (hg38); duplicates (assayed more than once
+  on the NBA array) are reduced to one
+- genotypes exported as hard calls: 0/1/2 copies of the counted allele
+
+**Methylation**: ComBat-corrected M values, inverse-normal transformed per CpG
+(each CpG's values ranked and mapped to a standard normal). This limits the
+influence of outliers and puts every CpG on the same scale, so effects are in
+standard deviations of methylation per allele. CpG positions are hg38 (EPICv1
+lifted over, as in the CpG annotation).
+
+**Model** (`3_mqtl.R`, MatrixEQTL, linear): methylation ~ SNP dosage +
+covariates, for every SNP within `MQTL_CIS_WINDOW` (1 Mb) of each CpG, one
+chromosome at a time. Covariates:
+- age, sex, cell proportions (without neutrophils), phenotype (left out if all
+  samples share one), chip row
+- `MQTL_N_GENO_PCS` (5) genotype PCs from LD-pruned SNPs (`MQTL_PRUNE_WINDOW`
+  500 kb, r2 < `MQTL_PRUNE_R2` 0.1), for ancestry structure
+- `MQTL_N_METH_PCS` (10) latent methylation PCs: PCs of the methylation
+  residuals after the other covariates (50,000 most variable CpGs), capturing
+  unmeasured technical and biological variation; tuned with `tune_meth_pcs.R`
+  (below)
+- batch isn't a covariate, since the M values are already ComBat-corrected
+
+Samples without age or sex are left out of the model.
+
+**Significance**:
+- A CpG has a cis-mQTL if its lead SNP has Benjamini-Hochberg FDR <
+  `MQTL_FDR` (0.05), with FDR computed over all SNP-CpG tests. A stricter set
+  uses p < `MQTL_P_STRICT` (1e-8), comparable with GoDMC.
+- Only pairs with p < `MQTL_P_CIS_SAVE` (1e-3) are saved. FDR is still computed
+  over all tests, so the saved q-values are exact; `3_mqtl.R` warns if the FDR
+  threshold lies beyond the saved range (counts would then be incomplete).
+- **Limitation**: FDR over SNP-CpG pairs treats SNPs near a CpG as independent,
+  although they're correlated through LD. The standard alternative,
+  permutations per CpG (as in FastQTL, QTLtools or tensorQTL), isn't
+  implemented yet.
+
+**Known caveats**
+- **Probe-SNP artifacts**: a SNP inside the 50-bp probe can change probe
+  binding and mimic an mQTL. The QC filter only removes probes with a
+  known SNP at the CpG or extension base. Lead SNPs within 50 bp of their CpG: 3.5%
+  of significant CpGs in Psomagen AFR, 1.7% in PPMI EUR; these aren't filtered
+  yet.
+- **Lead SNP is not necessarily causal**: it tags a block of correlated SNPs
+  (see the regional plots); identifying the causal variant needs
+  fine-mapping.
+- **Hard-call genotypes**: imputation uncertainty isn't carried into the model
+  or the LD estimates.
+- **Psomagen samples are PD cases** only (plus a few other parkinsonisms), so
+  its mQTLs are estimated in cases.
+
 ## Figures
 
 Saved in `<DIR_OUTPUT>/figures/mqtl/<ANCESTRY>/` for the data source being processed

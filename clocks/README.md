@@ -26,7 +26,7 @@ the root [`config.R`](../config.R).
 | `3_associations.R` | In cases (`CLOCK_CASE_GROUP`), tests each trait in `CLOCK_TRAITS` against age acceleration and DunedinPACE, adjusted for `CLOCK_COVARIATES`; FDR across all tests | `clock_case_traits.csv`, `clock_trait_summary.csv`, `clock_trait_associations.csv` |
 | `4_plots.R` | Clock vs chronological age (with r, median absolute error, CpG coverage), acceleration by phenotype, adjusted group differences, clinical trait effects | `figures/clocks/clock_*.png` |
 
-## Methods and caveats
+## Methods and decisions
 
 - **Age acceleration** is the residual of clock age regressed on chronological
   age, in years. DunedinPACE is already a rate (years of aging per year; 1 =
