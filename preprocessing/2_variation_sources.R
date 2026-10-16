@@ -198,7 +198,8 @@ saveRDS(list(input         = VARIATION_INPUT,
 write.csv(data.frame(variable = rownames(assoc_p), assoc_p, row.names = NULL),
           file.path(DIR_RESULTS_PREPROCESSING, paste0("variation_svd_pvalues_", VARIATION_INPUT, ".csv")),
           row.names = FALSE)
-write.csv(confounders, file.path(DIR_RESULTS_PREPROCESSING, "confounder_summary.csv"), row.names = FALSE)
+write.csv(confounders, file.path(DIR_RESULTS_PREPROCESSING, paste0("confounder_summary_", VARIATION_INPUT, ".csv")),
+          row.names = FALSE)
 cat("\nResults saved to:", DIR_RESULTS_PREPROCESSING, "\n")
 if (VARIATION_INPUT == "raw") {
   cat("Next: set COMBAT_BATCH_VAR in preprocessing/config.R, then Rscript preprocessing/3_combat.R",

@@ -32,7 +32,7 @@ other scripts use to find the file (root `config.R`, or
 | 1 | `cell_proportions.csv` | `CELL_PROPORTIONS` | Estimated blood cell proportions per sample (`CELL_TYPES`) | `2_variation_sources.R`, `3_combat.R` |
 | 2 | `variation_sources_<raw\|combat>.rds` | | PCs, variance explained and variable-PC association p-values behind the variation figures | |
 | 2 | `variation_svd_pvalues_<raw\|combat>.csv` | | p-values for each sample variable vs each of the top PCs | |
-| 2 | `confounder_summary.csv` | | Whether age, sex, batch and chip differ between phenotypes; written by both runs, so it holds the last one (`combat`) | |
+| 2 | `confounder_summary_<raw\|combat>.csv` | | Whether age, sex, batch and chip differ between phenotypes | |
 | 3 | `combat_mVals.rds` | `COMBAT_MVALS` | Batch-corrected M values (`COMBAT_BATCH_VAR`, protecting `COMBAT_PROTECT`) | mQTL (`R/mqtl_functions.R`, `4_mqtl_plots.R`) |
 | 3 | `sample_sheet_final.csv` | `SAMPLE_SHEET_FINAL` | QC-passed sample sheet + cell proportions + `combat_batch` (the batch ComBat used) | clocks, mQTL |
 | 3 | `combat_summary.csv` | | Samples, CpGs, batch variable, number and smallest size of batches, protected variables | |
@@ -70,7 +70,7 @@ values, with parametric priors.
 - **Protected variables** (`COMBAT_PROTECT`): phenotype, so ComBat keeps
   phenotype differences. If batch and phenotype overlap strongly, protecting
   phenotype can inflate phenotype differences (Nygaard et al. 2016); check
-  `confounder_summary.csv`.
+  `confounder_summary_raw.csv`.
 - **Not corrected**: position on the chip (row R01-R08). Later analyses adjust
   for it as a covariate (`chip_row`).
 - **Not ComBat-corrected**: the unfiltered betas used by the clocks; the clock

@@ -84,7 +84,7 @@ mod <- if (length(protect_cols)) {
 }
 
 # If batch and phenotype overlap strongly, protecting phenotype can inflate
-# phenotype differences (Nygaard et al. 2016); see confounder_summary.csv
+# phenotype differences (Nygaard et al. 2016); see confounder_summary_raw.csv
 # from 2_variation_sources.R
 if ("phenotype" %in% protect_cols) {
   t <- suppressWarnings(chisq.test(table(targets$phenotype, batch)))
