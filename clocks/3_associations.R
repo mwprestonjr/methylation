@@ -10,7 +10,9 @@
 #              CLOCK_MIN_TRAIT_N cases are skipped; categorical levels with
 #              fewer than CLOCK_MIN_LEVEL_N cases are left out. FDR (BH) is
 #              across all outcome x trait tests. Saves the trait values, a
-#              per-trait summary and the effects for 4_plots.R
+#              per-trait summary and the effects for 4_plots.R. Repeats the
+#              models without the cell proportions (CLOCK_COVARIATES_NO_CELLS)
+#              as a sensitivity analysis, saved separately
 # Usage:       Rscript clocks/3_associations.R <data source>   (see config.R)
 # =============================================================================
 
@@ -97,30 +99,39 @@ write.csv(trait_summary, CLOCK_TRAIT_SUMMARY, row.names = FALSE)
 
 tested <- trait_summary %>% filter(status == "tested")
 
-if (nrow(tested) > 0) {
-  effects <- pmap_dfr(tested %>% select(trait, label, type, trait_sd), function(trait, label, type, trait_sd) {
-    # Covariates are chosen among the cases with this trait
-    covars <- usable_covariates(data %>% filter(!is.na(.data[[trait]])), CLOCK_COVARIATES)
-    fit_predictor(data, outcomes, trait, covars) %>%
-      mutate(trait = trait, label = label, type = type, trait_sd = trait_sd,
-             level = ifelse(type == "categorical", str_remove(term, fixed(trait)), NA),
-             .after = outcome)
-  }) %>%
-    mutate(fdr = p.adjust(p.value, method = "BH"))
+# Main model (CLOCK_COVARIATES) and the sensitivity model without cell
+# proportions (CLOCK_COVARIATES_NO_CELLS), each saved to its own file
+models <- list(
+  list(label = "main model",               covariates = CLOCK_COVARIATES,          file = CLOCK_TRAIT_EFFECTS),
+  list(label = "without cell proportions", covariates = CLOCK_COVARIATES_NO_CELLS, file = CLOCK_TRAIT_EFFECTS_NO_CELLS)
+)
 
-  cat("\nAssociations (", nrow(effects), " tests; FDR across all):\n", sep = "")
-  print(as.data.frame(effects %>%
-                        select(outcome, trait, level, n, estimate, p.value, fdr) %>%
-                        mutate(across(c(estimate), ~ signif(.x, 3)),
-                               across(c(p.value, fdr), ~ signif(.x, 2)))),
-        right = FALSE)
-  cat("\nFDR <", CLOCK_FDR, ":", sum(effects$fdr < CLOCK_FDR), "of", nrow(effects), "\n")
-  write.csv(effects, CLOCK_TRAIT_EFFECTS, row.names = FALSE)
-  cat("Associations saved to:", CLOCK_TRAIT_EFFECTS, "\n")
+if (nrow(tested) > 0) {
+  for (m in models) {
+    effects <- pmap_dfr(tested %>% select(trait, label, type, trait_sd), function(trait, label, type, trait_sd) {
+      # Covariates are chosen among the cases with this trait
+      covars <- usable_covariates(data %>% filter(!is.na(.data[[trait]])), m$covariates)
+      fit_predictor(data, outcomes, trait, covars) %>%
+        mutate(trait = trait, label = label, type = type, trait_sd = trait_sd,
+               level = ifelse(type == "categorical", str_remove(term, fixed(trait)), NA),
+               .after = outcome)
+    }) %>%
+      mutate(fdr = p.adjust(p.value, method = "BH"))
+
+    cat("\nAssociations, ", m$label, " (", nrow(effects), " tests; FDR across all):\n", sep = "")
+    print(as.data.frame(effects %>%
+                          select(outcome, trait, level, n, estimate, p.value, fdr) %>%
+                          mutate(across(c(estimate), ~ signif(.x, 3)),
+                                 across(c(p.value, fdr), ~ signif(.x, 2)))),
+          right = FALSE)
+    cat("\nFDR <", CLOCK_FDR, ":", sum(effects$fdr < CLOCK_FDR), "of", nrow(effects), "\n")
+    write.csv(effects, m$file, row.names = FALSE)
+    cat("Associations saved to:", m$file, "\n")
+  }
 } else {
   cat("\nNo traits with enough data; skipping the associations\n")
   # Remove results from an earlier run so 4_plots.R doesn't draw stale ones
-  if (file.exists(CLOCK_TRAIT_EFFECTS)) file.remove(CLOCK_TRAIT_EFFECTS)
+  for (m in models) if (file.exists(m$file)) file.remove(m$file)
 }
 
 cat("\nNext: Rscript clocks/4_plots.R", DATA_SOURCE, "\n")

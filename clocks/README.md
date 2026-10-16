@@ -22,8 +22,8 @@ the root [`config.R`](../config.R).
 | Step | What it does | Outputs (`results/clocks/`) |
 |---|---|---|
 | `1_estimate.R` | Collapses EPICv2 probe names to 450K/EPIC IDs (replicate probes averaged), records each clock's CpG coverage, estimates the methylclock clocks and DunedinPACE from normalized, unfiltered betas, and computes age acceleration | `clock_age_acceleration.csv` (per sample, with the model covariates), `clock_accuracy.csv`, `clock_cpg_coverage.csv` |
-| `2_compare.R` | Compares age acceleration and DunedinPACE between `CLOCK_GROUPS` (first = reference), adjusted for `CLOCK_COVARIATES`; FDR across outcomes | `clock_acceleration_by_diagnosis.csv` |
-| `3_associations.R` | In cases (`CLOCK_CASE_GROUP`), tests each trait in `CLOCK_TRAITS` against age acceleration and DunedinPACE, adjusted for `CLOCK_COVARIATES`; FDR across all tests | `clock_case_traits.csv`, `clock_trait_summary.csv`, `clock_trait_associations.csv` |
+| `2_compare.R` | Compares age acceleration and DunedinPACE between `CLOCK_GROUPS` (first = reference), adjusted for `CLOCK_COVARIATES`; FDR across outcomes. Repeated without cell proportions | `clock_acceleration_by_diagnosis.csv`, `clock_acceleration_by_diagnosis_no_cells.csv` |
+| `3_associations.R` | In cases (`CLOCK_CASE_GROUP`), tests each trait in `CLOCK_TRAITS` against age acceleration and DunedinPACE, adjusted for `CLOCK_COVARIATES`; FDR across all tests. Repeated without cell proportions | `clock_case_traits.csv`, `clock_trait_summary.csv`, `clock_trait_associations.csv`, `clock_trait_associations_no_cells.csv` |
 | `4_plots.R` | Clock vs chronological age (with r, median absolute error, CpG coverage), acceleration by phenotype, adjusted group differences, clinical trait effects | `figures/clocks/clock_*.png` |
 
 ## Methods and decisions
@@ -36,6 +36,14 @@ the root [`config.R`](../config.R).
   sum to ~1), chip row, and the ComBat batch variable. Clock betas aren't
   ComBat-corrected, so batch is adjusted for in the model. Categorical
   covariates with one value among the compared samples are left out.
+- **Sensitivity analysis without cell proportions**: `2_compare.R` and
+  `3_associations.R` repeat every model with `CLOCK_COVARIATES_NO_CELLS`
+  (the covariates without the cell proportions), saved to the `_no_cells`
+  files, with FDR within each model. Part of what the extrinsic clocks
+  (Hannum, Levine) measure is immune cell composition, which the main
+  model adjusts away; an effect seen only without cell adjustment points to
+  cell composition rather than intrinsic aging. The figures show the main
+  model only.
 - **Skipped comparison**: if a group in `CLOCK_GROUPS` has fewer than
   `CLOCK_MIN_GROUP_N` samples (e.g. Psomagen has no controls), `2_compare.R`
   skips the comparison and `4_plots.R` skips the group effects figure.

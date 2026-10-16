@@ -50,6 +50,12 @@ CLOCK_MIN_GROUP_N <- 2
 # left out of it
 CLOCK_COVARIATES <- c("age", "sex", setdiff(CELL_TYPES, "Neu"), "chip_row", "combat_batch")
 
+# Sensitivity analysis (2_compare.R, 3_associations.R): the same models without
+# the cell proportions. Part of what the extrinsic clocks (Hannum, Levine)
+# measure is immune cell composition, which adjusting for cells removes; this
+# shows whether a difference is driven by cell composition
+CLOCK_COVARIATES_NO_CELLS <- setdiff(CLOCK_COVARIATES, CELL_TYPES)
+
 # --- Associations with clinical traits in cases (3_associations.R) ----------
 
 # Cases analysed (phenotype in the sample sheet)
@@ -118,7 +124,9 @@ CLOCK_ACCURACY <- file.path(DIR_RESULTS_CLOCKS, "clock_accuracy.csv")           
 CLOCK_COVERAGE <- file.path(DIR_RESULTS_CLOCKS, "clock_cpg_coverage.csv")          # per clock: CpGs on the array, whether estimated
 # 2_compare.R
 CLOCK_GROUP_EFFECTS <- file.path(DIR_RESULTS_CLOCKS, "clock_acceleration_by_diagnosis.csv")  # per outcome: group effect from the models
+CLOCK_GROUP_EFFECTS_NO_CELLS <- file.path(DIR_RESULTS_CLOCKS, "clock_acceleration_by_diagnosis_no_cells.csv")  # same, sensitivity model without cell proportions
 # 3_associations.R
 CLOCK_TRAIT_VALUES  <- file.path(DIR_RESULTS_CLOCKS, "clock_case_traits.csv")         # per case: trait values
 CLOCK_TRAIT_SUMMARY <- file.path(DIR_RESULTS_CLOCKS, "clock_trait_summary.csv")       # per trait: n, distribution, tested or why skipped
 CLOCK_TRAIT_EFFECTS <- file.path(DIR_RESULTS_CLOCKS, "clock_trait_associations.csv")  # per outcome x trait: effect, CI, p, FDR
+CLOCK_TRAIT_EFFECTS_NO_CELLS <- file.path(DIR_RESULTS_CLOCKS, "clock_trait_associations_no_cells.csv")  # same, sensitivity model without cell proportions
