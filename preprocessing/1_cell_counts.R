@@ -2,12 +2,12 @@
 # Preprocessing 1: Cell type deconvolution
 # Author: GP2 Subtypes and Mechanisms - M.E., M.P.
 # Date: May 6, 2026
-# Updated: Sept 30, 2026
+# Updated: Oct 16, 2026
 # Description: Estimates blood cell type proportions (CELL_TYPES) for the
 #              QC-passed samples with the IDOL reference (FlowSorted.Blood.EPIC,
-#              Salas et al. 2018). Re-reads the idat files, since this needs
-#              noob-normalized raw intensities rather than the Funnorm output.
-#              Works for any array in R/array_profiles.R
+#              Salas et al. 2018), from the noob-normalized betas saved by
+#              qc/2_qc.R (BVALS_NOOB): the IDOL reference needs noob, not
+#              Funnorm, values. Works for EPICv1 and EPICv2
 # Usage:       Rscript preprocessing/1_cell_counts.R <data source>   (see config.R)
 # =============================================================================
 
@@ -17,10 +17,9 @@ library(minfi)
 library(tidyverse)
 library(FlowSorted.Blood.EPIC)    # IDOL reference: IDOLOptimizedCpGs(.compTable)
 
-# Load shared configuration and array profiles
+# Load shared configuration
 source("config.R")
 source("preprocessing/config.R")
-source("R/array_profiles.R")
 
 # --- 1. Load QC-passed sample sheet ------------------------------------------
 
@@ -33,30 +32,25 @@ targets <- read.csv(SAMPLE_SHEET_QC,
                                    Basename         = "character"))
 cat("Samples:", nrow(targets), "\n")
 
-array_type <- unique(targets$Array)
-stopifnot(length(array_type) == 1, array_type %in% names(ARRAY_PROFILES))
-profile <- ARRAY_PROFILES[[array_type]]
-library(profile$anno_pkg, character.only = TRUE)
-cat("Array:", array_type, "\n")
+cat("Array:", unique(targets$Array), "\n")
 
-# --- 2. Re-read idat files ---------------------------------------------------
+# --- 2. Noob-normalized betas (qc/2_qc.R) ------------------------------------
 
-# Bead counts/SDs aren't needed here; extended = FALSE halves memory
-cat("\nRe-reading idat files for cell type estimation...\n")
-rgSet <- read.metharray.exp(targets  = targets,
-                            verbose  = TRUE,
-                            force    = TRUE,
-                            extended = FALSE)
-annotation(rgSet) <- profile$annotation
+# Saved before density outliers are removed, so subset to the QC-passed
+# samples (columns are idat basenames)
+cat("\nLoading noob-normalized betas...\n")
+beta_noob <- readRDS(BVALS_NOOB)
+samples   <- basename(targets$Basename)
+stopifnot(all(samples %in% colnames(beta_noob)))
+beta_noob <- beta_noob[, samples, drop = FALSE]
+cat("Noob betas:", dim(beta_noob), "\n")
 
 # --- 3. Estimate cell type proportions ---------------------------------------
 
 # estimateCellCounts2 only supports 450k/EPICv1, so run its IDOL steps
-# directly (the same for every array): noob-normalize, reduce probes to cg IDs,
-# project onto the IDOL reference
+# directly (the same for every array): noob betas, reduced to cg IDs,
+# projected onto the IDOL reference
 cat("\nEstimating cell type proportions with IDOL CpGs...\n")
-beta_noob <- getBeta(preprocessNoob(rgSet))
-rm(rgSet); invisible(gc())
 
 # EPICv2 names carry a suffix (cg00000029_TC21); average replicates per cg ID.
 # EPICv1 names have no suffix, so this leaves them unchanged

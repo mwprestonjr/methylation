@@ -104,6 +104,7 @@ SAMPLE_SHEET_QC  <- file.path(DIR_RESULTS_QC, "sample_sheet_qc_passed.csv")
 MSET_QC          <- file.path(DIR_RESULTS_QC, "mSetSq_qc_passed.rds")
 MVALS_QC         <- file.path(DIR_RESULTS_QC, "mVals.rds")              # normalized, probe-filtered
 BVALS_UNFILTERED <- file.path(DIR_RESULTS_QC, "bVals_unfiltered.rds")  # normalized, no probe filtering (for clocks)
+BVALS_NOOB       <- file.path(DIR_RESULTS_QC, "bVals_noob.rds")        # noob-normalized, all probes (for cell deconvolution)
 
 # preprocessing/ outputs (also CPG_ANNOTATION below)
 COMBAT_MVALS       <- file.path(DIR_RESULTS_PREPROCESSING, "combat_mVals.rds")
