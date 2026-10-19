@@ -5,7 +5,7 @@ RSCRIPT  ?= Rscript
 LOG_DIR  := logs
 STAMP    := $(shell date +%m%d_%H%M)
 comma    := ,
-MODULES  := qc preprocessing clocks mqtl
+MODULES  := qc preprocessing clocks ewas mqtl
 MQTL_LOG  = $(subst $(comma),_,$(ANCESTRY))
 
 SHEET_ppmi_p140 := qc/1_build_sample_sheet_ppmi.R
@@ -19,16 +19,17 @@ define run_r
 endef
 
 .NOTPARALLEL:
-.PHONY: help all qc preprocessing clocks mqtl check-source check-ancestry
+.PHONY: help all qc preprocessing clocks ewas mqtl check-source check-ancestry
 
 help:
-	@echo "Usage: make <qc|preprocessing|clocks|mqtl|all> SOURCE=<$(subst $() ,|,$(SOURCES))> [ANCESTRY=<label>]"
+	@echo "Usage: make <qc|preprocessing|clocks|ewas|mqtl|all> SOURCE=<$(subst $() ,|,$(SOURCES))> [ANCESTRY=<label>]"
 	@echo "See 'Running the pipeline' in README.md"
 
 all: check-source
 	@$(MAKE) --no-print-directory qc SOURCE=$(SOURCE) STAMP=$(STAMP)
 	@$(MAKE) --no-print-directory preprocessing SOURCE=$(SOURCE) STAMP=$(STAMP)
 	@$(MAKE) --no-print-directory clocks SOURCE=$(SOURCE) STAMP=$(STAMP)
+	@$(MAKE) --no-print-directory ewas SOURCE=$(SOURCE) STAMP=$(STAMP)
 	@if [ -n "$(ANCESTRY)" ]; then \
 	  $(MAKE) --no-print-directory mqtl SOURCE=$(SOURCE) ANCESTRY=$(ANCESTRY) STAMP=$(STAMP); \
 	fi
@@ -53,6 +54,13 @@ clocks: check-source
 	$(call run_r,clocks/3_associations.R,3_associations)
 	$(call run_r,clocks/4_plots.R,4_plots)
 	@echo "[$$(date +%H:%M)] clocks complete for $(SOURCE)"
+
+ewas: check-source
+	$(call run_r,ewas/1_case_control.R,1_case_control)
+	$(call run_r,ewas/2_age.R,2_age)
+	$(call run_r,ewas/3_exposure.R,3_exposure)
+	$(call run_r,ewas/4_plots.R,4_plots)
+	@echo "[$$(date +%H:%M)] ewas complete for $(SOURCE)"
 
 mqtl: check-source check-ancestry
 	$(call run_r,mqtl/1_mqtl_sample_map.R,$(MQTL_LOG)_1_sample_map,$(ANCESTRY))

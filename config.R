@@ -2,12 +2,13 @@
 # Configuration - shared
 # Author: GP2 Subtypes and Mechanisms - M.E., M.P.
 # Date: April 23, 2026
-# Updated: Oct 7, 2026
+# Updated: Oct 16, 2026
 # Description: Settings shared by all modules: the data sources (input paths,
 #              output directory), figure settings, and the files one module
 #              writes and another reads. Settings used by only one module are
 #              in that module's config (qc/config.R, preprocessing/config.R,
-#              mqtl/config.R). Scripts source this file, then their module's:
+#              clocks/config.R, ewas/config.R, mqtl/config.R). Scripts source
+#              this file, then their module's:
 #                source("config.R"); source("qc/config.R")
 #              and are run from the repository root, e.g.
 #                Rscript qc/2_qc.R ppmi_p140
@@ -69,12 +70,14 @@ DIR_RESULTS_QC            <- file.path(DIR_RESULTS, "qc")
 DIR_RESULTS_PREPROCESSING <- file.path(DIR_RESULTS, "preprocessing")
 DIR_RESULTS_CLOCKS        <- file.path(DIR_RESULTS, "clocks")
 DIR_RESULTS_MQTL          <- file.path(DIR_RESULTS, "mqtl")
+DIR_RESULTS_EWAS          <- file.path(DIR_RESULTS, "ewas")
 DIR_FIGURES_QC            <- file.path(DIR_FIGURES, "qc")
 DIR_FIGURES_PREPROCESSING <- file.path(DIR_FIGURES, "preprocessing")
 DIR_FIGURES_CLOCKS        <- file.path(DIR_FIGURES, "clocks")
 DIR_FIGURES_MQTL          <- file.path(DIR_FIGURES, "mqtl")
-for (d in c(DIR_RESULTS_QC, DIR_RESULTS_PREPROCESSING, DIR_RESULTS_CLOCKS, DIR_RESULTS_MQTL,
-            DIR_FIGURES_QC, DIR_FIGURES_PREPROCESSING, DIR_FIGURES_CLOCKS, DIR_FIGURES_MQTL)) {
+DIR_FIGURES_EWAS          <- file.path(DIR_FIGURES, "ewas")
+for (d in c(DIR_RESULTS_QC, DIR_RESULTS_PREPROCESSING, DIR_RESULTS_CLOCKS, DIR_RESULTS_MQTL, DIR_RESULTS_EWAS,
+            DIR_FIGURES_QC, DIR_FIGURES_PREPROCESSING, DIR_FIGURES_CLOCKS, DIR_FIGURES_MQTL, DIR_FIGURES_EWAS)) {
   dir.create(d, showWarnings = FALSE, recursive = TRUE)
 }
 
@@ -92,6 +95,11 @@ FIG_RES    <- 300  # dpi
 # scripts) and clinical traits (clocks/)
 FNAME_METADATA <- "/mnt/output/metadata/INTERNAL_USE_ONLY_master_key_release12_final_vwb.csv"
 
+# GP2 R12 extended clinical data: one row per participant (GP2ID) and visit
+# (visit_month). Used for the clinical traits (clocks/) and smoking status
+# (ewas/)
+CLINICAL_DATA <- "/mnt/output/metadata/clinical_r12_extended_clinical_data.csv"
+
 # Columns every qc/1 script writes to the sample sheet (source-specific
 # extras may follow). Later scripts only rely on these
 SAMPLE_SHEET_COLUMNS <- c("GP2ID", "GP2sampleID", "clinical_id",
@@ -106,7 +114,8 @@ MVALS_QC         <- file.path(DIR_RESULTS_QC, "mVals.rds")              # normal
 BVALS_UNFILTERED <- file.path(DIR_RESULTS_QC, "bVals_unfiltered.rds")  # normalized, no probe filtering (for clocks)
 BVALS_NOOB       <- file.path(DIR_RESULTS_QC, "bVals_noob.rds")        # noob-normalized, all probes (for cell deconvolution)
 
-# preprocessing/ outputs (also CPG_ANNOTATION below)
+# preprocessing/ outputs (also CPG_ANNOTATION below); read by clocks/, ewas/
+# and mqtl/
 COMBAT_MVALS       <- file.path(DIR_RESULTS_PREPROCESSING, "combat_mVals.rds")
 SAMPLE_SHEET_FINAL <- file.path(DIR_RESULTS_PREPROCESSING, "sample_sheet_final.csv")  # QC-passed sheet + cell proportions
 

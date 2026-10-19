@@ -40,7 +40,7 @@ when a file is replaced.
 |---|---|---|---|---|
 | GP2 master key (IDs, sex, race, phenotype, ages, family history) | `FNAME_METADATA` | `config.R` | GP2, internal-use master key | Release 12 (final) |
 | GP2 master key with genotype availability, QC and ancestry labels | `GP2_MASTER_KEY` | `mqtl/config.R` | GP2 | Release 12 |
-| GP2 extended clinical data (MDS-UPDRS, MoCA, H&Y, ...) | `CLINICAL_DATA` | `clocks/config.R` | GP2 | Release 12 |
+| GP2 extended clinical data (MDS-UPDRS, MoCA, H&Y, smoking, ...) | `CLINICAL_DATA` | `config.R` | GP2 | Release 12 |
 | GP2 genotypes, plink2 files per ancestry, related individuals removed | `GENO_PFILE_PATH`, `GENO_PFILE_NAME`, `GENO_SOURCE` | `mqtl/config.R` | GP2 release bucket (`gp2_release12`) | Release 12, NBA array (imputed), hg38 |
 
 **Reference data and annotation**
@@ -65,9 +65,10 @@ The pipeline is run with `make` from the repository root, with the
 make qc            SOURCE=ppmi_p140                # sample sheet, QC/normalization, QC plots
 make preprocessing SOURCE=ppmi_p140                # cell counts, sources of variation, ComBat
 make clocks        SOURCE=ppmi_p140                # epigenetic clocks, age acceleration, group comparison, clinical traits
+make ewas          SOURCE=ppmi_p140                # EWAS of case-control status, age, and an exposure
 make mqtl          SOURCE=ppmi_p140 ANCESTRY=EUR   # sample map, genotypes, cis-mQTLs
-make all           SOURCE=ppmi_p140                # qc, preprocessing, and clocks
-make all           SOURCE=ppmi_p140 ANCESTRY=EUR   # qc, preprocessing, clocks, and mqtl
+make all           SOURCE=ppmi_p140                # qc, preprocessing, clocks, and ewas
+make all           SOURCE=ppmi_p140 ANCESTRY=EUR   # qc, preprocessing, clocks, ewas, and mqtl
 make                                               # usage
 ```
 
@@ -76,10 +77,11 @@ make                                               # usage
 | `qc` | `qc/1_build_sample_sheet_<source>.R` → `qc/2_qc.R` → `qc/3_qc_plots.R` |
 | `preprocessing` | `1_cell_counts.R` → `2_variation_sources.R raw` → `3_combat.R` → `2_variation_sources.R combat` → `4_cpg_annotation.R` |
 | `clocks` | `1_estimate.R` → `2_compare.R` → `3_associations.R` → `4_plots.R` |
+| `ewas` | `1_case_control.R` → `2_age.R` → `3_exposure.R` → `4_plots.R` |
 | `mqtl` | `1_mqtl_sample_map.R` → `2_mqtl_genotypes.sh` (plink2) → `3_mqtl.R` → `4_mqtl_plots.R` |
 
 Each target needs the outputs of the one before it (`preprocessing` reads the
-`qc` outputs; `clocks` and `mqtl` read the `preprocessing` outputs), so run
+`qc` outputs; `clocks`, `ewas` and `mqtl` read the `preprocessing` outputs), so run
 them in this order the first time; afterwards a target can be rerun on its own.
 
 - **`SOURCE`** (required): one of the data sources above.
@@ -131,6 +133,7 @@ R/                shared functions, sourced by the scripts
 qc/               sample sheets, QC and normalization, QC plots (settings: qc/config.R)
 preprocessing/    cell counts, sources of variation, ComBat batch correction (settings: preprocessing/config.R)
 clocks/           epigenetic clocks, age acceleration, group comparison, clinical traits (settings: clocks/config.R)
+ewas/             epigenome-wide association studies: case-control, age, exposure (settings: ewas/config.R)
 mqtl/             cis-mQTL mapping against GP2 genotypes (settings: mqtl/config.R)
 logs/             step logs from make
 ```
@@ -144,7 +147,7 @@ script sources `config.R` first, then its own module's config:
   data sources (input paths, `DIR_OUTPUT`), figure settings, the files one
   module writes and another reads (e.g. `SAMPLE_SHEET_QC`, `COMBAT_MVALS`,
   `SAMPLE_SHEET_FINAL`, `CPG_ANNOTATION`), the R12 master key
-  (`FNAME_METADATA`), `SAMPLE_SHEET_COLUMNS`, `CELL_TYPES`,
+  (`FNAME_METADATA`) and extended clinical data (`CLINICAL_DATA`), `SAMPLE_SHEET_COLUMNS`, `CELL_TYPES`,
   and the hg19->hg38 liftover chain and GENCODE gene settings
 - **`qc/config.R`**: QC thresholds, SeSAMe and density outlier settings
 - **`preprocessing/config.R`**: sources-of-variation settings, the ComBat batch
@@ -152,6 +155,9 @@ script sources `config.R` first, then its own module's config:
 - **`clocks/config.R`**: clock coverage thresholds, the clocks used per data
   source, the groups compared, the model covariates, and the clinical traits
   tested in cases
+- **`ewas/config.R`**: EWAS covariates, the groups compared, the age column,
+  the smoking variables and exposure tested (per data source), FDR and
+  top-hit settings
 - **`mqtl/config.R`**: genotype files and source, genotype QC, cis window,
   model, multiple-testing and plot settings
 
@@ -167,11 +173,13 @@ Output folders, per data source (`DIR_OUTPUT` in `config.R`), one per module
 │   ├── qc/                  sample sheets, normalized mSet, M and beta values, QC metrics
 │   ├── preprocessing/       cell proportions, ComBat M values, final sample sheet, CpG annotation, variation sources
 │   ├── clocks/              clock estimates, accuracy, coverage, group comparison, clinical trait associations
+│   ├── ewas/                per-CpG results, top hits and summary per model, combined model summary
 │   └── mqtl/<ANCESTRY>/     sample map, genotypes/, cis-mQTL results, summary, top hits, tuning table
 └── figures/
     ├── qc/
     ├── preprocessing/
     ├── clocks/
+    ├── ewas/
     └── mqtl/<ANCESTRY>/
 ```
 
@@ -184,6 +192,7 @@ Each module has its own README with its scripts and figures:
 | `qc/` | sample sheets, sample and probe QC, normalization, QC plots | [qc/README.md](qc/README.md) |
 | `preprocessing/` | cell proportions, sources of variation, ComBat, CpG annotation | [preprocessing/README.md](preprocessing/README.md) |
 | `clocks/` | epigenetic clocks, age acceleration, group comparison, clinical traits | [clocks/README.md](clocks/README.md) |
+| `ewas/` | CpG-wise association with case-control status, age and an exposure | [ewas/README.md](ewas/README.md) |
 | `mqtl/` | cis-mQTL mapping against GP2 genotypes | [mqtl/README.md](mqtl/README.md) |
 
 ### Shared files
@@ -204,6 +213,8 @@ Each module has its own README with its scripts and figures:
 - `mqtl_setup.R` - handles the mQTL ancestry argument and configures ancestry-specific genotype inputs and output paths.
 - `clock_models.R` - shared clock association models for diagnosis-group comparisons and clinical-trait associations.
 - `clock_traits.R` - derives clinical traits at the blood draw for clock association analyses.
+- `ewas_functions.R` - loads the `preprocessing` outputs for the EWAS, builds the covariates, fits the limma CpG-wise models, and writes each model's results, top hits and summary.
+- `ewas_plot_functions.R` - Manhattan, QQ and effect / p-value distribution plots for `ewas/4_plots.R`.
 - `mqtl_functions.R` - functions shared by `3_mqtl.R` and `tune_meth_pcs.R` for data preparation, latent methylation PCs, and per-chromosome cis scans.
 
 ## Setup
