@@ -25,3 +25,7 @@ results/*.rds
 
 # logs
 logs/*
+
+# Dev container
+.devcontainer/
+.dockerignore
