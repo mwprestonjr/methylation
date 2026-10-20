@@ -11,6 +11,10 @@
 #                Rscript requirements.R
 # =============================================================================
 
+# CRAN mirror
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+
+# Install BiocManager if not already installed
 if (!require("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 
