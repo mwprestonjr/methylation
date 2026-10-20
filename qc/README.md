@@ -54,7 +54,8 @@ within qc).
   removed (likely batch controls or mislabelled visits); for two arrays
   (technical replicates), the more recent chip (higher Sentrix ID) is kept.
 - **Psomagen**: all samples in the deliveries listed in `DATASETS`, with
-  phenotype, sex, race and age from the R12 master key, matched on GP2ID.
+  phenotype, sex and race from the R12 master key (`GP2_MASTER_KEY`) and age
+  from the internal-use master key (`GP2_INTERNAL_KEY`), matched on GP2ID.
   Samples appearing in more than one delivery are reported.
 - **Age**: PPMI uses age at the methylation visit (falling back to enrollment
   age); Psomagen uses R12 `age_at_sample_collection`, the age at the GP2 DNA

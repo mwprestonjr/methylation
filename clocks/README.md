@@ -48,7 +48,7 @@ the root [`config.R`](../config.R).
   `CLOCK_MIN_GROUP_N` samples (e.g. Psomagen has no controls), `2_compare.R`
   skips the comparison and `4_plots.R` skips the group effects figure.
 - **Clinical traits** (`3_associations.R`): measured at the blood draw, from
-  the R12 master key (disease duration, family history), the GP2 extended
+  the R12 master key (`GP2_MASTER_KEY`; disease duration, family history), the GP2 extended
   clinical data (`CLINICAL_DATA`; first of `CLOCK_CLINICAL_VISIT_MONTHS` with
   a value, e.g. PPMI MoCA comes from screening), and for PPMI the monogenic PD
   gene (`PPMI_GENETICS`). Each trait is its own model; continuous traits are

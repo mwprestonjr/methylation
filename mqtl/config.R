@@ -9,9 +9,6 @@
 #              then source R/mqtl_setup.R
 # =============================================================================
 
-# GP2 master key with genotype availability, GP2 QC and ancestry labels
-GP2_MASTER_KEY <- "/mnt/output/metadata/R12_CURRENT_master_key_nba_wgs_20_06_2026.txt"
-
 # GP2 genotypes (plink2 .pgen/.pvar/.psam, hg38), one file set per ancestry:
 # folder, and file prefix with {ANCESTRY} where the ancestry label goes, e.g.
 # .../gwas/GP2_r12_final_samples_related_removed_AFR

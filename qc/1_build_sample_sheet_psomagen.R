@@ -54,10 +54,14 @@ if (length(dup_ids) > 0) {
           arrange(Sample_ID))
 }
 
-# Load R12 and combine (match 'GP2ID' in R12 to 'Sample_ID' in the sample sheet)
-r12 <- read.csv(file.path(FNAME_METADATA), colClasses = c(clinical_id = "character"))
+# Load R12 and combine (match 'GP2ID' in R12 to 'Sample_ID' in the sample sheet).
+# Age at sample collection is only in the internal-use master key
+r12 <- read.csv(GP2_MASTER_KEY, colClasses = c(clinical_id = "character"))
+r12_age <- read.csv(GP2_INTERNAL_KEY) %>%
+  select(GP2ID, age_at_sample_collection)
 sample_sheet <- sample_sheet %>%
-  left_join(r12, by = c("Sample_ID" = "GP2ID"), keep = TRUE)
+  left_join(r12, by = c("Sample_ID" = "GP2ID"), keep = TRUE) %>%
+  left_join(r12_age, by = c("Sample_ID" = "GP2ID"))
 
 # keep columns of interest, named as in SAMPLE_SHEET_COLUMNS. Methylation was
 # measured on the GP2 DNA sample, so age at its collection is the age to use

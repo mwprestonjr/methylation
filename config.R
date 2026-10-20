@@ -90,10 +90,17 @@ FIG_RES    <- 300  # dpi
 
 # --- Files and settings shared between modules -------------------------------
 
-# GP2 R12 master key: GP2ID, sex, race, phenotype, ages (sample collection,
-# onset, diagnosis), family history. Used for the sample sheets (qc/1
-# scripts) and clinical traits (clocks/)
-FNAME_METADATA <- "/mnt/output/metadata/INTERNAL_USE_ONLY_master_key_release12_final_vwb.csv"
+# GP2 R12 master key: GP2ID, sex, race, phenotype, ages (onset, diagnosis),
+# family history, genotype availability, GP2 QC and ancestry labels. Used for
+# the sample sheets (qc/1 scripts), clinical traits (clocks/) and the mQTL
+# sample map (mqtl/). From the gp2_release12 bucket, mounted at
+# ~/gp2_release12 (see README.md)
+GP2_MASTER_KEY <- "~/gp2_release12/master_key_release12_final_vwb.csv"
+
+# GP2 R12 internal-use master key: as GP2_MASTER_KEY, plus age at sample
+# collection. Used only for Psomagen age (qc/1_build_sample_sheet_psomagen.R).
+# From the gp2_release12 bucket, mounted at ~/gp2_release12 (see README.md)
+GP2_INTERNAL_KEY <- "~/gp2_release12/INTERNAL_USE_ONLY_master_key_release12_final_vwb.csv"
 
 # GP2 R12 extended clinical data: one row per participant (GP2ID) and visit
 # (visit_month). Used for the clinical traits (clocks/) and smoking status
