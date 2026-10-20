@@ -25,7 +25,7 @@ From `preprocessing` (paths in the root `config.R`), so run
 | `results/preprocessing/combat_mVals.rds` | `COMBAT_MVALS` | `preprocessing/3_combat.R` | M values, CpGs x samples (columns are idat basenames) |
 | `results/preprocessing/sample_sheet_final.csv` | `SAMPLE_SHEET_FINAL` | `preprocessing/3_combat.R` | phenotype, age, sex, cell proportions, `Sentrix_Position` (chip row), any exposure column |
 | `results/preprocessing/cpg_annotation.csv` | `CPG_ANNOTATION` | `preprocessing/4_cpg_annotation.R` | hg38 position, island context and gene, joined to the results by `cpg` |
-| `clinical_r12_extended_clinical_data.csv` | `CLINICAL_DATA` | GP2 R12 (root `config.R`) | `smoking_status` at the blood draw, joined by GP2ID (`3_exposure.R` only) |
+| `r12_extended_clinical_data.csv` | `CLINICAL_DATA` | GP2 R12, `gp2_release12` bucket (root `config.R`) | `smoking_status` at the blood draw, joined by GP2ID (`3_exposure.R` only) |
 
 ## Steps
 

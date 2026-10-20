@@ -104,8 +104,9 @@ GP2_INTERNAL_KEY <- "~/gp2_release12/INTERNAL_USE_ONLY_master_key_release12_fina
 
 # GP2 R12 extended clinical data: one row per participant (GP2ID) and visit
 # (visit_month). Used for the clinical traits (clocks/) and smoking status
-# (ewas/)
-CLINICAL_DATA <- "/mnt/output/metadata/clinical_r12_extended_clinical_data.csv"
+# (ewas/). From the gp2_release12 bucket, mounted at ~/gp2_release12 (see
+# README.md)
+CLINICAL_DATA <- "~/gp2_release12/clinical/r12_extended_clinical_data.csv"
 
 # Columns every qc/1 script writes to the sample sheet (source-specific
 # extras may follow). Later scripts only rely on these
