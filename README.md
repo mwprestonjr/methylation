@@ -38,10 +38,20 @@ when a file is replaced.
 
 | File | Name in code | Set in | Source | Version |
 |---|---|---|---|---|
-| GP2 master key (IDs, sex, race, phenotype, ages, family history) | `FNAME_METADATA` | `config.R` | GP2, internal-use master key | Release 12 (final) |
-| GP2 master key with genotype availability, QC and ancestry labels | `GP2_MASTER_KEY` | `mqtl/config.R` | GP2 | Release 12 |
+| GP2 master key (IDs, sex, race, phenotype, ages at onset/diagnosis, family history, genotype availability, QC and ancestry labels) | `GP2_MASTER_KEY` | `config.R` | GP2 release bucket (`gp2_release12`) | Release 12 (final) |
+| GP2 internal-use master key (age at sample collection, for Psomagen age) | `GP2_INTERNAL_KEY` | `config.R` | GP2 release bucket (`gp2_release12`), internal-use master key | Release 12 (final) |
 | GP2 extended clinical data (MDS-UPDRS, MoCA, H&Y, ...) | `CLINICAL_DATA` | `clocks/config.R` | GP2 | Release 12 |
 | GP2 genotypes, plink2 files per ancestry, related individuals removed | `GENO_PFILE_PATH`, `GENO_PFILE_NAME`, `GENO_SOURCE` | `mqtl/config.R` | GP2 release bucket (`gp2_release12`) | Release 12, NBA array (imputed), hg38 |
+
+Files from the GP2 release bucket (`GP2_MASTER_KEY`, `GP2_INTERNAL_KEY`, the mQTL genotypes) must
+be readable from the VM, e.g. the `gp2_release12` bucket mounted at
+`~/gp2_release12` with gcsfuse:
+
+```bash
+mkdir -p ~/gp2_release12
+gcsfuse --implicit-dirs -o ro gp2_release12 ~/gp2_release12   # mount (read-only)
+fusermount -u ~/gp2_release12                                 # unmount
+```
 
 **Reference data and annotation**
 
@@ -143,8 +153,8 @@ script sources `config.R` first, then its own module's config:
 - **`config.R`** (repository root): anything more than one module uses - the
   data sources (input paths, `DIR_OUTPUT`), figure settings, the files one
   module writes and another reads (e.g. `SAMPLE_SHEET_QC`, `COMBAT_MVALS`,
-  `SAMPLE_SHEET_FINAL`, `CPG_ANNOTATION`), the R12 master key
-  (`FNAME_METADATA`), `SAMPLE_SHEET_COLUMNS`, `CELL_TYPES`,
+  `SAMPLE_SHEET_FINAL`, `CPG_ANNOTATION`), the R12 master keys
+  (`GP2_MASTER_KEY`, `GP2_INTERNAL_KEY`), `SAMPLE_SHEET_COLUMNS`, `CELL_TYPES`,
   and the hg19->hg38 liftover chain and GENCODE gene settings
 - **`qc/config.R`**: QC thresholds, SeSAMe and density outlier settings
 - **`preprocessing/config.R`**: sources-of-variation settings, the ComBat batch

@@ -95,7 +95,7 @@ print(table(sample_sheet$phenotype))
 # --- 4. Merge R12 (GP2ID, sex, race) and age at visit ------------------------
 
 cat("\nLoading R12...\n")
-r12 <- read.csv(FNAME_METADATA, colClasses = c(clinical_id = "character")) %>%
+r12 <- read.csv(GP2_MASTER_KEY, colClasses = c(clinical_id = "character")) %>%
   filter(str_starts(study, "PPMI"), clinical_id != "") %>%
   select(GP2ID, GP2sampleID, clinical_id,
          sex  = biological_sex_for_qc,
