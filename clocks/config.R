@@ -61,8 +61,9 @@ CLOCK_COVARIATES_NO_CELLS <- setdiff(CLOCK_COVARIATES, CELL_TYPES)
 # Cases analysed (phenotype in the sample sheet)
 CLOCK_CASE_GROUP <- "PD"
 
-# GP2 extended clinical data (R12): one row per participant and visit
-CLINICAL_DATA <- "/mnt/output/metadata/clinical_r12_extended_clinical_data.csv"
+# GP2 extended clinical data (R12): one row per participant and visit. From
+# the gp2_release12 bucket, mounted at ~/gp2_release12 (see README.md)
+CLINICAL_DATA <- "~/gp2_release12/clinical/r12_extended_clinical_data.csv"
 
 # Visits used for the clinical traits, in order of preference: the first visit
 # with a value is used. The methylation sample is from the baseline visit

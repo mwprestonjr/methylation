@@ -40,10 +40,10 @@ when a file is replaced.
 |---|---|---|---|---|
 | GP2 master key (IDs, sex, race, phenotype, ages at onset/diagnosis, family history, genotype availability, QC and ancestry labels) | `GP2_MASTER_KEY` | `config.R` | GP2 release bucket (`gp2_release12`) | Release 12 (final) |
 | GP2 internal-use master key (age at sample collection, for Psomagen age) | `GP2_INTERNAL_KEY` | `config.R` | GP2 release bucket (`gp2_release12`), internal-use master key | Release 12 (final) |
-| GP2 extended clinical data (MDS-UPDRS, MoCA, H&Y, ...) | `CLINICAL_DATA` | `clocks/config.R` | GP2 | Release 12 |
+| GP2 extended clinical data (MDS-UPDRS, MoCA, H&Y, ...) | `CLINICAL_DATA` | `clocks/config.R` | GP2 release bucket (`gp2_release12`) | Release 12 |
 | GP2 genotypes, plink2 files per ancestry, related individuals removed | `GENO_PFILE_PATH`, `GENO_PFILE_NAME`, `GENO_SOURCE` | `mqtl/config.R` | GP2 release bucket (`gp2_release12`) | Release 12, NBA array (imputed), hg38 |
 
-Files from the GP2 release bucket (`GP2_MASTER_KEY`, `GP2_INTERNAL_KEY`, the mQTL genotypes) must
+Files from the GP2 release bucket (`GP2_MASTER_KEY`, `GP2_INTERNAL_KEY`, `CLINICAL_DATA`, the mQTL genotypes) must
 be readable from the VM, e.g. the `gp2_release12` bucket mounted at
 `~/gp2_release12` with gcsfuse:
 
