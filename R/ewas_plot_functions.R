@@ -81,11 +81,21 @@ plot_ewas_qq <- function(df, main, file) {
 # Histograms of the effects (logFC, M value scale) and of -log10(p)
 plot_ewas_distributions <- function(df, main, file) {
   png(file, width = 10, height = 5, units = "in", res = FIG_RES)
-  par(mfrow = c(1, 2), mar = c(5, 5, 4, 2))
+  # Outer top margin holds `main`, shared by both panels
+  par(mfrow = c(1, 2), mar = c(5, 5, 3, 2), oma = c(0, 0, 2.5, 0))
   hist(df$logFC, breaks = 100, col = "grey70", border = "white",
-       main = paste(main, "- effects"), xlab = "Effect (M value scale)")
+       main = "Effects", xlab = "Effect (M value scale)")
+  abline(v = 0, lty = 2)
+  # Solid line: FDR < EWAS_FDR (as on the Manhattan plot), with the CpG count
   hist(-log10(df$P.Value), breaks = 100, col = "steelblue", border = "white",
-       main = paste(main, "- p-values"), xlab = expression(-log[10](italic(p))))
+       main = "P-values", xlab = expression(-log[10](italic(p))))
+  cutoff <- fdr_p_cutoff(df)
+  if (!is.na(cutoff)) abline(v = -log10(cutoff), col = "firebrick")
+  legend("topright", bty = "n",
+         legend = sprintf("%s of %s CpGs\nFDR < %s",
+                          format(sum(df$FDR < EWAS_FDR, na.rm = TRUE), big.mark = ","),
+                          format(nrow(df), big.mark = ","), EWAS_FDR))
+  mtext(main, side = 3, outer = TRUE, line = 0.5, cex = 1.3, font = 2)
   dev.off()
   invisible(TRUE)
 }
