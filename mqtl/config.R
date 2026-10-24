@@ -44,3 +44,5 @@ MQTL_P_CIS_SAVE <- 1e-3    # pairs with p below this are saved; must be looser t
 MQTL_PLOT_N_TOP      <- 12      # top mQTLs (distinct loci) shown as genotype boxplots
 MQTL_PLOT_N_REGIONAL <- 4       # top loci shown as regional plots
 MQTL_PLOT_REGION     <- 250e3   # regional plot window: +/- 250 kb around the CpG
+MQTL_PLOT_LOGP_CAP   <- 50      # genome-wide plot: -log10 p capped here so extreme hits don't flatten the rest
+MQTL_PLOT_ZOOM       <- 50e3    # zoomed lead SNP distance plot: +/- 50 kb around the CpG
