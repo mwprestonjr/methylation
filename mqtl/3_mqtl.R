@@ -6,7 +6,8 @@
 #              MatrixEQTL, one chromosome at a time. Methylation: ComBat
 #              M values, inverse-normal transformed per CpG. Covariates: age,
 #              sex, phenotype, cell proportions, chip row, genotype PCs and latent
-#              methylation PCs. Probe coordinates come from the array's
+#              methylation PCs. Pairs with the SNP in the probe
+#              (probe_snp_regions() in R/mqtl_functions.R) are excluded. Probe coordinates come from the array's
 #              annotation (R/array_profiles.R) and are lifted hg19 -> hg38
 #              when needed (EPICv1) to match GP2 genotypes.
 # Usage:       Rscript mqtl/3_mqtl.R <data source> <ancestry>   (see R/mqtl_setup.R)
@@ -50,16 +51,21 @@ cvrt <- covariates_sliced(all_covs, colnames(meth_int))
 
 cat("\n--- cis-mQTL mapping (window +/-", MQTL_CIS_WINDOW / 1e6, "Mb) ---\n")
 
-cis_results <- list()
-n_tests     <- 0
+cis_results   <- list()
+n_tests       <- 0
+n_probe_tests <- 0
+n_probe_saved <- 0
 
 for (chr in 1:22) {
   cat("\nchr", chr, "\n", sep = "")
   geno <- load_chr_genotypes(prep$geno_dir, chr, prep$sample_map, colnames(meth_int))
-  res  <- run_cis_chr(geno, meth_int, cpg_pos, chr, cvrt)
-  n_tests <- n_tests + res$ntests
+  res  <- run_cis_chr(geno, meth_int, cpg_pos, prep$probe_regions, chr, cvrt)
+  n_tests       <- n_tests + res$ntests
+  n_probe_tests <- n_probe_tests + res$n_probe_tests
+  n_probe_saved <- n_probe_saved + res$n_probe_saved
   cat("  cis tests:", res$ntests,
-      "| saved (p <", MQTL_P_CIS_SAVE, "):", nrow(res$eqtls), "\n")
+      "| saved (p <", MQTL_P_CIS_SAVE, "):", nrow(res$eqtls),
+      "| excluded, SNP in probe:", res$n_probe_tests, "tests,", res$n_probe_saved, "saved\n")
   cis_results[[chr]] <- res$eqtls
   rm(geno, res); invisible(gc())
 }
@@ -68,6 +74,8 @@ for (chr in 1:22) {
 
 cat("\n--- Combining results ---\n")
 cat("Total cis tests:", n_tests, "\n")
+cat("Excluded, SNP in the probe:", n_probe_tests,
+    "tests, of which", n_probe_saved, "had p <", MQTL_P_CIS_SAVE, "\n")
 
 summ <- summarise_cis(cis_results, n_tests, cpg_pos)
 cis  <- summ$cis
@@ -111,11 +119,13 @@ write.csv(all_covs %>% mutate(meth_id = colnames(meth_int), .before = 1),
 mqtl_summary <- data.frame(
   metric = c("Samples", "Ancestry", "CpGs tested", "Cis window (bp)",
              "Genotype PCs", "Methylation PCs", "Total cis tests",
+             "Tests excluded: SNP in probe",
+             paste0("Tests excluded: SNP in probe, p < ", MQTL_P_CIS_SAVE),
              paste0("CpGs with cis-mQTL (", fdr_label, ")"),
              paste0("CpGs with cis-mQTL (", strict_label, ")"),
              "Saved pairs: p <", paste(fdr_label, "p-value threshold")),
   value  = c(ncol(meth_int), paste(MQTL_ANCESTRY, collapse = "+"), nrow(meth_int), MQTL_CIS_WINDOW,
-             MQTL_N_GENO_PCS, MQTL_N_METH_PCS, n_tests,
+             MQTL_N_GENO_PCS, MQTL_N_METH_PCS, n_tests, n_probe_tests, n_probe_saved,
              nrow(sig_fdr), nrow(sig_strict), MQTL_P_CIS_SAVE,
              if (is.na(fdr_p)) "beyond saved range (counts incomplete)" else signif(fdr_p, 3))
 )

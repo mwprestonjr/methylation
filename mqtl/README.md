@@ -88,6 +88,21 @@ chromosome at a time. Covariates:
   (below)
 - batch isn't a covariate, since the M values are already ComBat-corrected
 
+SNP-CpG pairs with the SNP in the probe are excluded: a SNP there can change
+probe binding or the extension base and mimic an mQTL. The excluded positions
+(`probe_snp_regions()` in `R/mqtl_functions.R`) are the CpG itself and the 50 bases on the probe's
+side of it, which covers the Infinium I and II probe bodies and their
+extension bases. The probe's side comes from the probe strand in the sesame
+hg38 manifest (`sesameData`, Zhou lab InfiniumAnnotation); CpGs missing from
+it (a handful) are excluded on both sides. Excluded pairs aren't counted as
+tests for the FDR, and the counts are in the log and `mqtl_summary.csv`.
+
+The probe side was checked against the unfiltered results: significant pairs
+were about twice as frequent 5-45 bp into the probe side as at the same
+distance on the other side, falling to background by ~50 bp. The first ~4 bp
+(the probe's 3' end) were depleted instead, presumably because probes are
+designed to avoid common SNPs there.
+
 Samples without age or sex are left out of the model.
 
 **Significance**:
@@ -103,11 +118,11 @@ Samples without age or sex are left out of the model.
   implemented yet.
 
 **Known caveats**
-- **Probe-SNP artifacts**: a SNP inside the 50-bp probe can change probe
-  binding and mimic an mQTL. The QC filter only removes probes with a
-  known SNP at the CpG or extension base. Lead SNPs within 50 bp of their CpG: 3.5%
-  of significant CpGs in Psomagen AFR, 1.7% in PPMI EUR; these aren't filtered
-  yet.
+- **Probe-SNP artifacts**: SNP-CpG pairs with the SNP inside the probe are
+  excluded (see Model), but a SNP outside the probe in LD with one inside it
+  can still pick up the artifact. Before this exclusion, lead SNPs within
+  50 bp of their CpG were 3.5% of significant CpGs in Psomagen AFR and 1.7%
+  in PPMI EUR.
 - **Lead SNP is not necessarily causal**: it tags a block of correlated SNPs
   (see the regional plots); identifying the causal variant needs
   fine-mapping.

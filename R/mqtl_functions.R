@@ -18,6 +18,8 @@
 #               phenotype and chip row indicators
 #   sample_map  samples in the final set, in the column order of meth_int
 #   geno_dir    folder with the step 2 genotype files
+#   probe_regions  hg38 range of SNP positions in each CpG's probe
+#               (probe_snp_regions), excluded from the scan
 mqtl_prepare <- function() {
   geno_dir <- file.path(MQTL_DIR, "genotypes")
 
@@ -106,7 +108,41 @@ mqtl_prepare <- function() {
   cat("Chip rows:", paste(rows, collapse = ", "), "(reference", rows[1], ")\n")
 
   list(meth_int = meth_int, cpg_pos = cpg_pos, known_covs = known_covs,
-       sample_map = sample_map, geno_dir = geno_dir)
+       sample_map = sample_map, geno_dir = geno_dir,
+       probe_regions = probe_snp_regions(cpg_pos, profile))
+}
+
+# hg38 range of SNP positions [lo, hi] that fall in each CpG's probe, where a
+# SNP can change probe binding or the extension base and mimic an mQTL.
+# Fixed by the Infinium design; positions counted from the CpG's C towards the
+# probe's 5' end:
+#   -1      the CpG's G (extension base of Infinium I probes)
+#    0      the CpG's C (extension base of Infinium II probes)
+#    0-49   Infinium I probe body;  1-50  Infinium II probe body
+# The probe strand and CpG position come from the sesame hg38 manifest
+# (probe_strand of the Zhou lab InfiniumAnnotation, aligned to hg38): a "+"
+# probe lies at lower coordinates than its CpG, a "-" probe at higher ones.
+# CpGs missing from the manifest, or on another chromosome there, get the
+# range on both sides of their position in cpg_pos. Returns a data.frame:
+# geneid, lo, hi, in cpg_pos order
+probe_snp_regions <- function(cpg_pos, profile) {
+  from <- -1
+  to   <- 50
+  man  <- sesameData::sesameData_getManifestGRanges(profile$sesame_platform, genome = "hg38")
+  m    <- match(cpg_pos$geneid, names(man))
+  # GRanges start is the CpG's first base: the C of a "+" strand CpG
+  beg    <- start(man)[m]
+  strand <- as.character(strand(man))[m]
+  known  <- !is.na(m) & strand %in% c("+", "-") &
+            sub("^chr", "", as.character(seqnames(man))[m]) == cpg_pos$chr
+  cat("Probe strand from the sesame", profile$sesame_platform, "manifest:", sum(known), "of",
+      nrow(cpg_pos), "CpGs; the rest are excluded on both sides\n")
+
+  lo <- ifelse(strand %in% "+", beg - to, beg + 1 + from)
+  hi <- ifelse(strand %in% "+", beg - from, beg + 1 + to)
+  lo[!known] <- cpg_pos$left[!known] - to - 1
+  hi[!known] <- cpg_pos$left[!known] + to + 1
+  data.frame(geneid = cpg_pos$geneid, lo = lo, hi = hi)
 }
 
 # Latent methylation PCs: the first n_pcs principal components of the
@@ -155,8 +191,11 @@ load_chr_genotypes <- function(geno_dir, chr, sample_map, sample_names) {
 }
 
 # cis-mQTL scan of one chromosome: tests within +/- MQTL_CIS_WINDOW, keeps
-# pairs with p < MQTL_P_CIS_SAVE. Returns list(eqtls = data frame, ntests)
-run_cis_chr <- function(geno, meth_int, cpg_pos, chr, cvrt) {
+# pairs with p < MQTL_P_CIS_SAVE. Pairs with the SNP in the CpG's probe
+# (probe_regions, from probe_snp_regions) are dropped and not counted as
+# tests. Returns list(eqtls = data frame, ntests, n_probe_tests = tests
+# excluded, n_probe_saved = saved pairs excluded)
+run_cis_chr <- function(geno, meth_int, cpg_pos, probe_regions, chr, cvrt) {
   chr_cpgs <- cpg_pos$chr == as.character(chr)
   gene <- SlicedData$new()
   gene$CreateFromMatrix(meth_int[chr_cpgs, , drop = FALSE])
@@ -187,7 +226,16 @@ run_cis_chr <- function(geno, meth_int, cpg_pos, chr, cvrt) {
     left_join(as.data.frame(geno$snp_info)[, c("snpid", "pos", "counted", "alt")],
               by = c("snp" = "snpid")) %>%
     mutate(chr = chr)
-  list(eqtls = eqtls, ntests = me$cis$ntests)
+
+  # SNP-in-probe pairs: all tested (well within the cis window), so their
+  # number is the SNPs in each CpG's probe region
+  region  <- probe_regions[chr_cpgs, ]
+  snp_bp  <- sort(geno$snp_info$pos)
+  n_probe <- sum(findInterval(region$hi, snp_bp) - findInterval(region$lo - 1, snp_bp))
+  r <- match(eqtls$cpg, region$geneid)
+  in_probe <- eqtls$pos >= region$lo[r] & eqtls$pos <= region$hi[r]
+  list(eqtls = eqtls[!in_probe, ], ntests = me$cis$ntests - n_probe,
+       n_probe_tests = n_probe, n_probe_saved = sum(in_probe))
 }
 
 # Combine the per-chromosome results: FDR over all tests, SNP-CpG distance,

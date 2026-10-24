@@ -60,6 +60,7 @@ fusermount -u ~/gp2_release12                                 # unmount
 | EPICv1 probe annotation (hg19) | `anno_pkg` | `R/array_profiles.R` | Bioconductor, `IlluminaHumanMethylationEPICanno.ilm10b4.hg19` | ilm10b4 (package 0.6.0) |
 | EPICv2 probe annotation (hg38) | `anno_pkg` | `R/array_profiles.R` | Bioconductor, `IlluminaHumanMethylationEPICv2anno.20a1.hg38` | 20a1 (package 1.0.0) |
 | Cross-reactive probe list (EPICv1, mapped to EPICv2) | `xreactive` | `R/array_profiles.R` | GitHub, `markgene/maxprobes` | 0.0.2 (commit `c2120db`) |
+| Probe strand and CpG positions, hg38 (SNP-in-probe exclusion, mQTL) | `sesame_platform` | `R/array_profiles.R` | Bioconductor, `sesameData` (`sesameData_getManifestGRanges`; Zhou lab InfiniumAnnotation manifests), cached by `sesameData::sesameDataCache()` in `requirements.R` | 1.24.0 |
 | Blood cell reference (IDOL) | `CELL_TYPES` | `config.R` | Bioconductor, `FlowSorted.Blood.EPIC` | 2.10.0 |
 | hg19 to hg38 liftover chain (EPICv1 positions) | `CHAIN_HG19_HG38` | `config.R` | UCSC, `hg19ToHg38.chain.gz` | - |
 | Gene annotation (GRCh38) | `GENCODE_GTF` | `config.R` | GENCODE, `gencode.v50.annotation.gtf.gz` | v50 |

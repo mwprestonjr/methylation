@@ -66,7 +66,7 @@ for (chr in 1:22) {
   cat("chr", chr, ":", sep = "")
   geno <- load_chr_genotypes(prep$geno_dir, chr, prep$sample_map, colnames(meth_int))
   for (k in as.character(grid)) {
-    res <- run_cis_chr(geno, meth_int, cpg_pos, chr, cvrts[[k]])
+    res <- run_cis_chr(geno, meth_int, cpg_pos, prep$probe_regions, chr, cvrts[[k]])
     cis_results[[k]][[chr]] <- res$eqtls
     cat(" ", k, sep = "")
   }

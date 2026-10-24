@@ -18,12 +18,15 @@
 #   xreactive  function(ann) returning cross-reactive probe names, where ann
 #              is getAnnotation(rgSet)
 #   genome     genome build of the annotation's probe coordinates
+#   sesame_platform  platform name of the sesame manifests (sesameData), for
+#              the hg38 probe strand used by the mQTL scan
 ARRAY_PROFILES <- list(
   EPICv1 = list(
     anno_pkg   = "IlluminaHumanMethylationEPICanno.ilm10b4.hg19",
     annotation = c(array = "IlluminaHumanMethylationEPIC",
                    annotation = "ilm10b4.hg19"),
     genome     = "hg19",
+    sesame_platform = "EPIC",
     xreactive  = function(ann) {
       unlist(maxprobes::xreactive_probes(array_type = "EPIC"))
     }
@@ -33,6 +36,7 @@ ARRAY_PROFILES <- list(
     annotation = c(array = "IlluminaHumanMethylationEPICv2",
                    annotation = "20a1.hg38"),
     genome     = "hg38",
+    sesame_platform = "EPICv2",
     # maxprobes only has an EPICv1 list; map it to EPICv2 names via EPICv1_Loci.
     # NOTE: probes new on EPICv2 (no v1 equivalent) are not screened
     xreactive  = function(ann) {
