@@ -29,3 +29,6 @@ logs/*
 # Dev container
 .devcontainer/
 .dockerignore
+
+# temporary files
+temp/*
