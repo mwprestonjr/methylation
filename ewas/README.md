@@ -68,8 +68,8 @@ the exposure column or its levels may have changed.
 - **Phenotype adjustment**: the age and exposure models also adjust for
   phenotype (`EWAS_ADJUST_PHENOTYPE`), so a PD-control difference that is
   correlated with age or exposure isn't reported as an age or exposure effect.
-  Phenotype is left out automatically when all samples have the same one
-  (e.g. Psomagen).
+  Phenotype is left out automatically when all samples have the same one.
+  Psomagen keeps it: besides PD it has a few DLB, MSA, PSP and Other samples.
 - **ComBat protection**: ComBat kept the variation explained by
   `COMBAT_PROTECT` (phenotype), so case-control differences survive batch
   correction. Age and exposures aren't protected: if they differ between
