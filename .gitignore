@@ -32,3 +32,6 @@ logs/*
 
 # temporary files
 temp/*
+
+# workspaces
+*.code-workspace
