@@ -135,6 +135,53 @@ In an interactive R session, set `DATA_SOURCE <- "ppmi_p140"` (and
 `MQTL_ANCESTRY <- "AFR"` for mQTL scripts) with the working directory at the
 repository root before sourcing a script.
 
+## Adding a data source or array
+
+### A new data source on a supported array (EPICv1, EPICv2)
+
+1. **`config.R`**: add the name to `DATA_SOURCES` and an
+   `if (DATA_SOURCE == "<source>")` block with its input paths and
+   `DIR_OUTPUT`.
+2. **`qc/1_build_sample_sheet_<source>.R`**: a new script that sets
+   `DATA_SOURCE` itself, finds the idat files, joins the GP2 master key, calls
+   `detect_chip_arrays()` (`R/array_profiles.R`) and writes the sample sheet
+   with the `SAMPLE_SHEET_COLUMNS` (`config.R`). Later steps rely only on
+   these columns.
+3. **`Makefile`**: add the source to `SOURCES` and a
+   `SHEET_<source> := qc/1_build_sample_sheet_<source>.R` line.
+4. **Per-source settings** in the module configs, each a
+   `switch(DATA_SOURCE, ...)` that gives `NULL` for a source it doesn't list:
+   - `COMBAT_BATCH_VAR` (`preprocessing/config.R`): chip or plate, chosen with
+     `preprocessing/2_variation_sources.R`
+   - `ADULT_CLOCKS` and `CLOCK_DURATION_FROM` (`clocks/config.R`)
+   - `EWAS_EXPOSURE_COL` (`ewas/config.R`)
+5. **This README**: a row in [Data sources](#data-sources), and its input
+   files in [Input files and versions](#input-files-and-versions).
+
+### A new array type
+
+In addition to the steps above:
+
+1. **`R/array_profiles.R`**: a bead-count range in `detect_array()` (450k is
+   recognised but has no profile), and an `ARRAY_PROFILES` entry with
+   `anno_pkg`, `annotation`, `genome`, `xreactive` and `sesame_platform`.
+   QC (bead counts, sex and SNP probes, `getSex`, Funnorm) reads the profile's
+   annotation and needs no other change.
+2. **hg38 positions**: `cpg_positions_hg38()` (`R/cpg_annotation.R`) handles
+   hg19 annotations (lifted over with `CHAIN_HG19_HG38`) and hg38 ones only.
+3. **Cell counts**: `preprocessing/1_cell_counts.R` uses the EPIC IDOL
+   reference (`FlowSorted.Blood.EPIC`) and averages EPICv2 replicate probes
+   by their cg ID (dropping the name suffix); check both apply to the new
+   array.
+4. **CpG annotation**: `preprocessing/4_cpg_annotation.R` merges EPICv1's
+   north/south shores and shelves to match EPICv2; check the new annotation's
+   island columns.
+5. **Clocks**: check each clock's CpG coverage (`clock_cpg_coverage.csv`) and
+   choose `ADULT_CLOCKS` for the sources on the array.
+6. **Dependencies**: the annotation package in `requirements.R` and
+   `environment.yml`, and a row in
+   [Reference data and annotation](#input-files-and-versions).
+
 ## Layout
 
 ```
