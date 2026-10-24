@@ -264,6 +264,7 @@ rm(gw); invisible(gc())
 png(fig("05_distance_zoom"), width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
 print(ggplot(sig[abs(distance) <= 50e3], aes(distance / 1e3)) +
   geom_histogram(binwidth = 1, boundary = 0) +
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "grey50") +
   labs(title = "Lead SNP - CpG distance within 50 kb",
        subtitle = sprintf("%s %s: %s CpGs at %s;\n%.0f%% of them within 50 kb", DATA_SOURCE,
                           paste(MQTL_ANCESTRY, collapse = "+"), format(nrow(sig), big.mark = ","),
