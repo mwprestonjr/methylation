@@ -4,7 +4,8 @@
 # Date: Sept 30, 2026
 # Description: QC steps used by qc/1 and qc/2 that work on idat files
 #              or the raw minfi objects: checking idat files exist, SeSAMe
-#              per-sample QC stats, sex check, and low bead count probes
+#              per-sample QC stats, sex check, duplicate arrays of one person,
+#              and low bead count probes
 # =============================================================================
 
 # Adds both_exist (TRUE if both <Basename>_Red.idat and _Grn.idat exist) to
@@ -75,6 +76,43 @@ check_sex <- function(mSet, reported_sex, cutoff = -2) {
              xMed               = predicted$xMed,
              yMed               = predicted$yMed,
              row.names = NULL)
+}
+
+# Duplicate arrays of one person among the samples in keep, and which one to
+# keep. person identifies the participant per rgSet column (NA or "" = can't
+# be matched, never a duplicate); quality ranks the arrays (higher is
+# better), ties going to the higher sentrix_id (more recent chip). Sample
+# swap check: if any two arrays of a person have rs SNP probe betas
+# (getSnpBeta) correlating below min_cor, or a different predicted_sex, all
+# of that person's arrays are removed. Returns one row per array of a
+# duplicated person: index (rgSet column), person, n_arrays, min_snp_cor
+# (lowest pairwise correlation), same_sex, and decision ("kept", "removed:
+# replicate" or "removed: possible swap")
+find_duplicate_arrays <- function(rgSet, person, keep, quality, sentrix_id,
+                                  predicted_sex, min_cor) {
+  p   <- ifelse(keep & !is.na(person) & person != "", person, NA)
+  idx <- which(p %in% unique(p[duplicated(p) & !is.na(p)]))
+  if (length(idx) == 0) {
+    return(data.frame(index = integer(0), person = character(0), n_arrays = integer(0),
+                      min_snp_cor = numeric(0), same_sex = logical(0),
+                      decision = character(0)))
+  }
+  snp <- minfi::getSnpBeta(rgSet[, idx])
+
+  groups <- split(seq_along(idx), p[idx])
+  do.call(rbind, lapply(groups, function(j) {
+    i     <- idx[j]
+    r     <- suppressWarnings(cor(snp[, j], use = "pairwise.complete.obs"))
+    min_r <- min(r[upper.tri(r)])
+    same_sex <- length(unique(predicted_sex[i])) == 1
+    swap  <- !isTRUE(min_r >= min_cor) || !same_sex   # NA correlation counts as a swap
+    best  <- i[order(-quality[i], -as.numeric(sentrix_id[i]))[1]]
+    data.frame(index = i, person = p[i], n_arrays = length(i),
+               min_snp_cor = min_r, same_sex = same_sex,
+               decision = if (swap) "removed: possible swap"
+                          else ifelse(i == best, "kept", "removed: replicate"),
+               row.names = NULL)
+  }))
 }
 
 # Names of probes with fewer than min_beads beads in more than max_frac of

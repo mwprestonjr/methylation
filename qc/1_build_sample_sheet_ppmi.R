@@ -39,7 +39,10 @@ visit <- link_list %>%
   filter(EVENT_ID == PRIMARY_TIMEPOINT)
 cat(PRIMARY_TIMEPOINT, "samples:", nrow(visit), "\n")
 
-# 2b. Remove duplicates, keep most recent technical replicate
+# 2b. Remove batch QC controls (PATNOs with more than two arrays at the visit).
+# Pairs (technical replicates) are kept here: qc/2_qc.R keeps the better
+# array after sample QC, so a replicate that fails QC doesn't cost the
+# participant
 cat("\nChecking for duplicate PATNOs...\n")
 
 # Identify duplicates
@@ -61,16 +64,9 @@ cat("Removing batch QC controls:", paste(batch_controls, collapse = ", "), "\n")
 visit <- visit %>%
   filter(!PATNO %in% batch_controls)
 
-# For technical replicates (n=2), keep most recent SENTRIXID
-# SENTRIXID assigned sequentially; higher SENTRIXID number = more recent chip
-visit <- visit %>%
-  group_by(PATNO) %>%
-  arrange(desc(SENTRIXID)) %>%  # most recent first
-  slice(1) %>%                  # keep first row per PATNO
-  ungroup()
-
-cat("Samples after deduplication:", nrow(visit), "\n")
-cat("Unique PATNOs:", length(unique(visit$PATNO)), "\n")
+cat("Samples after removing batch QC controls:", nrow(visit), "\n")
+cat("Unique PATNOs:", length(unique(visit$PATNO)),
+    "(technical replicate pairs are resolved in qc/2_qc.R)\n")
 
 # --- 3. Filter to cohorts of interest ----------------------------------------
 
@@ -109,8 +105,11 @@ if (length(dup_r12) > 0) {
   r12 <- r12 %>% distinct(clinical_id, .keep_all = TRUE)
 }
 
+# clinical_id is the PATNO, also for participants not in R12, so qc/2_qc.R
+# can match their arrays when there is no GP2ID
 sample_sheet <- sample_sheet %>%
-  left_join(r12, by = c("PATNO" = "clinical_id"), keep = TRUE)
+  left_join(r12, by = c("PATNO" = "clinical_id"), keep = TRUE) %>%
+  mutate(clinical_id = coalesce(clinical_id, PATNO))
 cat("Samples not in R12:", sum(is.na(sample_sheet$GP2ID)), "\n")
 cat("Sex breakdown:\n")
 print(table(sample_sheet$sex, useNA = "always"))

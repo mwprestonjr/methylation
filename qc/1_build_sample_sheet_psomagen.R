@@ -45,10 +45,11 @@ cat("Merged sample sheet dimensions:", nrow(sample_sheet), "rows x", ncol(sample
 cat("Samples per dataset:\n")
 print(table(sample_sheet$Dataset))
 
-# The same sample can appear in more than one dataset (e.g. re-runs)
+# The same sample can appear in more than one dataset (e.g. re-runs). All
+# arrays are kept here; qc/2_qc.R keeps the better one after sample QC
 dup_ids <- unique(sample_sheet$Sample_ID[duplicated(sample_sheet$Sample_ID)])
 if (length(dup_ids) > 0) {
-  cat("WARNING:", length(dup_ids), "Sample_IDs appear more than once:\n")
+  cat("NOTE:", length(dup_ids), "Sample_IDs appear more than once (resolved in qc/2_qc.R):\n")
   print(sample_sheet %>% filter(Sample_ID %in% dup_ids) %>%
           select(Sample_ID, Dataset, Sentrix_ID, Sentrix_Position) %>%
           arrange(Sample_ID))

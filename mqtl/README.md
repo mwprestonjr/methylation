@@ -59,7 +59,10 @@ In `<DIR_OUTPUT>/results/mqtl/<ANCESTRY>/` (`MQTL_DIR`, set in
 genotypes by GP2ID through the GP2 master key (`GP2_MASTER_KEY`), keeping
 samples genotyped on `GENO_SOURCE` (NBA array) that passed GP2 genotype QC and
 have the requested ancestry label. The genotype files have related
-individuals removed.
+individuals removed. Each person has one methylation array: `qc/2_qc.R`
+keeps the best of duplicate arrays (see the QC README), and
+`1_mqtl_sample_map.R` stops if a GP2ID still appears twice, since both
+arrays would get the same genotypes and count as independent samples.
 
 **Genotype QC** (`2_mqtl_genotypes.sh`, PLINK 2), on the analysed samples:
 - autosomal, biallelic, single-base (A/C/G/T) SNPs only

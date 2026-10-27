@@ -57,6 +57,14 @@ profile <- ARRAY_PROFILES[[array_type]]
 library(profile$anno_pkg, character.only = TRUE)
 cat("Array:", array_type, "- annotation:", profile$anno_pkg, "\n")
 
+# Checked now rather than at step 4, hours into the run
+if (!DUPLICATE_METRIC %in% c("frac_dt_cg", "mean_detP")) {
+  stop("DUPLICATE_METRIC (qc/config.R) must be \"frac_dt_cg\" or \"mean_detP\"")
+}
+if (DUPLICATE_METRIC == "frac_dt_cg" && !USE_SESAME_QC) {
+  stop("DUPLICATE_METRIC = \"frac_dt_cg\" needs USE_SESAME_QC = TRUE (qc/config.R)")
+}
+
 # --- 1. SeSAMe QC stats ---------------------------------------------------
 
 # Per-sample detection (pOOBAH), intensity, dye bias and beta distribution
@@ -167,6 +175,36 @@ sex_discordant    <- sex_check$sex_discordant %in% TRUE
 samples_to_remove <- failed_samples |
                      (REMOVE_SEX_DISCORDANT & sex_discordant)
 cat("Removing sex discordant samples:", REMOVE_SEX_DISCORDANT, "\n")
+
+# 4a. Duplicate arrays of one person (GP2ID, or clinical_id without one)
+# among the samples passing so far: keep the best by DUPLICATE_METRIC, or
+# remove all if they fail the sample swap check (find_duplicate_arrays in
+# R/idat_qc.R; DUPLICATE_* in qc/config.R)
+cat("\nChecking for duplicate arrays of one person...\n")
+person  <- ifelse(is.na(targets$GP2ID) | targets$GP2ID == "", targets$clinical_id, targets$GP2ID)
+quality <- if (DUPLICATE_METRIC == "frac_dt_cg") sesame_qc$frac_dt_cg else -mean_detP
+dups <- find_duplicate_arrays(rgSet, person, !samples_to_remove, quality,
+                              targets$Sentrix_ID, sex_check$predicted_sex,
+                              DUPLICATE_MIN_SNP_COR)
+dup_replicate <- seq_len(nrow(targets)) %in% dups$index[dups$decision == "removed: replicate"]
+dup_swap      <- seq_len(nrow(targets)) %in% dups$index[dups$decision == "removed: possible swap"]
+cat("People with more than one array:", length(unique(dups$person)),
+    "| replicates removed:", sum(dup_replicate),
+    "| arrays removed as possible sample swaps:", sum(dup_swap), "\n")
+if (nrow(dups) > 0) {
+  dups <- data.frame(Sample = sample_names[dups$index],
+                     targets[dups$index, c("GP2ID", "clinical_id", "Dataset",
+                                           "Sentrix_ID", "Sentrix_Position")],
+                     predicted_sex = sex_check$predicted_sex[dups$index],
+                     mean_detP     = mean_detP[dups$index],
+                     frac_dt_cg    = if (USE_SESAME_QC) sesame_qc$frac_dt_cg[dups$index] else NA,
+                     dups[, c("n_arrays", "min_snp_cor", "same_sex", "decision")],
+                     row.names = NULL)
+  print(dups)
+}
+write.csv(dups, file.path(DIR_RESULTS_QC, "qc_duplicates.csv"), row.names = FALSE)
+samples_to_remove <- samples_to_remove | dup_replicate | dup_swap
+
 cat("Total samples removed:", sum(samples_to_remove), "\n")
 cat("Samples remaining:", sum(!samples_to_remove), "\n")
 
@@ -189,6 +227,8 @@ qc_metrics <- data.frame(
   reported_sex_label = sex_check$reported_sex_label,
   sex_discordant     = sex_check$sex_discordant,
   failed_detection   = failed_samples,
+  duplicate_replicate = dup_replicate,          # another array of the person was kept
+  duplicate_swap     = dup_swap,                # arrays of the person disagree (qc_duplicates.csv)
   removed            = samples_to_remove,
   row.names = NULL
 )
@@ -371,6 +411,8 @@ qc_summary <- data.frame(
   step = c("Input samples",
            if (USE_SESAME_QC) "Failed detection (SeSAMe pOOBAH)" else "Failed detection (minfi mean p-value)",
            if (REMOVE_SEX_DISCORDANT) "Sex discordant (removed)" else "Sex discordant (kept)",
+           "Duplicate arrays: replicates removed",
+           "Duplicate arrays: possible sample swaps removed",
            if (REMOVE_DENSITY_OUTLIERS) "Density outliers (removed)" else "Density outliers (kept)",
            "Final samples",
            "Input probes",
@@ -383,6 +425,8 @@ qc_summary <- data.frame(
   n    = c(nrow(targets),
            sum(failed_samples),
            sum(sex_discordant),
+           sum(dup_replicate),
+           sum(dup_swap),
            length(density_outliers),
            nrow(targets_clean),
            n_probes_start,

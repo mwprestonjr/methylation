@@ -67,6 +67,15 @@ if (nrow(sample_map) == 0) {
   stop("No ", DATA_SOURCE, " samples have ancestry ", paste(MQTL_ANCESTRY, collapse = "+"),
        " - see the ancestry breakdown above")
 }
+# One array per person: two arrays with the same GP2ID would get the same
+# genotypes and count as two independent samples. qc/2_qc.R keeps one, so
+# this only fails on QC outputs from before that check
+dup_gp2 <- unique(sample_map$GP2ID[duplicated(sample_map$GP2ID)])
+if (length(dup_gp2) > 0) {
+  print(sample_map %>% filter(GP2ID %in% dup_gp2) %>% arrange(GP2ID))
+  stop(length(dup_gp2), " GP2IDs have more than one methylation sample (above) - ",
+       "rerun qc/2_qc.R ", DATA_SOURCE, ", which keeps one array per person")
+}
 
 # --- 4. Save outputs ---------------------------------------------------------
 

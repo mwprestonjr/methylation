@@ -31,6 +31,7 @@ within qc).
 |---|---|---|---|---|
 | 1 | `sample_sheet.csv` | `SAMPLE_SHEET` | One row per array sample: `SAMPLE_SHEET_COLUMNS` (IDs, phenotype, sex, race, age, batch, chip/position, array, idat path) | `2_qc.R` |
 | 2 | `qc_sample_metrics.csv` | | Every input sample: median intensities, mean detection p, predicted vs reported sex, density score, and why it was removed | |
+| 2 | `qc_duplicates.csv` | | Every QC-passed array of a person with more than one: IDs, chip/position, predicted sex, detection metrics, lowest rs-probe correlation between the person's arrays, and whether it was kept, removed as a replicate, or removed as a possible sample swap; empty if there are none | |
 | 2 | `qc_sesame_stats.csv` | | SeSAMe per-sample stats (detection, intensity, dye bias); only when `USE_SESAME_QC = TRUE` | |
 | 2 | `qc_summary.csv` | | Number of samples and probes removed at each QC step | |
 | 2 | `qc_figure_data.rds` | `QC_FIGURE_DATA` | Sample metrics, density curves and thresholds behind the QC figures | `3_qc_plots.R` |
@@ -51,12 +52,14 @@ within qc).
   enrollment cohort, not from R12 `GP2_phenotype`, which labels
   genetic-cohort unaffected carriers "Control" and later converters "PD".
 - **PPMI duplicates**: participants with more than two arrays at the visit are
-  removed (likely batch controls or mislabelled visits); for two arrays
-  (technical replicates), the more recent chip (higher Sentrix ID) is kept.
+  removed (likely batch controls or mislabelled visits). Pairs (technical
+  replicates) are kept for `2_qc.R` to choose between (see Sample QC).
+  `clinical_id` is the PATNO, also for participants not in R12.
 - **Psomagen**: all samples in the deliveries listed in `DATASETS`, with
   phenotype, sex and race from the R12 master key (`GP2_MASTER_KEY`) and age
   from the internal-use master key (`GP2_INTERNAL_KEY`), matched on GP2ID.
-  Samples appearing in more than one delivery are reported.
+  Samples appearing in more than one delivery are reported and kept for
+  `2_qc.R` to choose between (see Sample QC).
 - **Age**: PPMI uses age at the methylation visit (falling back to enrollment
   age); Psomagen uses R12 `age_at_sample_collection`, the age at the GP2 DNA
   draw that was arrayed.
@@ -71,14 +74,33 @@ within qc).
 2. **Sex**: predicted sex (minfi `getSex`, X/Y intensities) is compared with
    reported sex; discordant samples are removed (`REMOVE_SEX_DISCORDANT`).
    Samples with unknown reported sex are never called discordant.
-3. **Beta density outliers**: samples with a third peak in the beta
+3. **Duplicate arrays**: one array is kept per person, so later modules
+   don't count a person twice (in mQTL mapping, two arrays with the same
+   genotypes). A person is identified by GP2ID, or `clinical_id` if there is
+   no GP2ID. Among a person's arrays that passed steps 1-2:
+   - **Sample swap check**: the arrays are compared on the rs SNP probes
+     (59-65 per array, minfi `getSnpBeta`) and on predicted sex. If any two
+     correlate below `DUPLICATE_MIN_SNP_COR` (0.9; true replicates are
+     ~0.95 or higher, different people much lower) or differ in predicted
+     sex, the arrays can't all be the same person, and there's no way to tell
+     which one is, so all are removed.
+   - Otherwise the best array is kept, by `DUPLICATE_METRIC`: `"frac_dt_cg"`
+     (default; highest fraction of cg probes detected by SeSAMe pOOBAH, needs
+     `USE_SESAME_QC = TRUE`) or `"mean_detP"` (lowest mean minfi detection
+     p-value). Ties go to the more recent chip (higher Sentrix ID).
+   - Only arrays passing steps 1-2 are compared, so a re-run of a failed
+     array is used. Density outliers (step 4) aren't considered.
+
+   The arrays and decisions are in `qc_duplicates.csv`, and the counts in
+   `qc_summary.csv`. Removed arrays aren't normalized.
+4. **Beta density outliers**: samples with a third peak in the beta
    distribution between 0.15 and 0.75 (e.g. a mixed sample) are scored after
    normalization and flagged above `DENSITY_MID_PEAK_MAX`. They are **flagged,
    not removed** (`REMOVE_DENSITY_OUTLIERS = FALSE`); see
    `qc_sample_metrics.csv`.
 
 **Normalization**: functional normalization (minfi `preprocessFunnorm`) of the
-samples passing steps 1-2. Density outliers are part of the normalization even
+samples passing steps 1-3. Density outliers are part of the normalization even
 when removed afterwards.
 
 **Probe filters**, applied after normalization:

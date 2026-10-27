@@ -26,6 +26,19 @@ REMOVE_DENSITY_OUTLIERS <- FALSE  # TRUE = remove flagged samples; FALSE = flag 
 USE_SESAME_QC            <- TRUE
 SESAME_MIN_FRAC_DETECTED <- 0.90   # Min fraction of cg probes detected (pOOBAH p < 0.05)
 
+# Duplicate arrays: several QC-passed arrays of one person (same GP2ID, or
+# clinical_id if there is no GP2ID). One is kept, the best by
+# DUPLICATE_METRIC; ties go to the more recent chip (higher Sentrix ID)
+#   "frac_dt_cg" = highest fraction of cg probes detected (SeSAMe pOOBAH;
+#                  needs USE_SESAME_QC = TRUE)
+#   "mean_detP"  = lowest mean minfi detection p-value
+# Sample swap check: if any two arrays of the person have rs SNP probe betas
+# correlating below DUPLICATE_MIN_SNP_COR (true replicates are ~0.95 or
+# higher, different people much lower), or a different predicted sex, they
+# can't all be that person, so all of them are removed
+DUPLICATE_METRIC      <- "frac_dt_cg"
+DUPLICATE_MIN_SNP_COR <- 0.9
+
 # Samples per detectionP() call; computing all samples at once needs more
 # memory than the VM has for a few hundred EPIC samples
 DETP_CHUNK_SIZE <- 50
