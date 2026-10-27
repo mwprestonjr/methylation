@@ -123,11 +123,33 @@ are set to the SNP's mean in these samples (MatrixEQTL's handling).
   implemented yet.
 
 **Known caveats**
+- **CpGs with a SNP at the CpG or extension base aren't tested**: QC removes
+  these probes (minfi `dropLociWithSnps`), since the array would read the
+  genotype rather than methylation. So allele-specific methylation caused by
+  alleles that destroy a CpG can't be studied with these data. The probes
+  are chosen from a fixed list of common SNPs (dbSNP, included in the array
+  annotation: build 137 for EPICv1, 151 for EPICv2), not from the study's
+  genotypes, so the same probes are removed for every ancestry.
 - **Probe-SNP artifacts**: SNP-CpG pairs with the SNP inside the probe are
   excluded (see Model), but a SNP outside the probe in LD with one inside it
-  can still pick up the artifact. Before this exclusion, lead SNPs within
+  can still pick up the artifact. Only variants in the QC'd genotypes can be
+  excluded: indels, SNPs with MAF < `MQTL_MAF` and variants not on the array
+  stay in the probe unexcluded, and a common SNP in LD with one of them can
+  show the artifact. Before this exclusion, lead SNPs within
   50 bp of their CpG were 3.5% of significant CpGs in Psomagen AFR and 1.7%
   in PPMI EUR.
+- **Autosomes only**: QC removes X and Y probes, and step 2 keeps autosomal
+  SNPs.
+- **EPICv2 replicate probes count as separate CpGs**: on EPICv2 some sites
+  are measured by more than one probe (e.g. `cg00002033_TC11` and `_TC12`;
+  about 4,800 sites with 2-6 probes after QC in Psomagen, mostly identical
+  copies). Each probe is tested and counted on its own, so CpG counts are per
+  probe (under 1% more than per site). The copies agree: of the 317
+  replicated sites with two or more probes at p < 1e-8 in Psomagen AFR, 88%
+  have the same lead SNP and 96% the same effect direction.
+- **Cross-reactive probes new on EPICv2 aren't screened** (see the QC
+  README): a probe that also binds elsewhere in the genome measures a mix of
+  sites, so an mQTL can belong to a site other than the annotated CpG.
 - **Lead SNP is not necessarily causal**: it tags a block of correlated SNPs
   (see the regional plots); identifying the causal variant needs
   fine-mapping.
