@@ -66,7 +66,8 @@ corrected without removing phenotype signal. Run before ComBat (`raw`) to
 choose the batch variable, and after (`combat`) to check the correction.
 
 **Batch correction** (`3_combat.R`): ComBat (`sva`) on the probe-filtered M
-values, with parametric priors.
+values (one row per site: EPICv2 replicate probes are averaged in QC), with
+parametric priors.
 - **Batch variable** (`COMBAT_BATCH_VAR`): `Batch` (processing plate) for
   PPMI and `Sentrix_ID` (chip) for Psomagen. PPMI samples are spread over about
   240 chips, often one per chip, too few for ComBat (a batch of one sample

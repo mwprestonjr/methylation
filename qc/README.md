@@ -36,8 +36,9 @@ within qc).
 | 2 | `qc_summary.csv` | | Number of samples and probes removed at each QC step | |
 | 2 | `qc_figure_data.rds` | `QC_FIGURE_DATA` | Sample metrics, density curves and thresholds behind the QC figures | `3_qc_plots.R` |
 | 2 | `sample_sheet_qc_passed.csv` | `SAMPLE_SHEET_QC` | Sample sheet of the samples that passed QC | preprocessing (all steps) |
-| 2 | `mVals.rds` | `MVALS_QC` | M values: QC-passed samples, Funnorm-normalized, probe-filtered, infinite values capped | `preprocessing/2_variation_sources.R`, `3_combat.R` |
-| 2 | `bVals.rds` | | Beta values, same samples and probes as `mVals.rds`; only if `SAVE_BVALS = TRUE` | not read by the pipeline |
+| 2 | `mVals.rds` | `MVALS_QC` | M values: QC-passed samples, Funnorm-normalized, probe-filtered, EPICv2 replicate probes averaged per site, infinite values capped | `preprocessing/2_variation_sources.R`, `3_combat.R` |
+| 2 | `bVals.rds` | | Beta values, same samples and rows as `mVals.rds`; only if `SAVE_BVALS = TRUE` | not read by the pipeline |
+| 2 | `replicate_probes.csv` | `REPLICATE_PROBES` | EPICv2 replicate probes averaged in `mVals.rds`: site, probe, and the row name kept; empty for other arrays or with `COLLAPSE_REPLICATE_PROBES = FALSE` | mQTL (`R/mqtl_functions.R`) |
 | 2 | `bVals_noob.rds` | `BVALS_NOOB` | Beta values: QC-passed samples (before density outlier removal), **noob-normalized**, all probes; the IDOL cell reference needs noob, not Funnorm, values | `preprocessing/1_cell_counts.R` |
 | 2 | `bVals_unfiltered.rds` | `BVALS_UNFILTERED` | Beta values: QC-passed samples, normalized, **no probe filtering** (filters can remove clock CpGs) | `clocks/1_estimate.R` |
 | 2 | `mSetSq_qc_passed.rds` | `MSET_QC` | Normalized, filtered `GenomicRatioSet` (minfi object with annotation); only if `SAVE_MSET_QC = TRUE` | not read by the pipeline |
@@ -125,8 +126,18 @@ when removed afterwards.
 **M values**: betas of exactly 0 or 1 give infinite M values; these are capped
 (`R/mvalues.R`) so ComBat and other models can use them.
 
-**EPICv2**: replicate probes for the same CpG (e.g. `cg00000029_TC21`,
-`_BC21`) are kept as separate probes here.
+**EPICv2 replicate probes**: EPICv2 measures some sites with more than one
+probe; the name's suffix differs (e.g. `cg00002033_TC11` and `_TC12`; in
+Psomagen about 4,800 sites have 2-6 probes after the probe filters, almost
+all identical copies, a few of another Infinium type or strand). With
+`COLLAPSE_REPLICATE_PROBES = TRUE` (default), `mVals.rds` (and `bVals.rds`)
+have one value per site: the betas of the site's probes that passed the probe
+filters are averaged, then converted to M values. The averaged row keeps the
+name of the site's first probe (sorted), so lookups by probe name
+(annotation, `CPG_ANNOTATION`) still work; `replicate_probes.csv` lists which
+probes went into each site. The unfiltered and noob betas and
+`mSetSq_qc_passed.rds` keep every probe (cell deconvolution averages
+replicates itself). No effect on EPICv1/450k, which have no replicates.
 
 ## Sample sheet
 

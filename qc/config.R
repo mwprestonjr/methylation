@@ -39,6 +39,13 @@ SESAME_MIN_FRAC_DETECTED <- 0.90   # Min fraction of cg probes detected (pOOBAH 
 DUPLICATE_METRIC      <- "frac_dt_cg"
 DUPLICATE_MIN_SNP_COR <- 0.9
 
+# EPICv2 measures some sites with more than one probe (e.g. cg00002033_TC11
+# and _TC12). TRUE = average them to one value per site in the probe-filtered
+# M values (mVals.rds), named after the site's first probe; the probes
+# averaged are listed in replicate_probes.csv. No effect on EPICv1/450k.
+# Unfiltered and noob betas keep every probe
+COLLAPSE_REPLICATE_PROBES <- TRUE
+
 # Samples per detectionP() call; computing all samples at once needs more
 # memory than the VM has for a few hundred EPIC samples
 DETP_CHUNK_SIZE <- 50

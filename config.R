@@ -119,7 +119,8 @@ SAMPLE_SHEET_COLUMNS <- c("GP2ID", "GP2sampleID", "clinical_id",
 # qc/ outputs (also <DIR_RESULTS_QC>/bVals.rds)
 SAMPLE_SHEET_QC  <- file.path(DIR_RESULTS_QC, "sample_sheet_qc_passed.csv")
 MSET_QC          <- file.path(DIR_RESULTS_QC, "mSetSq_qc_passed.rds")
-MVALS_QC         <- file.path(DIR_RESULTS_QC, "mVals.rds")              # normalized, probe-filtered
+MVALS_QC         <- file.path(DIR_RESULTS_QC, "mVals.rds")             # normalized, probe-filtered, replicate probes averaged
+REPLICATE_PROBES <- file.path(DIR_RESULTS_QC, "replicate_probes.csv")  # EPICv2 probes averaged per site in MVALS_QC (for mQTL)
 BVALS_UNFILTERED <- file.path(DIR_RESULTS_QC, "bVals_unfiltered.rds")  # normalized, no probe filtering (for clocks)
 BVALS_NOOB       <- file.path(DIR_RESULTS_QC, "bVals_noob.rds")        # noob-normalized, all probes (for cell deconvolution)
 

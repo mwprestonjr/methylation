@@ -387,15 +387,32 @@ cat("Final probe count:", n_after_sex, "\n")
 
 cat("\nSaving QC-passed data...\n")
 
+# 7a. EPICv2 replicate probes (several probes for one site) averaged to one
+# value per site (COLLAPSE_REPLICATE_PROBES; collapse_replicate_probes in
+# R/mvalues.R). The map of which probes were averaged is always written
+# (empty if none), so later steps can tell collapsed sites apart
+beta_qc <- getBeta(mSetSq)
+replicate_map <- data.frame(site = character(0), probe = character(0), kept = character(0))
+if (COLLAPSE_REPLICATE_PROBES) {
+  collapsed     <- collapse_replicate_probes(beta_qc)
+  beta_qc       <- collapsed$beta
+  replicate_map <- collapsed$map
+  rm(collapsed)
+  cat("Replicate probes averaged:", nrow(replicate_map), "probes into",
+      length(unique(replicate_map$site)), "sites | rows:", nrow(beta_qc), "\n")
+}
+write.csv(replicate_map, REPLICATE_PROBES, row.names = FALSE)
+
 cat("\nCalculating M values...\n")
-mVals <- cap_infinite_m(getM(mSetSq))   # betas of 0/1 give -Inf/Inf (R/mvalues.R)
+# M = logit2(beta), as minfi's getM; betas of 0/1 give -Inf/Inf (R/mvalues.R)
+mVals <- cap_infinite_m(log2(beta_qc / (1 - beta_qc)))
 cat("M values dimensions:", dim(mVals), "\n")
 saveRDS(mVals, MVALS_QC)
 cat("M values saved\n")
 
 # Outputs no later step reads (SAVE_BVALS, SAVE_MSET_QC in qc/config.R)
 if (SAVE_BVALS) {
-  saveRDS(getBeta(mSetSq), file.path(DIR_RESULTS_QC, "bVals.rds"))
+  saveRDS(beta_qc, file.path(DIR_RESULTS_QC, "bVals.rds"))
   cat("Beta values saved\n")
 }
 if (SAVE_MSET_QC) {
@@ -421,6 +438,7 @@ qc_summary <- data.frame(
            "Failed probes removed",
            "SNP probes removed",
            "Sex chromosome probes removed",
+           "Replicate probes averaged into their site",
            "Final probes"),
   n    = c(nrow(targets),
            sum(failed_samples),
@@ -435,7 +453,8 @@ qc_summary <- data.frame(
            n_after_xreact - n_after_failed,
            n_after_failed - n_after_snp,
            n_after_snp - n_after_sex,
-           n_after_sex)
+           n_after_sex - nrow(mVals),
+           nrow(mVals))
 )
 
 write.csv(qc_summary,

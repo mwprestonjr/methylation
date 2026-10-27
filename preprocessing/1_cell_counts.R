@@ -17,9 +17,10 @@ library(minfi)
 library(tidyverse)
 library(FlowSorted.Blood.EPIC)    # IDOL reference: IDOLOptimizedCpGs(.compTable)
 
-# Load shared configuration
+# Load shared configuration and beta/M value helpers
 source("config.R")
 source("preprocessing/config.R")
+source("R/mvalues.R")
 
 # --- 1. Load QC-passed sample sheet ------------------------------------------
 
@@ -52,12 +53,12 @@ cat("Noob betas:", dim(beta_noob), "\n")
 # projected onto the IDOL reference
 cat("\nEstimating cell type proportions with IDOL CpGs...\n")
 
-# EPICv2 names carry a suffix (cg00000029_TC21); average replicates per cg ID.
+# EPICv2 names carry a suffix (cg00000029_TC21); average replicates per cg ID
+# (collapse_replicate_probes in R/mvalues.R) and name rows by the cg ID.
 # EPICv1 names have no suffix, so this leaves them unchanged
 cg_id     <- sub("_.*$", "", rownames(beta_noob))
-keep      <- cg_id %in% IDOLOptimizedCpGs
-beta_idol <- rowsum(beta_noob[keep, ], cg_id[keep]) /
-             as.vector(rowsum(rep(1, sum(keep)), cg_id[keep]))
+beta_idol <- collapse_replicate_probes(beta_noob[cg_id %in% IDOLOptimizedCpGs, , drop = FALSE])$beta
+rownames(beta_idol) <- sub("_.*$", "", rownames(beta_idol))
 cat("IDOL CpGs found on array:", nrow(beta_idol), "/", length(IDOLOptimizedCpGs), "\n")
 rm(beta_noob); invisible(gc())
 

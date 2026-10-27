@@ -107,9 +107,13 @@ mqtl_prepare <- function() {
   }
   cat("Chip rows:", paste(rows, collapse = ", "), "(reference", rows[1], ")\n")
 
+  # Sites averaged from EPICv2 replicate probes (qc/2_qc.R); missing for QC
+  # outputs from before the averaging, which have no averaged sites
+  replicate_map <- if (file.exists(REPLICATE_PROBES)) read.csv(REPLICATE_PROBES) else NULL
+
   list(meth_int = meth_int, cpg_pos = cpg_pos, known_covs = known_covs,
        sample_map = sample_map, geno_dir = geno_dir,
-       probe_regions = probe_snp_regions(cpg_pos, profile))
+       probe_regions = probe_snp_regions(cpg_pos, profile, replicate_map))
 }
 
 # hg38 range of SNP positions [lo, hi] that fall in each CpG's probe, where a
@@ -123,9 +127,11 @@ mqtl_prepare <- function() {
 # (probe_strand of the Zhou lab InfiniumAnnotation, aligned to hg38): a "+"
 # probe lies at lower coordinates than its CpG, a "-" probe at higher ones.
 # CpGs missing from the manifest, or on another chromosome there, get the
-# range on both sides of their position in cpg_pos. Returns a data.frame:
-# geneid, lo, hi, in cpg_pos order
-probe_snp_regions <- function(cpg_pos, profile) {
+# range on both sides of their position in cpg_pos. So do sites averaged from
+# replicate probes on different strands (replicate_map, from
+# REPLICATE_PROBES: site, probe, kept = the row name of the average).
+# Returns a data.frame: geneid, lo, hi, in cpg_pos order
+probe_snp_regions <- function(cpg_pos, profile, replicate_map = NULL) {
   from <- -1
   to   <- 50
   man  <- sesameData::sesameData_getManifestGRanges(profile$sesame_platform, genome = "hg38")
@@ -135,6 +141,14 @@ probe_snp_regions <- function(cpg_pos, profile) {
   strand <- as.character(strand(man))[m]
   known  <- !is.na(m) & strand %in% c("+", "-") &
             sub("^chr", "", as.character(seqnames(man))[m]) == cpg_pos$chr
+  if (!is.null(replicate_map) && nrow(replicate_map) > 0) {
+    rep_strand <- as.character(strand(man))[match(replicate_map$probe, names(man))]
+    n_strands  <- tapply(rep_strand, replicate_map$kept,
+                         function(s) length(unique(s[s %in% c("+", "-")])))
+    mixed <- cpg_pos$geneid %in% names(n_strands)[n_strands > 1]
+    cat("Sites averaged from probes on both strands:", sum(mixed), "\n")
+    known <- known & !mixed
+  }
   cat("Probe strand from the sesame", profile$sesame_platform, "manifest:", sum(known), "of",
       nrow(cpg_pos), "CpGs; the rest are excluded on both sides\n")
 

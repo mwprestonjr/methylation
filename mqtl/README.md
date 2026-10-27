@@ -98,7 +98,8 @@ probe binding or the extension base and mimic an mQTL. The excluded positions
 side of it, which covers the Infinium I and II probe bodies and their
 extension bases. The probe's side comes from the probe strand in the sesame
 hg38 manifest (`sesameData`, Zhou lab InfiniumAnnotation); CpGs missing from
-it (a handful) are excluded on both sides. Excluded pairs aren't counted as
+it (a handful), and EPICv2 sites averaged from replicate probes on both
+strands (about 30), are excluded on both sides. Excluded pairs aren't counted as
 tests for the FDR, and the counts are in the log and `mqtl_summary.csv`.
 
 The probe side was checked against the unfiltered results: significant pairs
@@ -140,13 +141,12 @@ are set to the SNP's mean in these samples (MatrixEQTL's handling).
   in PPMI EUR.
 - **Autosomes only**: QC removes X and Y probes, and step 2 keeps autosomal
   SNPs.
-- **EPICv2 replicate probes count as separate CpGs**: on EPICv2 some sites
-  are measured by more than one probe (e.g. `cg00002033_TC11` and `_TC12`;
-  about 4,800 sites with 2-6 probes after QC in Psomagen, mostly identical
-  copies). Each probe is tested and counted on its own, so CpG counts are per
-  probe (under 1% more than per site). The copies agree: of the 317
+- **EPICv2 replicate probes are averaged per site** in QC (see the QC
+  README), so each site is tested and counted once, under the name of its
+  first probe (e.g. `cg00002033_TC11` for the average of `_TC11` and
+  `_TC12`). Before averaging, the copies gave consistent mQTLs: of the 317
   replicated sites with two or more probes at p < 1e-8 in Psomagen AFR, 88%
-  have the same lead SNP and 96% the same effect direction.
+  had the same lead SNP and 96% the same effect direction.
 - **Cross-reactive probes new on EPICv2 aren't screened** (see the QC
   README): a probe that also binds elsewhere in the genome measures a mix of
   sites, so an mQTL can belong to a site other than the annotated CpG.
