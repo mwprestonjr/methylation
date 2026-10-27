@@ -19,7 +19,9 @@
 #              (preprocessing/4_cpg_annotation.R)
 #              Step 3 saves only pairs with p < MQTL_P_CIS_SAVE, so the regional
 #              plots recompute every SNP in the window with the step 3 model
-#              (same transformed methylation and covariates)
+#              (same transformed methylation, covariates, missing-genotype
+#              handling and SNP-in-probe exclusion). The island context plot
+#              counts the CpGs step 3 tested (mqtl_cpgs_tested.tsv.gz)
 # Usage:       Rscript mqtl/4_mqtl_plots.R <data source> <ancestry>
 # =============================================================================
 
@@ -49,6 +51,11 @@ lead <- fread(file.path(MQTL_DIR, "cis_mqtl_lead_per_cpg.tsv"))
 cis  <- fread(file.path(MQTL_DIR, "cis_mqtl_all_saved.tsv.gz"))
 covs <- read.csv(file.path(MQTL_DIR, "mqtl_covariates.csv"))       # final samples, in model order
 sample_map <- read.csv(MQTL_SAMPLE_MAP, colClasses = "character")
+# CpGs with at least one SNP tested in step 3 (CpGs without an hg38 position
+# or without a cis SNP aren't tested)
+tested_file <- file.path(MQTL_DIR, "mqtl_cpgs_tested.tsv.gz")
+cpg_tests <- fread(tested_file)
+tested    <- cpg_tests[n_snps > 0, cpg]
 gp2id <- sample_map$GP2ID[match(covs$meth_id, sample_map$meth_id)]
 stopifnot(!anyNA(gp2id))
 
@@ -99,7 +106,6 @@ cat("Top loci:", nrow(top), "\n")
 
 cat("Loading methylation for the top CpGs...\n")
 combat     <- readRDS(COMBAT_MVALS)
-tested     <- rownames(combat)                 # CpGs tested (EPICv1: a few hundred fewer after liftover)
 m_top      <- combat[top$cpg, covs$meth_id, drop = FALSE]
 rm(combat); invisible(gc())
 beta_top   <- 2^m_top / (1 + 2^m_top)          # M -> beta, for plotting
@@ -130,11 +136,14 @@ for (chr in 1:22) {
   }
   # Lead SNP genotypes for the top hits
   for (s in intersect(top$snp, traw$SNP)) lead_geno[[s]] <- g[s, ]
-  # All SNPs within the window of each regional CpG (widened if needed so it
-  # includes the lead SNP, which can be up to MQTL_CIS_WINDOW away)
+  # SNPs step 3 tested within the window of each regional CpG (widened if
+  # needed so it includes the lead SNP, but not beyond the cis window), minus
+  # those in the CpG's probe, which step 3 excludes
   for (i in which(regional$chr == chr)) {
-    half <- max(MQTL_PLOT_REGION, abs(regional$distance[i]) + 10e3)
-    w <- which(abs(traw$POS - regional$cpg_pos[i]) <= half)
+    half  <- min(max(MQTL_PLOT_REGION, abs(regional$distance[i]) + 10e3), MQTL_CIS_WINDOW)
+    probe <- cpg_tests[cpg == regional$cpg[i]]
+    w <- which(abs(traw$POS - regional$cpg_pos[i]) <= half &
+               !(traw$POS >= probe$probe_lo & traw$POS <= probe$probe_hi))
     win_geno[[regional$cpg[i]]] <- list(g = g[w, , drop = FALSE], pos = traw$POS[w])
   }
   rm(traw, g); invisible(gc())
@@ -187,15 +196,17 @@ dev.off()
 # Every SNP in the window, tested with the step 3 model: transformed
 # methylation ~ SNP + all step 3 covariates (incl. latent PCs)
 C <- as.matrix(covs[, setdiff(names(covs), "meth_id")])
-# Returns NA for a SNP the model can't be fitted with (no variation in these
-# samples, or identical to a covariate); MatrixEQTL skips these too
+# Missing genotypes are set to the SNP's mean, as MatrixEQTL does in step 3,
+# so the p-values match step 3's. Returns NA for a SNP the model can't be
+# fitted with (no variation in these samples, or identical to a covariate);
+# MatrixEQTL skips these too
 snp_test <- function(y, g) {
-  ok  <- !is.na(g)
-  if (length(unique(g[ok])) < 2) return(NA_real_)
-  X   <- cbind(1, g[ok], C[ok, , drop = FALSE])
-  fit <- lm.fit(X, y[ok])
+  g[is.na(g)] <- mean(g, na.rm = TRUE)
+  if (length(unique(g)) < 2) return(NA_real_)
+  X   <- cbind(1, g, C)
+  fit <- lm.fit(X, y)
   if (fit$rank < ncol(X)) return(NA_real_)
-  df  <- sum(ok) - fit$rank
+  df  <- nrow(X) - fit$rank
   se  <- sqrt(sum(fit$residuals^2) / df * chol2inv(qr.R(fit$qr))[2, 2])
   2 * pt(-abs(fit$coefficients[2] / se), df)
 }
@@ -206,8 +217,13 @@ reg_df <- rbindlist(lapply(seq_len(nrow(regional)), function(i) {
   y  <- int_top[h$cpg, ]
   p  <- apply(wg$g, 1, function(g) snp_test(y, g))
   r2 <- apply(wg$g, 1, function(g) suppressWarnings(cor(g, wg$g[h$snp, ], use = "complete.obs"))^2)
-  # The recomputed lead p-value should match step 3
+  # The recomputed lead p-value should match step 3: compared on the log
+  # scale, skipped if step 3's p is 0 (below machine precision)
   cat(sprintf("  %s lead SNP: step 3 p = %.3g, recomputed p = %.3g\n", h$cpg, h$p, p[h$snp]))
+  if (h$p > 0 && !isTRUE(abs(log10(p[h$snp]) / log10(h$p) - 1) <= 1e-3)) {
+    warning(h$cpg, ": recomputed lead p-value doesn't match step 3 - check that ",
+            "steps 3 and 4 used the same inputs", call. = FALSE)
+  }
   if (any(is.na(p))) cat("   ", sum(is.na(p)), "SNP(s) in the window skipped (no variation or collinear)\n")
   data.table(panel = sprintf("%s%s (lead %s)", h$cpg,
                              ifelse(is.na(h$gene_label), "", paste0(" ", h$gene_label)), h$snp),

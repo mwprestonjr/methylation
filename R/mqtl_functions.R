@@ -194,7 +194,9 @@ load_chr_genotypes <- function(geno_dir, chr, sample_map, sample_names) {
 # pairs with p < MQTL_P_CIS_SAVE. Pairs with the SNP in the CpG's probe
 # (probe_regions, from probe_snp_regions) are dropped and not counted as
 # tests. Returns list(eqtls = data frame, ntests, n_probe_tests = tests
-# excluded, n_probe_saved = saved pairs excluded)
+# excluded, n_probe_saved = saved pairs excluded, cpg_tests = one row per
+# CpG on the chromosome: cpg, chr, n_snps tested, n_probe_snps excluded,
+# probe_lo/probe_hi the excluded range)
 run_cis_chr <- function(geno, meth_int, cpg_pos, probe_regions, chr, cvrt) {
   chr_cpgs <- cpg_pos$chr == as.character(chr)
   gene <- SlicedData$new()
@@ -227,15 +229,26 @@ run_cis_chr <- function(geno, meth_int, cpg_pos, probe_regions, chr, cvrt) {
               by = c("snp" = "snpid")) %>%
     mutate(chr = chr)
 
-  # SNP-in-probe pairs: all tested (well within the cis window), so their
+  # SNPs tested per CpG: MatrixEQTL tests the SNPs at [left - cisDist,
+  # right + cisDist], bounds included, so these counts add up to its tests.
+  # SNP-in-probe pairs are all tested (well within the cis window), so their
   # number is the SNPs in each CpG's probe region
+  genes   <- cpg_pos[chr_cpgs, ]
   region  <- probe_regions[chr_cpgs, ]
   snp_bp  <- sort(geno$snp_info$pos)
-  n_probe <- sum(findInterval(region$hi, snp_bp) - findInterval(region$lo - 1, snp_bp))
+  n_cis   <- findInterval(genes$right + MQTL_CIS_WINDOW, snp_bp) -
+             findInterval(genes$left - MQTL_CIS_WINDOW - 1, snp_bp)
+  stopifnot(sum(n_cis) == me$cis$ntests)
+  n_in_probe <- findInterval(region$hi, snp_bp) - findInterval(region$lo - 1, snp_bp)
+  cpg_tests  <- data.frame(cpg = genes$geneid, chr = chr,
+                           n_snps = n_cis - n_in_probe, n_probe_snps = n_in_probe,
+                           probe_lo = region$lo, probe_hi = region$hi)
+
   r <- match(eqtls$cpg, region$geneid)
   in_probe <- eqtls$pos >= region$lo[r] & eqtls$pos <= region$hi[r]
-  list(eqtls = eqtls[!in_probe, ], ntests = me$cis$ntests - n_probe,
-       n_probe_tests = n_probe, n_probe_saved = sum(in_probe))
+  list(eqtls = eqtls[!in_probe, ], ntests = sum(cpg_tests$n_snps),
+       n_probe_tests = sum(n_in_probe), n_probe_saved = sum(in_probe),
+       cpg_tests = cpg_tests)
 }
 
 # Combine the per-chromosome results: FDR over all tests, SNP-CpG distance,

@@ -47,8 +47,9 @@ In `<DIR_OUTPUT>/results/mqtl/<ANCESTRY>/` (`MQTL_DIR`, set in
 | 2 | `genotypes/*.log` | plink2 logs | |
 | 3 | `cis_mqtl_all_saved.tsv.gz` | Every SNP-CpG pair with p < `MQTL_P_CIS_SAVE`: effect, t, p, positions, distance, FDR | step 4 |
 | 3 | `cis_mqtl_lead_per_cpg.tsv` | Lead (strongest) SNP per CpG, same columns; one row per CpG with any saved pair | step 4 |
+| 3 | `mqtl_cpgs_tested.tsv.gz` | One row per CpG with an hg38 position: SNPs tested (`n_snps`; 0 = no cis SNP, so not tested), SNPs excluded in the probe (`n_probe_snps`) and the excluded range (`probe_lo`, `probe_hi`) | step 4 |
 | 3 | `mqtl_covariates.csv` | Covariates used in the model, per sample in model order (known covariates, genotype PCs, latent methylation PCs) | step 4 |
-| 3 | `mqtl_summary.csv` | Samples, CpGs tested, window, PCs, number of tests, CpGs with a cis-mQTL (FDR and strict thresholds), FDR p-value cut-off | |
+| 3 | `mqtl_summary.csv` | Samples, CpGs tested (at least one cis SNP), window, PCs, number of tests, CpGs with a cis-mQTL (FDR and strict thresholds), FDR p-value cut-off | |
 | 4 | `mqtl_top_hits.csv` | Top mQTLs at distinct loci with gene, island context and MAF | |
 | tune | `tune_meth_pcs.csv` | CpGs with a cis-mQTL for each number of latent methylation PCs in `MQTL_N_METH_PCS_GRID` | |
 
@@ -103,7 +104,8 @@ distance on the other side, falling to background by ~50 bp. The first ~4 bp
 (the probe's 3' end) were depleted instead, presumably because probes are
 designed to avoid common SNPs there.
 
-Samples without age or sex are left out of the model.
+Samples without age or sex are left out of the model. Missing genotype calls
+are set to the SNP's mean in these samples (MatrixEQTL's handling).
 
 **Significance**:
 - A CpG has a cis-mQTL if its lead SNP has Benjamini-Hochberg FDR <
@@ -147,7 +149,11 @@ Saved in `<DIR_OUTPUT>/figures/mqtl/<ANCESTRY>/` for the data source being proce
 
 The number of hits shown and the regional window are set in `mqtl/config.R`
 (`MQTL_PLOT_*`). Regional plots recompute every SNP in the window with the
-step 3 model, since step 3 saves only pairs with p < `MQTL_P_CIS_SAVE`.
+step 3 model, since step 3 saves only pairs with p < `MQTL_P_CIS_SAVE`: the
+same covariates, missing genotypes set to the mean, and SNPs in the probe left
+out. `4_mqtl_plots.R` warns if a recomputed lead p-value doesn't match step 3.
+The island context plot's denominator is the CpGs step 3 tested
+(`mqtl_cpgs_tested.tsv.gz`).
 
 ## Choosing the number of latent methylation PCs
 

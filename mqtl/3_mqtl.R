@@ -52,6 +52,7 @@ cvrt <- covariates_sliced(all_covs, colnames(meth_int))
 cat("\n--- cis-mQTL mapping (window +/-", MQTL_CIS_WINDOW / 1e6, "Mb) ---\n")
 
 cis_results   <- list()
+cpg_tests     <- list()
 n_tests       <- 0
 n_probe_tests <- 0
 n_probe_saved <- 0
@@ -67,12 +68,18 @@ for (chr in 1:22) {
       "| saved (p <", MQTL_P_CIS_SAVE, "):", nrow(res$eqtls),
       "| excluded, SNP in probe:", res$n_probe_tests, "tests,", res$n_probe_saved, "saved\n")
   cis_results[[chr]] <- res$eqtls
+  cpg_tests[[chr]]   <- res$cpg_tests
   rm(geno, res); invisible(gc())
 }
 
 # --- 4. Multiple testing and summary -----------------------------------------
 
 cat("\n--- Combining results ---\n")
+# CpGs with at least one SNP tested; the rest (no SNP within the window
+# outside the probe) have no test
+cpg_tests <- bind_rows(cpg_tests)
+n_cpgs    <- sum(cpg_tests$n_snps > 0)
+cat("CpGs tested:", n_cpgs, "of", nrow(meth_int), "(the rest have no cis SNP)\n")
 cat("Total cis tests:", n_tests, "\n")
 cat("Excluded, SNP in the probe:", n_probe_tests,
     "tests, of which", n_probe_saved, "had p <", MQTL_P_CIS_SAVE, "\n")
@@ -113,6 +120,7 @@ dev.off()
 cat("\n--- Saving outputs ---\n")
 fwrite(cis,  file.path(MQTL_DIR, "cis_mqtl_all_saved.tsv.gz"), sep = "\t")
 fwrite(lead, file.path(MQTL_DIR, "cis_mqtl_lead_per_cpg.tsv"),  sep = "\t")
+fwrite(cpg_tests, file.path(MQTL_DIR, "mqtl_cpgs_tested.tsv.gz"), sep = "\t")
 write.csv(all_covs %>% mutate(meth_id = colnames(meth_int), .before = 1),
           file.path(MQTL_DIR, "mqtl_covariates.csv"), row.names = FALSE)
 
@@ -124,7 +132,7 @@ mqtl_summary <- data.frame(
              paste0("CpGs with cis-mQTL (", fdr_label, ")"),
              paste0("CpGs with cis-mQTL (", strict_label, ")"),
              "Saved pairs: p <", paste(fdr_label, "p-value threshold")),
-  value  = c(ncol(meth_int), paste(MQTL_ANCESTRY, collapse = "+"), nrow(meth_int), MQTL_CIS_WINDOW,
+  value  = c(ncol(meth_int), paste(MQTL_ANCESTRY, collapse = "+"), n_cpgs, MQTL_CIS_WINDOW,
              MQTL_N_GENO_PCS, MQTL_N_METH_PCS, n_tests, n_probe_tests, n_probe_saved,
              nrow(sig_fdr), nrow(sig_strict), MQTL_P_CIS_SAVE,
              if (is.na(fdr_p)) "beyond saved range (counts incomplete)" else signif(fdr_p, 3))
