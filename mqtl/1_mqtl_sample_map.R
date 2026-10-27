@@ -1,6 +1,6 @@
 # =============================================================================
 # mQTL Step 1: Link methylation samples to GP2 genotypes
-# Author: GP2 Subtypes and Mechanisms - M.E.
+# Author: GP2 Subtypes and Mechanisms - M.P.
 # Date: Oct 7, 2026
 # Description: Maps methylation samples to GP2 genotype sample IDs via the
 #              GP2 master key (by GP2ID), keeps samples genotyped in

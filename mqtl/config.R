@@ -1,6 +1,6 @@
 # =============================================================================
 # Configuration - mQTL module (mqtl/ scripts)
-# Author: GP2 Subtypes and Mechanisms - M.E., M.P.
+# Author: GP2 Subtypes and Mechanisms - M.P.
 # Date: Oct 7, 2026
 # Description: Settings used only by the mqtl/ scripts. The ancestry to
 #              analyse is a command-line argument, not a setting here;
@@ -40,7 +40,18 @@ MQTL_FDR        <- 0.05
 MQTL_P_STRICT   <- 1e-8
 MQTL_P_CIS_SAVE <- 1e-3    # pairs with p below this are saved; must be looser than the FDR threshold (3_mqtl.R checks)
 
-# Plots (4_mqtl_plots.R)
+# Permutations (4_mqtl_permutations.R), as FastQTL/tensorQTL (GTEx): each
+# CpG's lead SNP is compared with the best SNP after shuffling the samples,
+# which accounts for the number of SNPs tested and the LD between them. A CpG
+# has a cis-mQTL if the q-value of its Beta-approximated permutation p-value
+# is < MQTL_FDR
+MQTL_N_PERM          <- 1000       # shuffles, the same for every CpG
+MQTL_PERM_SEED       <- 20261027
+MQTL_PERM_FDR_METHOD <- "storey"   # "storey" (q-values, as GTEx) or "bh" (Benjamini-Hochberg, more conservative)
+MQTL_PERM_BLOCK      <- 20         # neighbouring CpGs permuted together; memory ~ SNPs in their windows x MQTL_PERM_BLOCK x MQTL_N_PERM x 8 bytes, per core
+MQTL_PERM_CORES      <- max(1, parallel::detectCores() - 1)   # chromosomes run in parallel
+
+# Plots (5_mqtl_plots.R)
 MQTL_PLOT_N_TOP      <- 12      # top mQTLs (distinct loci) shown as genotype boxplots
 MQTL_PLOT_N_REGIONAL <- 4       # top loci shown as regional plots
 MQTL_PLOT_REGION     <- 250e3   # regional plot window: +/- 250 kb around the CpG

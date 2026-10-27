@@ -129,4 +129,4 @@ dev.off()
 
 cat("\nResults saved to:", file.path(MQTL_DIR, "tune_meth_pcs.csv"), "\n")
 cat("Plot saved to:", file.path(MQTL_FIG_DIR, "mqtl_tune_meth_pcs.png"), "\n")
-cat("Set MQTL_N_METH_PCS in mqtl/config.R, then rerun 3_mqtl.R\n")
+cat("Set MQTL_N_METH_PCS in mqtl/config.R, then rerun steps 3-5 (3_mqtl.R, 4_mqtl_permutations.R, 5_mqtl_plots.R)\n")

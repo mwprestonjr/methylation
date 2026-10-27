@@ -10,6 +10,10 @@ make mqtl SOURCE=<source> ANCESTRY=<label>
 Rscript mqtl/3_mqtl.R psomagen AFR   # a single script
 ```
 
+Step 4 runs chromosomes in parallel (`MQTL_PERM_CORES`), each worker with
+single-threaded BLAS (`RhpcBLASctl`), so the workers don't compete for the
+CPUs.
+
 Settings: [`config.R`](config.R) in this folder; shared paths and settings in
 the root [`config.R`](../config.R).
 
@@ -21,14 +25,15 @@ must match them (`nba` for the NBA array files).
 
 ## Scripts
 
-Run steps 1-4 separately for each data source and ancestry.
+Run steps 1-5 separately for each data source and ancestry.
 
 - `1_mqtl_sample_map.R` - creates the ancestry-specific methylation/genotype sample map.
 - `2_mqtl_genotypes.sh` - prepares and QC-filters genotypes with PLINK 2.
 - `3_mqtl.R` - performs the cis-mQTL scan.
-- `4_mqtl_plots.R` - summarizes and plots mQTL results.
+- `4_mqtl_permutations.R` - CpG-level significance by permutation (see Significance).
+- `5_mqtl_plots.R` - summarizes and plots mQTL results.
 - `tune_meth_pcs.R` - reruns scans across methylation-PC counts to support PC selection.
-- `config.R` - genotype, QC, scan, and plot settings.
+- `config.R` - genotype, QC, scan, permutation and plot settings.
 
 ## Outputs
 
@@ -37,20 +42,23 @@ In `<DIR_OUTPUT>/results/mqtl/<ANCESTRY>/` (`MQTL_DIR`, set in
 
 | Step | File | Contents | Read by |
 |---|---|---|---|
-| 1 | `mqtl_sample_map.csv` (`MQTL_SAMPLE_MAP`) | Methylation samples with genotypes for this ancestry: GP2ID, clinical ID, methylation sample ID, phenotype, ancestry | steps 3, 4, `tune_meth_pcs.R` |
+| 1 | `mqtl_sample_map.csv` (`MQTL_SAMPLE_MAP`) | Methylation samples with genotypes for this ancestry: GP2ID, clinical ID, methylation sample ID, phenotype, ancestry | steps 3, 4, 5, `tune_meth_pcs.R` |
 | 1 | `mqtl_keep.txt` (`MQTL_KEEP`) | plink2 `--keep` file (FID, IID) of those samples | step 2 |
 | 2 | `genotypes/geno_qc.{pgen,pvar,psam}` | Genotypes after variant and sample QC (autosomal biallelic SNPs; `MQTL_MAF`, `MQTL_GENO_MISSING`, `MQTL_SAMPLE_MISSING`, `MQTL_HWE_P`), variant IDs `chr:pos:ref:alt` (hg38) | step 2 |
 | 2 | `genotypes/geno_qc.rmdup.list` | Duplicate variant IDs removed | |
 | 2 | `genotypes/ld_prune.prune.{in,out}` | LD-pruned variant list used for the genotype PCs | step 2 |
 | 2 | `genotypes/geno_pcs.{eigenvec,eigenval}` | `MQTL_N_GENO_PCS` genotype PCs (ancestry covariates) | step 3, `tune_meth_pcs.R` |
-| 2 | `genotypes/geno_chr<N>.traw` | Genotypes per chromosome, SNPs x samples, as 0/1/2 copies of the `COUNTED` allele (hard calls) | steps 3, 4, `tune_meth_pcs.R` |
+| 2 | `genotypes/geno_chr<N>.traw` | Genotypes per chromosome, SNPs x samples, as 0/1/2 copies of the `COUNTED` allele (hard calls) | steps 3, 4, 5, `tune_meth_pcs.R` |
 | 2 | `genotypes/*.log` | plink2 logs | |
-| 3 | `cis_mqtl_all_saved.tsv.gz` | Every SNP-CpG pair with p < `MQTL_P_CIS_SAVE`: effect, t, p, positions, distance, FDR | step 4 |
-| 3 | `cis_mqtl_lead_per_cpg.tsv` | Lead (strongest) SNP per CpG, same columns; one row per CpG with any saved pair | step 4 |
-| 3 | `mqtl_cpgs_tested.tsv.gz` | One row per CpG with an hg38 position: SNPs tested (`n_snps`; 0 = no cis SNP, so not tested), SNPs excluded in the probe (`n_probe_snps`) and the excluded range (`probe_lo`, `probe_hi`) | step 4 |
-| 3 | `mqtl_covariates.csv` | Covariates used in the model, per sample in model order (known covariates, genotype PCs, latent methylation PCs) | step 4 |
+| 3 | `cis_mqtl_all_saved.tsv.gz` | Every SNP-CpG pair with p < `MQTL_P_CIS_SAVE`: effect, t, p, positions, distance, FDR | steps 4, 5 |
+| 3 | `cis_mqtl_lead_per_cpg.tsv` | Lead (strongest) SNP per CpG, same columns; one row per CpG with any saved pair | steps 4, 5 |
+| 3 | `mqtl_cpgs_tested.tsv.gz` | One row per CpG with an hg38 position: SNPs tested (`n_snps`; 0 = no cis SNP, so not tested), SNPs excluded in the probe (`n_probe_snps`) and the excluded range (`probe_lo`, `probe_hi`) | steps 4, 5 |
+| 3 | `mqtl_covariates.csv` | Covariates used in the model, per sample in model order (known covariates, genotype PCs, latent methylation PCs) | steps 4, 5 |
 | 3 | `mqtl_summary.csv` | Samples, CpGs tested (at least one cis SNP), window, PCs, number of tests, CpGs with a cis-mQTL (FDR and strict thresholds), FDR p-value cut-off | |
-| 4 | `mqtl_top_hits.csv` | Top mQTLs at distinct loci with gene, island context and MAF | |
+| 4 | `cis_mqtl_perm_per_cpg.tsv.gz` | One row per tested CpG: lead SNP (as step 3: effect, t, p, position, distance), SNPs tested, direct permutation p-value (`p_perm`), effective df (`true_df`) and Beta shapes, Beta-approximated p-value (`p_beta`), its Storey and BH q-values (`q_storey`, `q_bh`; `q` is the one used, `MQTL_PERM_FDR_METHOD`) and the CpG's nominal p-value threshold (`p_nominal_threshold`) | step 5 |
+| 4 | `cis_mqtl_perm_signif_pairs.tsv.gz` | Saved step 3 pairs of significant CpGs with p below the CpG's nominal threshold: every significant SNP, not only the lead | |
+| 4 | `mqtl_perm_summary.csv` | Permutations, seed, FDR method, Storey pi0, CpGs with a cis-mQTL (Storey, BH and step 3's pair-level FDR), p_beta threshold, significant pairs | |
+| 5 | `mqtl_top_hits.csv` | Top mQTLs at distinct loci with gene, island context and MAF (and permutation q-value and nominal threshold) | |
 | tune | `tune_meth_pcs.csv` | CpGs with a cis-mQTL for each number of latent methylation PCs in `MQTL_N_METH_PCS_GRID` | |
 
 ## Methods and decisions
@@ -111,17 +119,65 @@ designed to avoid common SNPs there.
 Samples without age or sex are left out of the model. Missing genotype calls
 are set to the SNP's mean in these samples (MatrixEQTL's handling).
 
-**Significance**:
-- A CpG has a cis-mQTL if its lead SNP has Benjamini-Hochberg FDR <
-  `MQTL_FDR` (0.05), with FDR computed over all SNP-CpG tests. A stricter set
-  uses p < `MQTL_P_STRICT` (1e-8), comparable with GoDMC.
-- Only pairs with p < `MQTL_P_CIS_SAVE` (1e-3) are saved. FDR is still computed
-  over all tests, so the saved q-values are exact; `3_mqtl.R` warns if the FDR
-  threshold lies beyond the saved range (counts would then be incomplete).
-- **Limitation**: FDR over SNP-CpG pairs treats SNPs near a CpG as independent,
-  although they're correlated through LD. The standard alternative,
-  permutations per CpG (as in FastQTL, QTLtools or tensorQTL), isn't
-  implemented yet.
+**Significance** (`4_mqtl_permutations.R`): a CpG has a cis-mQTL if its
+permutation q-value is < `MQTL_FDR` (0.05). This is the approach of FastQTL
+and tensorQTL, used by GTEx:
+- **One test per CpG.** Testing every SNP in a CpG's window and keeping the
+  best inflates its p-value, more so with more SNPs, and the SNPs aren't
+  independent tests because of LD. So each CpG's lead SNP is compared with
+  the lead SNP after shuffling the samples, `MQTL_N_PERM` (1,000) times, which
+  accounts for both. The shuffles (seed `MQTL_PERM_SEED`) are the same for
+  every CpG. Methylation and genotypes are first residualized on the step 3
+  covariates (read from `mqtl_covariates.csv`), so each shuffle tests the same
+  model as step 3, with the same SNPs (probe SNPs excluded) and missing
+  genotypes set to the mean. A shuffled residual is no longer orthogonal to
+  the covariates, so it is residualized again, as tensorQTL does; without
+  this the permuted correlations are too small (by about covariates/samples,
+  ~13% in r² here), the null too weak and the p-values anti-conservative (in
+  a pure-null simulation, 10% of CpGs at p_beta < 0.05). The step warns if
+  the median `true_df` is well above the model's df, the visible sign of
+  this. The step checks that its lead p-values and SNP
+  counts match step 3's.
+- **Beta approximation.** 1,000 shuffles can't give a p-value below 1/1001, so,
+  as FastQTL, a Beta distribution is fitted to each CpG's 1,000 shuffled lead
+  p-values and evaluated at the observed one (`p_beta`). As FastQTL, the
+  degrees of freedom of those p-values are first adjusted (`true_df`) so the
+  Beta's first shape is 1, a small correction to the Beta form.
+  The direct permutation p-value (`p_perm`) is saved too, and `p_beta` should
+  agree with it where 1,000 shuffles can resolve it
+  (`mqtl_perm_02_beta_vs_empirical.png`).
+- **FDR across CpGs.** Storey q-values of `p_beta` (`MQTL_PERM_FDR_METHOD =
+  "storey"`, as GTEx): Benjamini-Hochberg multiplied by pi0, the estimated
+  share of CpGs without a cis-mQTL, from the flat part of the `p_beta`
+  histogram (`mqtl_perm_01_pvalues.png`). BH assumes pi0 = 1, which is
+  conservative when many CpGs have mQTLs. pi0 is estimated as in
+  `qvalue::pi0est` with its defaults (`storey_pi0()` in
+  `R/mqtl_functions.R`), so q-values match the qvalue package without
+  depending on it. Both are saved (`q_storey`, `q_bh`); set
+  `MQTL_PERM_FDR_METHOD = "bh"` for the conservative call.
+- **Significant SNPs per CpG.** The `p_beta` cut-off between significant and
+  non-significant CpGs is mapped back through each CpG's Beta distribution to a
+  nominal p-value threshold (`p_nominal_threshold`), as GTEx's
+  `pval_nominal_threshold`. Every SNP below it is significant for that CpG
+  (`cis_mqtl_perm_signif_pairs.tsv.gz`). Only step 3's saved pairs (p <
+  `MQTL_P_CIS_SAVE`) can be listed; the step warns if a significant CpG's
+  threshold is above that.
+- **Step 3's pair-level FDR** (Benjamini-Hochberg over all SNP-CpG tests) is
+  still computed, used by `tune_meth_pcs.R` (much faster, and fine for
+  comparing PC counts) and as a fallback by `5_mqtl_plots.R` if step 4 hasn't
+  been run. A stricter fixed set uses p < `MQTL_P_STRICT` (1e-8), comparable
+  with GoDMC. Only pairs with p < `MQTL_P_CIS_SAVE` (1e-3) are saved; the
+  pair-level FDR is still over all tests, so its saved q-values are exact, and
+  `3_mqtl.R` warns if its threshold lies beyond the saved range.
+- **Possible improvements**:
+  - *Adaptive permutations* (FastQTL `--permute 1000 10000`): stop early for
+    CpGs that are clearly null, and permute more where the direct p-value is
+    near the significance cut-off. With the Beta approximation, a fixed 1,000
+    is standard and enough, so this would mainly save time.
+  - *Conditional (independent) signals* (tensorQTL `cis_independent`): a CpG
+    can have several independent mQTLs; only the lead signal is tested here.
+    Forward-backward stepwise regression on the lead SNPs, with the
+    permutation threshold, would find the others.
 
 **Known caveats**
 - **CpGs with a SNP at the CpG or extension base aren't tested**: QC removes
@@ -163,9 +219,11 @@ are set to the SNP's mean in these samples (MatrixEQTL's handling).
 Saved in `<DIR_OUTPUT>/figures/mqtl/<ANCESTRY>/` for the data source being processed
 (`DIR_OUTPUT` in the root `config.R`).
 
-- `mqtl_01_lead_snp_distance.png` - distance between each significant lead SNP and its CpG; generated by `mqtl/3_mqtl.R`.
+- `mqtl_01_lead_snp_distance.png` - distance between each significant lead SNP (step 3's pair-level FDR) and its CpG; generated by `mqtl/3_mqtl.R`.
+- `mqtl_perm_01_pvalues.png` - histogram of the permutation p-values (`p_beta`) with Storey's pi0; generated by `mqtl/4_mqtl_permutations.R`.
+- `mqtl_perm_02_beta_vs_empirical.png` - Beta-approximated against direct permutation p-values; generated by `mqtl/4_mqtl_permutations.R`.
 - `mqtl_02_top_genotype_boxplots.png` - methylation by genotype for top mQTLs at distinct loci.
-- `mqtl_03_regional.png` - regional association plots around top CpGs, with points colored by LD to the lead SNP.
+- `mqtl_03_regional.png` - regional association plots around top CpGs, with points colored by LD to the lead SNP and the CpG's nominal threshold.
 - `mqtl_04_genome.png` - lead association p-values across the genome.
 - `mqtl_05_distance_zoom.png` - lead SNP-to-CpG distances within 50 kb.
 - `mqtl_06_effect_vs_maf.png` - lead-SNP effect size by minor allele frequency.
@@ -176,9 +234,11 @@ The number of hits shown and the regional window are set in `mqtl/config.R`
 (`MQTL_PLOT_*`). Regional plots recompute every SNP in the window with the
 step 3 model, since step 3 saves only pairs with p < `MQTL_P_CIS_SAVE`: the
 same covariates, missing genotypes set to the mean, and SNPs in the probe left
-out. `4_mqtl_plots.R` warns if a recomputed lead p-value doesn't match step 3.
+out. `5_mqtl_plots.R` warns if a recomputed lead p-value doesn't match step 3.
 The island context plot's denominator is the CpGs step 3 tested
-(`mqtl_cpgs_tested.tsv.gz`).
+(`mqtl_cpgs_tested.tsv.gz`). Figures 02-07 use the step 4 permutation
+significance, or step 3's pair-level FDR (with a warning) if step 4 hasn't
+been run.
 
 ## Choosing the number of latent methylation PCs
 
@@ -192,5 +252,8 @@ Rscript mqtl/tune_meth_pcs.R <source> <ancestry>
 It reruns the cis scan for each value in `MQTL_N_METH_PCS_GRID`
 (`mqtl/config.R`), saves the number of CpGs with a cis-mQTL for each
 (`tune_meth_pcs.csv`) and plots them (`mqtl_tune_meth_pcs.png`). Choose the
-value where the curve levels off, set `MQTL_N_METH_PCS`, and rerun `3_mqtl.R`.
+value where the curve levels off, set `MQTL_N_METH_PCS`, and rerun steps 3-5
+(`3_mqtl.R`, `4_mqtl_permutations.R`, `5_mqtl_plots.R`). The counts use step
+3's pair-level FDR, which is much faster than permutations and fine for
+comparing PC counts.
 Tune each data source and ancestry separately.

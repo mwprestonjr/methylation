@@ -303,6 +303,7 @@ dependencies:
   - r-reshape=0.8.10=r44hc72bb7e_1
   - r-reshape2=1.4.5=r44h3697838_0
   - r-restfulr=0.0.16=r44h5ef9028_0
+  - r-rhpcblasctl=0.23_42=r44h54b55ab_4
   - r-rjson=0.2.23=r44h3697838_1
   - r-rlang=1.2.0=r44h3697838_0
   - r-rmarkdown=2.31=r44hc72bb7e_0

@@ -1,9 +1,12 @@
 # =============================================================================
-# mQTL Step 4: plots
+# mQTL Step 5: plots
 # Author: GP2 Subtypes and Mechanisms - M.P.
 # Date: Oct 8, 2026
 # Description: Figures and a top-hits table from the step 3 results, saved in
-#              MQTL_FIG_DIR (figures) and MQTL_DIR (table):
+#              MQTL_FIG_DIR (figures) and MQTL_DIR (table). CpGs with a
+#              cis-mQTL are those significant in the step 4 permutations
+#              (cis_mqtl_perm_per_cpg.tsv.gz), or by step 3's pair-level FDR
+#              if step 4 hasn't been run (with a warning):
 #   mqtl_02_top_genotype_boxplots  methylation (beta) by genotype for the
 #                                  MQTL_PLOT_N_TOP strongest mQTLs at distinct loci
 #   mqtl_03_regional               -log10 p of every SNP within
@@ -22,7 +25,7 @@
 #              (same transformed methylation, covariates, missing-genotype
 #              handling and SNP-in-probe exclusion). The island context plot
 #              counts the CpGs step 3 tested (mqtl_cpgs_tested.tsv.gz)
-# Usage:       Rscript mqtl/4_mqtl_plots.R <data source> <ancestry>
+# Usage:       Rscript mqtl/5_mqtl_plots.R <data source> <ancestry>
 # =============================================================================
 
 # --- 0. Setup ----------------------------------------------------------------
@@ -64,11 +67,25 @@ stopifnot(!anyNA(gp2id))
 fdr_p <- fdr_threshold(cis)
 rm(cis); invisible(gc())
 
+# Significance: the step 4 permutation q-values (one per CpG) when available,
+# else step 3's FDR over SNP-CpG pairs. With permutations each CpG has its own
+# nominal p-value threshold (p_nominal_threshold) instead of fdr_p
+perm_file <- file.path(MQTL_DIR, "cis_mqtl_perm_per_cpg.tsv.gz")
+use_perm  <- file.exists(perm_file)
+if (use_perm) {
+  lead <- merge(lead, fread(perm_file, select = c("cpg", "q", "p_nominal_threshold")),
+                by = "cpg", all.x = TRUE)
+  fdr_label <- paste0("permutation q < ", MQTL_FDR)
+} else {
+  warning(perm_file, " not found - using step 3's pair-level FDR; run ",
+          "mqtl/4_mqtl_permutations.R for CpG-level significance", call. = FALSE)
+}
+
 # p-values of 0 (below machine precision) are set to the smallest positive
 # double so -log10 p is finite; ties are broken by |t|
 lead[, p_plot := pmax(p, .Machine$double.xmin)]
 lead <- lead[order(p, -abs(t_stat))]
-sig <- lead[fdr < MQTL_FDR]
+sig <- if (use_perm) lead[q < MQTL_FDR] else lead[fdr < MQTL_FDR]
 cat("CpGs with a cis-mQTL at", fdr_label, ":", nrow(sig), "\n")
 
 # CpG annotation: island context and GENCODE gene, from
@@ -222,12 +239,13 @@ reg_df <- rbindlist(lapply(seq_len(nrow(regional)), function(i) {
   cat(sprintf("  %s lead SNP: step 3 p = %.3g, recomputed p = %.3g\n", h$cpg, h$p, p[h$snp]))
   if (h$p > 0 && !isTRUE(abs(log10(p[h$snp]) / log10(h$p) - 1) <= 1e-3)) {
     warning(h$cpg, ": recomputed lead p-value doesn't match step 3 - check that ",
-            "steps 3 and 4 used the same inputs", call. = FALSE)
+            "steps 3 and 5 used the same inputs", call. = FALSE)
   }
   if (any(is.na(p))) cat("   ", sum(is.na(p)), "SNP(s) in the window skipped (no variation or collinear)\n")
   data.table(panel = sprintf("%s%s (lead %s)", h$cpg,
                              ifelse(is.na(h$gene_label), "", paste0(" ", h$gene_label)), h$snp),
              order = i, pos = wg$pos, cpg_pos = h$cpg_pos,
+             threshold = if (use_perm) h$p_nominal_threshold else fdr_p,
              logp  = -log10(pmax(p, .Machine$double.xmin)),
              r2    = cut(r2, c(-Inf, 0.2, 0.4, 0.6, 0.8, Inf),
                          labels = c("< 0.2", "0.2-0.4", "0.4-0.6", "0.6-0.8", "> 0.8")),
@@ -242,10 +260,15 @@ p_reg <- ggplot(reg_df, aes(pos / 1e6, logp)) +
   scale_colour_manual(values = c("navy", "lightblue", "green3", "orange", "red"), drop = FALSE) +
   facet_wrap(~ panel, scales = "free", ncol = 2) +
   labs(title = paste0("Regional plots of top cis-mQTLs", title_suffix),
-       subtitle = "Dashed line: CpG; diamond: lead SNP",
+       subtitle = paste0("Dashed line: CpG; diamond: lead SNP; dotted: ",
+                         if (use_perm) "the CpG's nominal threshold (permutations)" else fdr_label),
        x = "Position (Mb, hg38)", y = "-log10 p", colour = "LD r2 with lead") +
   theme_bw(base_size = 8)
-if (!is.na(fdr_p)) p_reg <- p_reg + geom_hline(yintercept = -log10(fdr_p), linetype = "dotted", colour = "red")
+thr_df <- unique(reg_df[!is.na(threshold), .(panel, threshold)])
+if (nrow(thr_df) > 0) {
+  p_reg <- p_reg + geom_hline(data = thr_df, aes(yintercept = -log10(threshold)),
+                              linetype = "dotted", colour = "red")
+}
 png(fig("03_regional"), width = FIG_WIDTH * 2, height = FIG_HEIGHT * 1.8, units = "in", res = FIG_RES)
 print(p_reg)
 dev.off()
@@ -265,11 +288,15 @@ p_gw <- ggplot(gw, aes(x, logp, colour = factor(chr %% 2))) +
   scale_colour_manual(values = c("grey40", "steelblue"), guide = "none") +
   scale_x_continuous(breaks = chr_len$offset + chr_len$len / 2, labels = chr_len$chr) +
   labs(title = paste0("Lead cis-mQTL p-value per CpG", title_suffix),
-       subtitle = paste0("Dashed: ", strict_label, "; dotted: ", fdr_label, "; -log10 p capped at 50"),
+       subtitle = paste0("Dashed: ", strict_label,
+                         if (!use_perm) paste0("; dotted: ", fdr_label), "; -log10 p capped at 50"),
        x = "Chromosome", y = "-log10 p (lead SNP)") +
   theme_bw(base_size = 8) +
   theme(panel.grid.major.x = element_blank(), panel.grid.minor = element_blank())
-if (!is.na(fdr_p)) p_gw <- p_gw + geom_hline(yintercept = -log10(fdr_p), linetype = "dotted", colour = "red")
+# With permutations the threshold differs per CpG, so there's no single line
+if (!use_perm && !is.na(fdr_p)) {
+  p_gw <- p_gw + geom_hline(yintercept = -log10(fdr_p), linetype = "dotted", colour = "red")
+}
 png(fig("04_genome"), width = FIG_WIDTH * 2, height = FIG_HEIGHT, units = "in", res = FIG_RES)
 print(p_gw)
 dev.off()
@@ -328,5 +355,6 @@ dev.off()
 top_out <- top[, .(cpg, gene, gene_type, gene_region, distance_to_gene, island,
                    chr, cpg_pos, snp, counted, alt, maf,
                    distance, beta, t_stat, p, fdr)]
+if (use_perm) top_out[, c("q", "p_nominal_threshold") := top[, .(q, p_nominal_threshold)]]
 fwrite(top_out, file.path(MQTL_DIR, "mqtl_top_hits.csv"))
 cat("\nFigures saved to:", MQTL_FIG_DIR, "\nmqtl_top_hits.csv saved to:", MQTL_DIR, "\n")

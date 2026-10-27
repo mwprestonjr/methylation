@@ -67,7 +67,8 @@ mqtl: check-source check-ancestry
 	@echo "[$$(date +%H:%M)] mqtl/2_mqtl_genotypes.sh $(SOURCE) $(ANCESTRY) -> $(call log_file,mqtl/,$(MQTL_LOG)_2_genotypes)"
 	@bash mqtl/2_mqtl_genotypes.sh $(SOURCE) $(ANCESTRY) > $(call log_file,mqtl/,$(MQTL_LOG)_2_genotypes) 2>&1
 	$(call run_r,mqtl/3_mqtl.R,$(MQTL_LOG)_3_mqtl,$(ANCESTRY))
-	$(call run_r,mqtl/4_mqtl_plots.R,$(MQTL_LOG)_4_plots,$(ANCESTRY))
+	$(call run_r,mqtl/4_mqtl_permutations.R,$(MQTL_LOG)_4_permutations,$(ANCESTRY))
+	$(call run_r,mqtl/5_mqtl_plots.R,$(MQTL_LOG)_5_plots,$(ANCESTRY))
 	@echo "[$$(date +%H:%M)] mqtl complete for $(SOURCE) $(ANCESTRY)"
 
 check-ancestry:

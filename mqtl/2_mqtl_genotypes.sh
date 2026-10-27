@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
 # mQTL Step 2: Genotype QC, ancestry PCs and per-chromosome dosage export
-# Author: GP2 Subtypes and Mechanisms - M.E.
+# Author: GP2 Subtypes and Mechanisms - M.P.
 # Date: Oct 7, 2026
 # Description: Subsets GP2 genotypes to the samples in the step 1 keep file,
 #              applies variant QC, computes genotype PCs on LD-pruned SNPs,

@@ -1,6 +1,6 @@
 # =============================================================================
 # mQTL Step 3: cis-mQTL mapping
-# Author: GP2 Subtypes and Mechanisms - M.E.
+# Author: GP2 Subtypes and Mechanisms - M.P.
 # Date: Oct 7, 2026
 # Description: Tests SNP-CpG associations within +/- MQTL_CIS_WINDOW using
 #              MatrixEQTL, one chromosome at a time. Methylation: ComBat

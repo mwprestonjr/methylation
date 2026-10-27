@@ -89,7 +89,7 @@ make                                               # usage
 | `preprocessing` | `1_cell_counts.R` → `2_variation_sources.R raw` → `3_combat.R` → `2_variation_sources.R combat` → `4_cpg_annotation.R` |
 | `clocks` | `1_estimate.R` → `2_compare.R` → `3_associations.R` → `4_plots.R` |
 | `ewas` | `1_case_control.R` → `2_age.R` → `3_exposure.R` → `4_plots.R` |
-| `mqtl` | `1_mqtl_sample_map.R` → `2_mqtl_genotypes.sh` (plink2) → `3_mqtl.R` → `4_mqtl_plots.R` |
+| `mqtl` | `1_mqtl_sample_map.R` → `2_mqtl_genotypes.sh` (plink2) → `3_mqtl.R` → `4_mqtl_permutations.R` → `5_mqtl_plots.R` |
 
 Each target needs the outputs of the one before it (`preprocessing` reads the
 `qc` outputs; `clocks`, `ewas` and `mqtl` read the `preprocessing` outputs), so run

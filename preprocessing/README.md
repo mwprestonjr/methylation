@@ -33,10 +33,10 @@ other scripts use to find the file (root `config.R`, or
 | 2 | `variation_sources_<raw\|combat>.rds` | | PCs, variance explained and variable-PC association p-values behind the variation figures | |
 | 2 | `variation_svd_pvalues_<raw\|combat>.csv` | | p-values for each sample variable vs each of the top PCs | |
 | 2 | `confounder_summary_<raw\|combat>.csv` | | Whether age, sex, batch and chip differ between phenotypes | |
-| 3 | `combat_mVals.rds` | `COMBAT_MVALS` | Batch-corrected M values (`COMBAT_BATCH_VAR`, protecting `COMBAT_PROTECT`) | mQTL (`R/mqtl_functions.R`, `4_mqtl_plots.R`) |
+| 3 | `combat_mVals.rds` | `COMBAT_MVALS` | Batch-corrected M values (`COMBAT_BATCH_VAR`, protecting `COMBAT_PROTECT`) | mQTL (`R/mqtl_functions.R`, `5_mqtl_plots.R`) |
 | 3 | `sample_sheet_final.csv` | `SAMPLE_SHEET_FINAL` | QC-passed sample sheet + cell proportions + `combat_batch` (the batch ComBat used) | clocks, mQTL |
 | 3 | `combat_summary.csv` | | Samples, CpGs, batch variable, number and smallest size of batches, protected variables | |
-| 4 | `cpg_annotation.csv` | `CPG_ANNOTATION` | Every probe on the array: hg38 position, island context, GENCODE gene and type, promoter/body/intergenic, distances to gene and TSS | `mqtl/4_mqtl_plots.R` |
+| 4 | `cpg_annotation.csv` | `CPG_ANNOTATION` | Every probe on the array: hg38 position, island context, GENCODE gene and type, promoter/body/intergenic, distances to gene and TSS | `mqtl/5_mqtl_plots.R` |
 
 ## Methods and decisions
 
