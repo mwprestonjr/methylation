@@ -48,7 +48,7 @@ cat("\nChecking for duplicate PATNOs...\n")
 # Identify duplicates
 duplicate_counts <- visit %>%
   dplyr::group_by(PATNO) %>%
-  dplyr::summarise(n = n()) %>%
+  dplyr::summarize(n = n()) %>%
   dplyr::filter(n > 1)
 
 cat("PATNOs with multiple entries:", nrow(duplicate_counts), "\n")

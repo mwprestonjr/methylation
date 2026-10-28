@@ -214,8 +214,8 @@ title_suffix <- paste0(" - ", DATA_SOURCE, " ", paste(MQTL_ANCESTRY, collapse = 
 png(file.path(MQTL_FIG_DIR, "mqtl_perm_01_pvalues.png"),
     width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
 print(ggplot(perm, aes(p_beta)) +
-  geom_histogram(aes(y = after_stat(density)), breaks = seq(0, 1, 0.02), fill = "grey60") +
-  geom_hline(yintercept = sig$pi0, linetype = "dashed", colour = "red") +
+  geom_histogram(aes(y = after_stat(density)), breaks = seq(0, 1, 0.02), fill = "gray60") +
+  geom_hline(yintercept = sig$pi0, linetype = "dashed", color = "red") +
   labs(title = paste0("Permutation p-values (Beta approx.)", title_suffix),
        subtitle = sprintf("Dashed: Storey pi0 = %.3f; %s CpGs at %s", sig$pi0,
                           format(n_sig, big.mark = ","), fdr_label),
@@ -231,8 +231,8 @@ png(file.path(MQTL_FIG_DIR, "mqtl_perm_02_beta_vs_empirical.png"),
     width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
 print(ggplot(perm, aes(-log10(p_perm), pmin(-log10(p_beta), y_cap))) +
   geom_bin2d(bins = 80) +
-  geom_abline(linetype = "dashed", colour = "red") +
-  geom_vline(xintercept = log10(MQTL_N_PERM + 1), linetype = "dotted", colour = "grey40") +
+  geom_abline(linetype = "dashed", color = "red") +
+  geom_vline(xintercept = log10(MQTL_N_PERM + 1), linetype = "dotted", color = "gray40") +
   scale_fill_viridis_c(trans = "log10") +
   labs(title = paste0("Beta vs direct permutation p-value", title_suffix),
        subtitle = sprintf("Dotted: smallest p_perm (%d permutations); p_beta capped at 1e-%.0f",

@@ -53,7 +53,7 @@ within qc).
   enrollment cohort, not from R12 `GP2_phenotype`, which labels
   genetic-cohort unaffected carriers "Control" and later converters "PD".
 - **PPMI duplicates**: participants with more than two arrays at the visit are
-  removed (likely batch controls or mislabelled visits). Pairs (technical
+  removed (likely batch controls or mislabeled visits). Pairs (technical
   replicates) are kept for `2_qc.R` to choose between (see Sample QC).
   `clinical_id` is the PATNO, also for participants not in R12.
 - **Psomagen**: all samples in the deliveries listed in `DATASETS`, with

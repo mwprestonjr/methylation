@@ -57,7 +57,7 @@ build_clock_traits <- function(samples) {
     filter(!is.na(visit_rank)) %>%
     arrange(GP2ID, visit_rank) %>%
     group_by(GP2ID) %>%
-    summarise(across(any_of(clinical_cols), ~ as.numeric(first(na.omit(.x)))), .groups = "drop")
+    summarize(across(any_of(clinical_cols), ~ as.numeric(first(na.omit(.x)))), .groups = "drop")
 
   # Traits in CLOCK_TRAITS that aren't columns of the clinical data are NA
   missing <- setdiff(clinical_cols, names(clinical))

@@ -79,7 +79,7 @@ cat("Scan time:", round(as.numeric(difftime(Sys.time(), start_time, units = "min
 # --- 3. Counts per value -----------------------------------------------------
 
 tuning <- bind_rows(lapply(as.character(grid), function(k) {
-  summ <- summarise_cis(cis_results[[k]], n_tests, cpg_pos)
+  summ <- summarize_cis(cis_results[[k]], n_tests, cpg_pos)
   lead <- summ$lead
   # NA (with a warning) if the FDR threshold is beyond the saved range
   fdr_p <- fdr_threshold(summ$cis, label = paste0(k, " PCs: "))
@@ -114,8 +114,8 @@ plot_df <- tuning %>%
 
 png(file.path(MQTL_FIG_DIR, "mqtl_tune_meth_pcs.png"),
     width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
-print(ggplot(plot_df, aes(n_meth_pcs, cpgs, colour = threshold)) +
-  geom_vline(xintercept = MQTL_N_METH_PCS, linetype = "dashed", colour = "grey50") +
+print(ggplot(plot_df, aes(n_meth_pcs, cpgs, color = threshold)) +
+  geom_vline(xintercept = MQTL_N_METH_PCS, linetype = "dashed", color = "gray50") +
   geom_line() +
   geom_point(size = 2) +
   scale_x_continuous(breaks = grid) +
@@ -123,7 +123,7 @@ print(ggplot(plot_df, aes(n_meth_pcs, cpgs, colour = threshold)) +
   labs(title = paste0("CpGs with a cis-mQTL by number of latent PCs - ",
                       DATA_SOURCE, " ", paste(MQTL_ANCESTRY, collapse = "+")),
        subtitle = "Dashed line: current MQTL_N_METH_PCS",
-       x = "Latent methylation PCs", y = "CpGs with a cis-mQTL", colour = NULL) +
+       x = "Latent methylation PCs", y = "CpGs with a cis-mQTL", color = NULL) +
   theme_bw())
 dev.off()
 

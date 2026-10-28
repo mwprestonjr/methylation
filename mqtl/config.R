@@ -3,7 +3,7 @@
 # Author: GP2 Subtypes and Mechanisms - M.P.
 # Date: Oct 7, 2026
 # Description: Settings used only by the mqtl/ scripts. The ancestry to
-#              analyse is a command-line argument, not a setting here;
+#              analyze is a command-line argument, not a setting here;
 #              R/mqtl_setup.R sets it and the per-ancestry paths (GENO_PFILE,
 #              MQTL_DIR, MQTL_SAMPLE_MAP, MQTL_KEEP). Source after config.R,
 #              then source R/mqtl_setup.R
@@ -48,7 +48,7 @@ MQTL_P_CIS_SAVE <- 1e-3    # pairs with p below this are saved; must be looser t
 MQTL_N_PERM          <- 1000       # shuffles, the same for every CpG
 MQTL_PERM_SEED       <- 20261027
 MQTL_PERM_FDR_METHOD <- "storey"   # "storey" (q-values, as GTEx) or "bh" (Benjamini-Hochberg, more conservative)
-MQTL_PERM_BLOCK      <- 20         # neighbouring CpGs permuted together; memory ~ SNPs in their windows x MQTL_PERM_BLOCK x MQTL_N_PERM x 8 bytes, per core
+MQTL_PERM_BLOCK      <- 20         # neighboring CpGs permuted together; memory ~ SNPs in their windows x MQTL_PERM_BLOCK x MQTL_N_PERM x 8 bytes, per core
 # Chromosomes run in parallel. Memory (Psomagen AFR, ~870k CpGs): ~8 GB for the
 # main process plus ~4 GB per core, so ~70 GB with 15 cores; lower this if
 # other jobs share the VM

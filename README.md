@@ -98,7 +98,7 @@ Each target needs the outputs of the one before it (`preprocessing` reads the
 them in this order the first time; afterwards a target can be rerun on its own.
 
 - **`SOURCE`** (required): one of the data sources above.
-- **`ANCESTRY`** (`mqtl` only): the GP2 master key ancestry label to analyse,
+- **`ANCESTRY`** (`mqtl` only): the GP2 master key ancestry label to analyze,
   e.g. `EUR` for PPMI or `AFR` for Psomagen. The genotype file for that
   ancestry is found from `GENO_PFILE_PATH`/`GENO_PFILE_NAME` in `mqtl/config.R`, and
   results go to `results/mqtl/<ANCESTRY>/` and figures to
@@ -172,7 +172,7 @@ repository root before sourcing a script.
 In addition to the steps above:
 
 1. **`R/array_profiles.R`**: a bead-count range in `detect_array()` (450k is
-   recognised but has no profile), and an `ARRAY_PROFILES` entry with
+   recognized but has no profile), and an `ARRAY_PROFILES` entry with
    `anno_pkg`, `annotation`, `genome`, `xreactive` and `sesame_platform`.
    QC (bead counts, sex and SNP probes, `getSex`, Funnorm) reads the profile's
    annotation and needs no other change.

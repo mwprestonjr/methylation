@@ -74,7 +74,7 @@ keeps the best of duplicate arrays (see the QC README), and
 `1_mqtl_sample_map.R` stops if a GP2ID still appears twice, since both
 arrays would get the same genotypes and count as independent samples.
 
-**Genotype QC** (`2_mqtl_genotypes.sh`, PLINK 2), on the analysed samples:
+**Genotype QC** (`2_mqtl_genotypes.sh`, PLINK 2), on the analyzed samples:
 - autosomal, biallelic, single-base (A/C/G/T) SNPs only
 - minor allele frequency >= `MQTL_MAF` (5%), variant missingness <=
   `MQTL_GENO_MISSING` (5%), sample missingness <= `MQTL_SAMPLE_MISSING` (5%),

@@ -90,7 +90,7 @@ cat("Samples per dataset and array:\n")
 print(table(sample_sheet$Dataset, sample_sheet$Array, useNA = "ifany"))
 
 if (any(sample_sheet$Array %in% "Unknown")) {
-  cat("WARNING: some chips are not a recognised methylation array",
+  cat("WARNING: some chips are not a recognized methylation array",
       "(check DATASETS in config.R):\n")
   print(sample_sheet %>% filter(Array %in% "Unknown") %>% count(Dataset, Sentrix_ID))
 }

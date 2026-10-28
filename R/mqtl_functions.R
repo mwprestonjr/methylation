@@ -120,7 +120,7 @@ mqtl_prepare <- function() {
 
 # hg38 range of SNP positions [lo, hi] that fall in each CpG's probe, where a
 # SNP can change probe binding or the extension base and mimic an mQTL.
-# Fixed by the Infinium design; positions counted from the CpG's C towards the
+# Fixed by the Infinium design; positions counted from the CpG's C toward the
 # probe's 5' end:
 #   -1      the CpG's G (extension base of Infinium I probes)
 #    0      the CpG's C (extension base of Infinium II probes)
@@ -282,7 +282,7 @@ run_cis_chr <- function(geno, meth_int, cpg_pos, probe_regions, chr, cvrt) {
 # Combine the per-chromosome results: FDR over all tests, SNP-CpG distance,
 # and the lead SNP per CpG. Saved rows are exactly the smallest p-values, so
 # BH with n = all tests gives the same q-values as adjusting the full set
-summarise_cis <- function(cis_results, n_tests, cpg_pos) {
+summarize_cis <- function(cis_results, n_tests, cpg_pos) {
   cis <- bind_rows(cis_results) %>%
     left_join(cpg_pos %>% select(cpg = geneid, cpg_pos = left), by = "cpg") %>%
     mutate(distance = pos - cpg_pos,
@@ -300,7 +300,7 @@ summarise_cis <- function(cis_results, n_tests, cpg_pos) {
 # saved, so if every saved pair passes, the true threshold lies at or beyond
 # MQTL_P_CIS_SAVE: significant pairs were discarded and the counts are
 # incomplete. Then this warns and returns NA; loosen MQTL_P_CIS_SAVE in
-# mqtl/config.R. cis is the cis table from summarise_cis()
+# mqtl/config.R. cis is the cis table from summarize_cis()
 fdr_threshold <- function(cis, fdr = MQTL_FDR, label = "") {
   passing <- cis$fdr < fdr
   if (nrow(cis) > 0 && all(passing)) {
@@ -396,7 +396,7 @@ beta_approx_pval <- function(r2_lead, r2_perm, df) {
 # orthogonal to the covariates, so only the scaling changes (r divided by
 # the length of the shuffled residual's part outside the covariates; without
 # this the permuted r^2 is ~covariates/samples too small and the null too
-# weak). Neighbouring CpGs (block at a time) share most of
+# weak). Neighboring CpGs (block at a time) share most of
 # their SNPs, so they are permuted together in one matrix product.
 #   geno      load_chr_genotypes(..., sliced = FALSE)
 #   Ys        methylation residuals of the chromosome's CpGs, unit length
@@ -428,7 +428,7 @@ cis_perm_chr <- function(geno, Ys, y_norm, genes, region, Q, perms, df,
   win <- cis_snp_ranges(genes, region, snp_info$pos)
   win$n_snps <- (win$last - win$first + 1) - pmax(win$probe_last - win$probe_first + 1, 0)
 
-  # Blocks of neighbouring CpGs with a SNP to test
+  # Blocks of neighboring CpGs with a SNP to test
   cpgs   <- which(win$n_snps > 0)
   cpgs   <- cpgs[order(genes$left[cpgs])]
   blocks <- split(cpgs, ceiling(seq_along(cpgs) / block))

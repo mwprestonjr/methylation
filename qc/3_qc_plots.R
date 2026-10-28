@@ -10,7 +10,7 @@
 #   qc_02  Mean detection p-value per sample, sorted, log scale, with the
 #          DETECTION_P_THRESHOLD line
 #   qc_02b Fraction of cg probes detected (SeSAMe pOOBAH) per sample, sorted,
-#          coloured by dataset, with the SESAME_MIN_FRAC_DETECTED line
+#          colored by dataset, with the SESAME_MIN_FRAC_DETECTED line
 #          (only if qc/2_qc.R ran with USE_SESAME_QC)
 #   qc_03  Sex prediction: X vs Y chromosome median intensity, fill =
 #          predicted sex, border = reported sex
@@ -60,7 +60,7 @@ plot(detP_ord,
      ylim = y_lim,
      pch  = 16,
      cex  = 0.8,
-     col  = ifelse(failing, "red", "grey30"),
+     col  = ifelse(failing, "red", "gray30"),
      xaxt = "n",
      yaxt = "n",
      xlab = "",
@@ -82,7 +82,7 @@ cat("Detection p-value plot saved\n")
 
 # --- 3. SeSAMe detection (qc_02b) --------------------------------------------
 
-# Fraction of cg probes detected per sample, sorted, coloured by dataset.
+# Fraction of cg probes detected per sample, sorted, colored by dataset.
 # Only available if qc/2_qc.R ran with USE_SESAME_QC
 if (params$USE_SESAME_QC) {
   SESAME_MIN_FRAC_DETECTED <- params$SESAME_MIN_FRAC_DETECTED
@@ -121,7 +121,7 @@ if (params$USE_SESAME_QC) {
 # --- 4. Sex prediction (qc_03) -----------------------------------------------
 
 # Fill = predicted sex, border = reported sex; discordant samples drawn on top
-sex_colors <- c(F = "hotpink", M = "steelblue", Unknown = "grey60")
+sex_colors <- c(F = "hotpink", M = "steelblue", Unknown = "gray60")
 fill_col   <- sex_colors[qc_metrics$predicted_sex]
 border_col <- sex_colors[qc_metrics$reported_sex_label]
 discordant_on_top <- order(!is.na(qc_metrics$sex_discordant) & qc_metrics$sex_discordant)
@@ -141,7 +141,7 @@ legend("right",
        legend = c("Female", "Male", "Reported unknown", "Discordant"),
        pch    = 21,
        pt.bg  = c("hotpink", "steelblue", "hotpink", "hotpink"),
-       col    = c("hotpink", "steelblue", "grey60", "steelblue"),
+       col    = c("hotpink", "steelblue", "gray60", "steelblue"),
        pt.cex = 1.4,
        pt.lwd = 1.5,
        cex    = 0.8)
@@ -164,7 +164,7 @@ density_plot <- function(curves, sampGroups, main, flagged = NULL,
        ylab = "Density",
        xlab = "Beta",
        main = main)
-  abline(h = 0, col = "grey80")
+  abline(h = 0, col = "gray80")
   for (i in c(which(!flagged), which(flagged))) {
     lines(curves$x[, i], curves$y[, i],
           col = if (flagged[i]) "black" else pal[sampGroups[i]],

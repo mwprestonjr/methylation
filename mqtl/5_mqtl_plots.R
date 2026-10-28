@@ -11,7 +11,7 @@
 #                                  MQTL_PLOT_N_TOP strongest mQTLs at distinct loci
 #   mqtl_03_regional               -log10 p of every SNP within
 #                                  +/- MQTL_PLOT_REGION of the MQTL_PLOT_N_REGIONAL
-#                                  top CpGs, coloured by LD (r2) with the lead SNP
+#                                  top CpGs, colored by LD (r2) with the lead SNP
 #   mqtl_04_genome                 lead p-value of each CpG across the genome
 #   mqtl_05_distance_zoom          lead SNP - CpG distance within +/- 50 kb
 #   mqtl_06_effect_vs_maf          effect size of the lead SNP by its allele frequency
@@ -198,7 +198,7 @@ box_df[, x := factor(x, levels = unique(x[order(order, copies)]))]
 png(fig("02_top_genotype_boxplots"), width = FIG_WIDTH * 2, height = FIG_HEIGHT * 2.2,
     units = "in", res = FIG_RES)
 print(ggplot(box_df, aes(x, beta)) +
-  geom_boxplot(outlier.shape = NA, fill = "grey90") +
+  geom_boxplot(outlier.shape = NA, fill = "gray90") +
   geom_jitter(width = 0.15, size = 0.6, alpha = 0.5) +
   facet_wrap(~ panel, scales = "free", ncol = 4) +
   scale_x_discrete(labels = function(x) sub("^[0-9]+\\|", "", x)) +
@@ -254,20 +254,20 @@ reg_df <- rbindlist(lapply(seq_len(nrow(regional)), function(i) {
 reg_df[, panel := factor(panel, levels = unique(panel[order(order)]))]
 
 p_reg <- ggplot(reg_df, aes(pos / 1e6, logp)) +
-  geom_vline(aes(xintercept = cpg_pos / 1e6), linetype = "dashed", colour = "grey50") +
-  geom_point(aes(colour = r2), size = 1) +
+  geom_vline(aes(xintercept = cpg_pos / 1e6), linetype = "dashed", color = "gray50") +
+  geom_point(aes(color = r2), size = 1) +
   geom_point(data = reg_df[is_lead == TRUE], shape = 23, size = 2.5, fill = "purple") +
-  scale_colour_manual(values = c("navy", "lightblue", "green3", "orange", "red"), drop = FALSE) +
+  scale_color_manual(values = c("navy", "lightblue", "green3", "orange", "red"), drop = FALSE) +
   facet_wrap(~ panel, scales = "free", ncol = 2) +
   labs(title = paste0("Regional plots of top cis-mQTLs", title_suffix),
        subtitle = paste0("Dashed line: CpG; diamond: lead SNP; dotted: ",
                          if (use_perm) "the CpG's nominal threshold (permutations)" else fdr_label),
-       x = "Position (Mb, hg38)", y = "-log10 p", colour = "LD r2 with lead") +
+       x = "Position (Mb, hg38)", y = "-log10 p", color = "LD r2 with lead") +
   theme_bw(base_size = 8)
 thr_df <- unique(reg_df[!is.na(threshold), .(panel, threshold)])
 if (nrow(thr_df) > 0) {
   p_reg <- p_reg + geom_hline(data = thr_df, aes(yintercept = -log10(threshold)),
-                              linetype = "dotted", colour = "red")
+                              linetype = "dotted", color = "red")
 }
 png(fig("03_regional"), width = FIG_WIDTH * 2, height = FIG_HEIGHT * 1.8, units = "in", res = FIG_RES)
 print(p_reg)
@@ -282,10 +282,10 @@ chr_len[, offset := cumsum(as.numeric(len)) - len]
 gw <- merge(lead[, .(chr, cpg_pos, p_plot)], chr_len[, .(chr, offset)], by = "chr")
 gw[, x := cpg_pos + offset]
 gw[, logp := pmin(-log10(p_plot), 50)]             # cap so extreme hits don't flatten the rest
-p_gw <- ggplot(gw, aes(x, logp, colour = factor(chr %% 2))) +
+p_gw <- ggplot(gw, aes(x, logp, color = factor(chr %% 2))) +
   geom_point(size = 0.2, alpha = 0.5) +
-  geom_hline(yintercept = -log10(MQTL_P_STRICT), linetype = "dashed", colour = "grey30") +
-  scale_colour_manual(values = c("grey40", "steelblue"), guide = "none") +
+  geom_hline(yintercept = -log10(MQTL_P_STRICT), linetype = "dashed", color = "gray30") +
+  scale_color_manual(values = c("gray40", "steelblue"), guide = "none") +
   scale_x_continuous(breaks = chr_len$offset + chr_len$len / 2, labels = chr_len$chr) +
   labs(title = paste0("Lead cis-mQTL p-value per CpG", title_suffix),
        subtitle = paste0("Dashed: ", strict_label,
@@ -295,7 +295,7 @@ p_gw <- ggplot(gw, aes(x, logp, colour = factor(chr %% 2))) +
   theme(panel.grid.major.x = element_blank(), panel.grid.minor = element_blank())
 # With permutations the threshold differs per CpG, so there's no single line
 if (!use_perm && !is.na(fdr_p)) {
-  p_gw <- p_gw + geom_hline(yintercept = -log10(fdr_p), linetype = "dotted", colour = "red")
+  p_gw <- p_gw + geom_hline(yintercept = -log10(fdr_p), linetype = "dotted", color = "red")
 }
 png(fig("04_genome"), width = FIG_WIDTH * 2, height = FIG_HEIGHT, units = "in", res = FIG_RES)
 print(p_gw)
@@ -307,7 +307,7 @@ rm(gw); invisible(gc())
 png(fig("05_distance_zoom"), width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
 print(ggplot(sig[abs(distance) <= 50e3], aes(distance / 1e3)) +
   geom_histogram(binwidth = 1, boundary = 0) +
-  geom_vline(xintercept = 0, linetype = "dashed", colour = "grey50") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray50") +
   labs(title = "Lead SNP - CpG distance within 50 kb",
        subtitle = sprintf("%s %s: %s CpGs at %s;\n%.0f%% of them within 50 kb", DATA_SOURCE,
                           paste(MQTL_ANCESTRY, collapse = "+"), format(nrow(sig), big.mark = ","),

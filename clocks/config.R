@@ -58,7 +58,7 @@ CLOCK_COVARIATES_NO_CELLS <- setdiff(CLOCK_COVARIATES, CELL_TYPES)
 
 # --- Associations with clinical traits in cases (3_associations.R) ----------
 
-# Cases analysed (phenotype in the sample sheet)
+# Cases analyzed (phenotype in the sample sheet)
 CLOCK_CASE_GROUP <- "PD"
 
 # Clinical traits come from the GP2 extended clinical data (CLINICAL_DATA in

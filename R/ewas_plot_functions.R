@@ -40,7 +40,7 @@ plot_ewas_manhattan <- function(df, main, file) {
   d$pos_cum <- d$pos + offset[as.character(d$chr)]
   ticks  <- tapply(d$pos_cum, d$chr, median)[as.character(chrs)]
   labels <- ifelse(chrs == 23, "X", ifelse(chrs == 24, "Y", chrs))
-  cols   <- c("grey30", "steelblue4")[(match(d$chr, chrs) %% 2) + 1]
+  cols   <- c("gray30", "steelblue4")[(match(d$chr, chrs) %% 2) + 1]
 
   png(file, width = 10, height = 5, units = "in", res = FIG_RES)
   par(mar = c(5, 5, 4, 2))
@@ -83,7 +83,7 @@ plot_ewas_distributions <- function(df, main, file) {
   png(file, width = 10, height = 5, units = "in", res = FIG_RES)
   # Outer top margin holds `main`, shared by both panels
   par(mfrow = c(1, 2), mar = c(5, 5, 3, 2), oma = c(0, 0, 2.5, 0))
-  hist(df$logFC, breaks = 100, col = "grey70", border = "white",
+  hist(df$logFC, breaks = 100, col = "gray70", border = "white",
        main = "Effects", xlab = "Effect (M value scale)")
   abline(v = 0, lty = 2)
   # Solid line: FDR < EWAS_FDR (as on the Manhattan plot), with the CpG count

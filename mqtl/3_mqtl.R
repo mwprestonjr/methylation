@@ -84,7 +84,7 @@ cat("Total cis tests:", n_tests, "\n")
 cat("Excluded, SNP in the probe:", n_probe_tests,
     "tests, of which", n_probe_saved, "had p <", MQTL_P_CIS_SAVE, "\n")
 
-summ <- summarise_cis(cis_results, n_tests, cpg_pos)
+summ <- summarize_cis(cis_results, n_tests, cpg_pos)
 cis  <- summ$cis
 lead <- summ$lead
 
@@ -109,7 +109,7 @@ png(file.path(MQTL_FIG_DIR, "mqtl_01_lead_snp_distance.png"),
     width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
 print(ggplot(sig_fdr, aes(x = distance / 1e3)) +
   geom_histogram(bins = 100) +
-  geom_vline(xintercept = 0, linetype = "dashed", colour = "grey50") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray50") +
   labs(title = paste0("Lead cis-mQTL SNP position relative to CpG (", fdr_label, ")"),
        x = "SNP - CpG distance (kb)", y = "CpGs") +
   theme_bw())

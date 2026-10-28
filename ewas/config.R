@@ -71,7 +71,7 @@ EWAS_CLINICAL_VISIT_MONTHS <- c(0, -1.5)
 # smoking_status, smoking_ever)
 EWAS_SMOKING_VALUES <- file.path(DIR_RESULTS_EWAS, "smoking_values.csv")
 
-# Exposure tested, and how it's modelled:
+# Exposure tested, and how it's modeled:
 #   continuous:  effect per unit
 #   categorical: each level vs EWAS_EXPOSURE_REFERENCE, one result set per
 #                level (levels with fewer than EWAS_MIN_GROUP_N samples are

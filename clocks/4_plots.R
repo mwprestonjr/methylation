@@ -46,14 +46,14 @@ accuracy_labels <- clock_accuracy %>%
 
 png(fig("01_vs_chronological_age"), width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
 print(ggplot(clocks_long, aes(age, DNAm_age)) +
-  geom_abline(linetype = "dashed", colour = "grey50") +
-  geom_smooth(method = "lm", formula = y ~ x, se = FALSE, colour = "black", linewidth = 0.6) +
-  geom_point(aes(colour = phenotype), alpha = 0.7) +
+  geom_abline(linetype = "dashed", color = "gray50") +
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE, color = "black", linewidth = 0.6) +
+  geom_point(aes(color = phenotype), alpha = 0.7) +
   geom_text(data = accuracy_labels, aes(label = label),
             x = axis_lim[1], y = axis_lim[2], hjust = 0, vjust = 1, size = 3) +
   facet_wrap(~ clock) +
   coord_equal(xlim = axis_lim, ylim = axis_lim) +
-  labs(x = "Chronological age", y = "Epigenetic age", colour = "Phenotype",
+  labs(x = "Chronological age", y = "Epigenetic age", color = "Phenotype",
        caption = "Dashed: epigenetic = chronological age. Solid: linear fit. MAE: median absolute error (years).\nCpGs: share of the clock's CpGs on the array; missing ones are left out of the clock.") +
   theme_bw() +
   theme(plot.caption = element_text(hjust = 0), plot.caption.position = "plot"))
@@ -75,8 +75,8 @@ print(ggplot(accel_long, aes(phenotype, value)) +
   geom_hline(data = data.frame(outcome = factor(c(ADULT_CLOCKS, "DunedinPACE"),
                                                 levels = c(ADULT_CLOCKS, "DunedinPACE")),
                                ref = c(rep(0, length(ADULT_CLOCKS)), 1)),
-             aes(yintercept = ref), linetype = "dashed", colour = "grey50") +
-  geom_boxplot(outlier.shape = NA, fill = "grey90") +
+             aes(yintercept = ref), linetype = "dashed", color = "gray50") +
+  geom_boxplot(outlier.shape = NA, fill = "gray90") +
   geom_jitter(width = 0.15, size = 0.5, alpha = 0.4) +
   facet_wrap(~ outcome, scales = "free_y") +
   labs(title = paste("Age acceleration by phenotype -", DATA_SOURCE),
@@ -98,7 +98,7 @@ if (file.exists(CLOCK_GROUP_EFFECTS)) {
   png(fig("03_group_effects"), width = FIG_WIDTH * 1.4, height = FIG_HEIGHT,
       units = "in", res = FIG_RES)
   print(ggplot(effects, aes(estimate, outcome)) +
-    geom_vline(xintercept = 0, linetype = "dashed", colour = "grey50") +
+    geom_vline(xintercept = 0, linetype = "dashed", color = "gray50") +
     geom_errorbar(aes(xmin = conf.low, xmax = conf.high), orientation = "y", width = 0.2) +
     geom_point(aes(shape = fdr_sig), size = 2, show.legend = TRUE) +
     scale_shape_manual(values = setNames(c(16, 1), fdr_labels), drop = FALSE) +
@@ -134,8 +134,8 @@ if (file.exists(CLOCK_TRAIT_EFFECTS)) {
   png(fig("04_trait_effects"), width = FIG_WIDTH * 1.6,
       height = max(FIG_HEIGHT, 0.35 * n_distinct(trait_effects$row) + 1.5),
       units = "in", res = FIG_RES)
-  print(ggplot(trait_effects, aes(estimate, row, colour = outcome)) +
-    geom_vline(xintercept = 0, linetype = "dashed", colour = "grey50") +
+  print(ggplot(trait_effects, aes(estimate, row, color = outcome)) +
+    geom_vline(xintercept = 0, linetype = "dashed", color = "gray50") +
     geom_errorbar(aes(xmin = conf.low, xmax = conf.high), orientation = "y", width = 0,
                    position = position_dodge(width = 0.7), alpha = 0.6) +
     geom_point(aes(shape = fdr_sig), position = position_dodge(width = 0.7), size = 1.6,
@@ -145,7 +145,7 @@ if (file.exists(CLOCK_TRAIT_EFFECTS)) {
     labs(title = paste0("Clinical traits in ", CLOCK_CASE_GROUP, " - ", DATA_SOURCE),
          subtitle = paste("Adjusted for", paste(CLOCK_COVARIATES, collapse = ", ")),
          x = "Effect (95% CI): per SD of the trait, or vs the reference level",
-         y = NULL, colour = "Outcome", shape = NULL) +
+         y = NULL, color = "Outcome", shape = NULL) +
     theme_bw(base_size = 8))
   dev.off()
 } else {
