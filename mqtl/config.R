@@ -49,7 +49,10 @@ MQTL_N_PERM          <- 1000       # shuffles, the same for every CpG
 MQTL_PERM_SEED       <- 20261027
 MQTL_PERM_FDR_METHOD <- "storey"   # "storey" (q-values, as GTEx) or "bh" (Benjamini-Hochberg, more conservative)
 MQTL_PERM_BLOCK      <- 20         # neighbouring CpGs permuted together; memory ~ SNPs in their windows x MQTL_PERM_BLOCK x MQTL_N_PERM x 8 bytes, per core
-MQTL_PERM_CORES      <- max(1, parallel::detectCores() - 1)   # chromosomes run in parallel
+# Chromosomes run in parallel. Memory (Psomagen AFR, ~870k CpGs): ~8 GB for the
+# main process plus ~4 GB per core, so ~70 GB with 15 cores; lower this if
+# other jobs share the VM
+MQTL_PERM_CORES      <- max(1, parallel::detectCores() - 1)
 
 # Plots (5_mqtl_plots.R)
 MQTL_PLOT_N_TOP      <- 12      # top mQTLs (distinct loci) shown as genotype boxplots

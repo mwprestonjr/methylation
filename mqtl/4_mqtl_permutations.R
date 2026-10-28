@@ -70,7 +70,9 @@ cat("Residualizing methylation on the covariates...\n")
 Y      <- residualize_rows(meth_int, Q)
 y_norm <- sqrt(rowSums(Y^2))
 Ys     <- Y / y_norm
-rm(Y, meth_int); invisible(gc())
+# Only Ys is needed from here; prep's copy of the methylation is dropped too,
+# so the forked workers start from a smaller parent
+rm(Y, meth_int); prep$meth_int <- NULL; invisible(gc())
 
 # --- 2. Permutations, per chromosome -----------------------------------------
 

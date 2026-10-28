@@ -440,13 +440,13 @@ cis_perm_chr <- function(geno, Ys, y_norm, genes, region, Q, perms, df,
     Gu <- G[u, , drop = FALSE]
     Yb <- Ys[j, , drop = FALSE]
     r_obs <- Gu %*% t(Yb)                              # SNPs x CpGs
-    # Permuted methylation: for CpG k, columns (k - 1) * n_perm + 1:n_perm
+    # Permuted methylation: for CpG k, columns (k - 1) * n_perm + 1:n_perm.
+    # Re-residualized: Yp has unit length, and Gu is orthogonal to Q, so Gu Yp
+    # is unchanged and only the length of Yp's residual part,
+    # sqrt(1 - |Q'Yp|^2), is divided out (from Yp, the smaller matrix)
     Yp     <- matrix(t(Yb)[perms, ], nrow = n)
+    Yp     <- Yp / rep(sqrt(1 - colSums(crossprod(Q, Yp)^2)), each = n)
     r_perm <- Gu %*% Yp                                # SNPs x (CpGs * permutations)
-    # Re-residualize the shuffled methylation: Yp has unit length, and Gu is
-    # orthogonal to Q, so Gu Yp is unchanged and only the length of Yp's
-    # residual part, sqrt(1 - |Q'Yp|^2), is divided out
-    r_perm <- r_perm / rep(sqrt(1 - colSums(crossprod(Q, Yp)^2)), each = nrow(r_perm))
 
     out[[b]] <- do.call(rbind, lapply(seq_along(j), function(k) {
       w    <- j[k]
@@ -468,6 +468,12 @@ cis_perm_chr <- function(geno, Ys, y_norm, genes, region, Q, perms, df,
                  beta_shape1 = ba[["shape1"]], beta_shape2 = ba[["shape2"]],
                  p_beta = ba[["p_beta"]])
     }))
+
+    # Each block leaves ~200 MB of garbage. A forked worker (4_mqtl_permutations.R)
+    # inherits the parent's garbage collection trigger, which is high after
+    # its setup, so without collecting here each worker held up to ~10 GB
+    rm(Yp, r_perm)
+    if (b %% 10 == 0) invisible(gc(full = FALSE))
   }
   bind_rows(out) %>% mutate(chr = genes$chr[1], .after = cpg)
 }
