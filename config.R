@@ -94,14 +94,13 @@ FIG_RES    <- 300  # dpi
 # family history, genotype availability, GP2 QC and ancestry labels. Used for
 # the sample sheets (qc/1 scripts), clinical traits (clocks/) and the mQTL
 # sample map (mqtl/). From the gp2_release12 bucket, mounted at
-# ~/gp2_release12 (see README.md). 
-# NOTE: the name of the file may change; previous 'final' version is gone.
-GP2_MASTER_KEY <- "~/gp2_release12/CURRENT_master_key_nba_wgs_28_06_2026.csv"
+# ~/gp2_release12 (see README.md).
+# NOTE: this filename may change from time to time
+GP2_MASTER_KEY <- "~/gp2_release12/nba/CURRENT_master_key_nba_wgs_28_06_2026.csv"
 
 # GP2 R12 internal-use master key: as GP2_MASTER_KEY, plus age at sample
 # collection. Used only for Psomagen age (qc/1_build_sample_sheet_psomagen.R).
-# No longer in gp2_release12 bucket, so copied to GP2 working_bucket (mounted at /mnt)
-GP2_INTERNAL_KEY <- "/mnt/expansion_working/methylation/INTERNAL_USE_ONLY_master_key_release12_final_vwb.csv"
+GP2_INTERNAL_KEY <- "~/gp2_release12/INTERNAL_USE_ONLY_master_key_release12_final_vwb.csv"
 
 # GP2 R12 extended clinical data: one row per participant (GP2ID) and visit
 # (visit_month). Used for the clinical traits (clocks/) and smoking status

@@ -11,8 +11,8 @@
 
 # GP2 genotypes (plink2 .pgen/.pvar/.psam, hg38), one file set per ancestry:
 # folder, and file prefix with {ANCESTRY} where the ancestry label goes, e.g.
-# .../gwas/GP2_r12_final_samples_related_removed_AFR
-GENO_PFILE_PATH <- "/home/Michael/gp2_release12/gwas"
+# .../nba/gwas/GP2_r12_final_samples_related_removed_AFR
+GENO_PFILE_PATH <- "/home/Michael/gp2_release12/nba/gwas"
 GENO_PFILE_NAME <- "GP2_r12_final_samples_related_removed_{ANCESTRY}"
 GENO_SOURCE     <- "nba"    # "wgs" or "nba" (imputed) - column in master key; must match the genotype files
 
