@@ -73,6 +73,7 @@ The pipeline is run with `make` from the repository root, with the
 `methylation` conda environment active. Each data source is run separately:
 
 ```bash
+make check         SOURCE=ppmi_p140                # step 0: check input paths (add ANCESTRY= to include mqtl)
 make qc            SOURCE=ppmi_p140                # sample sheet, QC/normalization, QC plots
 make preprocessing SOURCE=ppmi_p140                # cell counts, sources of variation, ComBat
 make clocks        SOURCE=ppmi_p140                # epigenetic clocks, age acceleration, group comparison, clinical traits
@@ -85,6 +86,7 @@ make                                               # usage
 
 | Target | Steps, in order |
 |---|---|
+| `check` | `R/check_inputs.R` (also run first by every other target, for that target's inputs) |
 | `qc` | `qc/1_build_sample_sheet_<source>.R` → `qc/2_qc.R` → `qc/3_qc_plots.R` |
 | `preprocessing` | `1_cell_counts.R` → `2_variation_sources.R raw` → `3_combat.R` → `2_variation_sources.R combat` → `4_cpg_annotation.R` |
 | `clocks` | `1_estimate.R` → `2_compare.R` → `3_associations.R` → `4_plots.R` |
@@ -105,6 +107,13 @@ them in this order the first time; afterwards a target can be rerun on its own.
 - **Logs**: each step writes `logs/<module>/<step>_<SOURCE>_<timestamp>.log`
   (mQTL steps start with the ancestry); all steps of one run share the
   timestamp. `make` itself prints one line per step.
+- **Input check (step 0)**: every target first runs `R/check_inputs.R` for its
+  own inputs (`all`: for all modules it runs), printed to the terminal. It
+  checks that the input files in `config.R` and `mqtl/config.R` exist and are
+  readable, that `DIR_OUTPUT` is writable and, for `mqtl`, that `plink2` is on
+  the PATH and the `ANCESTRY` genotype files exist. If anything is missing it
+  stops before the first step and names any mount point (e.g.
+  `~/gp2_release12`) that is missing or empty.
 - **Failures**: `make` stops at the first step that fails; see that step's log.
 - **Steps never run in parallel**, even with `make -j`, because they are
   memory-heavy and each depends on the previous one.
@@ -263,6 +272,7 @@ Each module has its own README with its scripts and figures:
 
 **Shared R helpers (`R/`)**
 
+- `check_inputs.R` - step 0, run by `make` before each module (not sourced): checks that the module's input files exist and are readable and that the output folder is writable.
 - `array_profiles.R` - array-specific annotation packages, genome builds, cross-reactive probes, and array detection from IDAT files.
 - `idat_qc.R` - QC helpers for IDAT file checks, SeSAMe QC statistics, sex checks, and low-bead-count probes.
 - `density.R` - computes beta-value density curves and the density outlier score.
