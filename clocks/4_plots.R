@@ -54,9 +54,13 @@ print(ggplot(clocks_long, aes(age, DNAm_age)) +
   facet_wrap(~ clock) +
   coord_equal(xlim = axis_lim, ylim = axis_lim) +
   labs(x = "Chronological age", y = "Epigenetic age", color = "Phenotype",
-       caption = "Dashed: epigenetic = chronological age. Solid: linear fit. MAE: median absolute error (years).\nCpGs: share of the clock's CpGs on the array; missing ones are left out of the clock.") +
+       caption = paste("Dashed: epigenetic = chronological age. Solid: linear fit.",
+                       "MAE: median absolute error (years).",
+                       "CpGs: share of the clock's CpGs on the array (missing ones are left out).",
+                       sep = "\n")) +
   theme_bw() +
-  theme(plot.caption = element_text(hjust = 0), plot.caption.position = "plot"))
+  theme(plot.caption = element_text(hjust = 0), plot.caption.position = "plot",
+        panel.spacing.x = unit(1, "lines")))
 dev.off()
 
 # --- 2. Age acceleration by phenotype ----------------------------------------
