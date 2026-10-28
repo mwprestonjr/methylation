@@ -181,14 +181,26 @@ cat("p_beta threshold:", signif(sig$p_beta_threshold, 3), "\n")
 
 # Saved step 3 pairs below their CpG's nominal threshold. Step 3 saves only
 # pairs with p < MQTL_P_CIS_SAVE, so a CpG whose threshold is above that may
-# have significant pairs that weren't saved
-sig_cpgs <- perm %>% filter(q < MQTL_FDR) %>% select(cpg, p_nominal_threshold)
-n_above  <- sum(sig_cpgs$p_nominal_threshold >= MQTL_P_CIS_SAVE)
+# have significant pairs that weren't saved. These are CpGs with few SNPs in
+# their window (a CpG with one SNP is significant at about the p_beta
+# threshold); a handful is expected and only their pair lists are incomplete
+sig_cpgs <- perm %>% filter(q < MQTL_FDR) %>% select(cpg, n_snps, p_nominal_threshold)
+above    <- sig_cpgs$p_nominal_threshold >= MQTL_P_CIS_SAVE
+n_above  <- sum(above)
 if (n_above > 0) {
-  warning(n_above, " significant CpGs have a nominal threshold >= MQTL_P_CIS_SAVE (",
-          MQTL_P_CIS_SAVE, "), so their significant pairs are incomplete. Loosen ",
-          "MQTL_P_CIS_SAVE in mqtl/config.R and rerun steps 3 and 4", call. = FALSE)
+  msg <- sprintf(paste0("%d significant CpGs (%.2f%%; median %d SNPs in the window) have a ",
+                        "nominal threshold >= MQTL_P_CIS_SAVE (%g), so their lists of ",
+                        "significant pairs are incomplete"),
+                 n_above, 100 * mean(above), as.integer(median(sig_cpgs$n_snps[above])),
+                 MQTL_P_CIS_SAVE)
+  if (mean(above) > 0.01) {
+    warning(msg, ". Loosen MQTL_P_CIS_SAVE in mqtl/config.R and rerun steps 3 and 4",
+            call. = FALSE)
+  } else {
+    cat(msg, "(expected for CpGs with few SNPs; per-CpG results are complete)\n")
+  }
 }
+sig_cpgs <- select(sig_cpgs, -n_snps)
 pairs <- fread(file.path(MQTL_DIR, "cis_mqtl_all_saved.tsv.gz"))
 pairs <- merge(pairs, as.data.table(sig_cpgs), by = "cpg")[p < p_nominal_threshold]
 setorder(pairs, p)
@@ -204,24 +216,27 @@ png(file.path(MQTL_FIG_DIR, "mqtl_perm_01_pvalues.png"),
 print(ggplot(perm, aes(p_beta)) +
   geom_histogram(aes(y = after_stat(density)), breaks = seq(0, 1, 0.02), fill = "grey60") +
   geom_hline(yintercept = sig$pi0, linetype = "dashed", colour = "red") +
-  labs(title = paste0("Permutation p-values (Beta approximation)", title_suffix),
+  labs(title = paste0("Permutation p-values (Beta approx.)", title_suffix),
        subtitle = sprintf("Dashed: Storey pi0 = %.3f; %s CpGs at %s", sig$pi0,
                           format(n_sig, big.mark = ","), fdr_label),
        x = "p_beta (lead SNP, per CpG)", y = "Density") +
   theme_bw())
 dev.off()
 
-# Beta approximation against the direct permutation p-value
+# Beta approximation against the direct permutation p-value. -log10 p_beta is
+# capped before binning, so the bins cover the plotted range rather than the
+# strongest hits (p_beta down to ~1e-300)
+y_cap <- 3 * log10(MQTL_N_PERM + 1)
 png(file.path(MQTL_FIG_DIR, "mqtl_perm_02_beta_vs_empirical.png"),
     width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
-print(ggplot(perm, aes(-log10(p_perm), -log10(pmax(p_beta, .Machine$double.xmin)))) +
+print(ggplot(perm, aes(-log10(p_perm), pmin(-log10(p_beta), y_cap))) +
   geom_bin2d(bins = 80) +
   geom_abline(linetype = "dashed", colour = "red") +
   geom_vline(xintercept = log10(MQTL_N_PERM + 1), linetype = "dotted", colour = "grey40") +
   scale_fill_viridis_c(trans = "log10") +
-  coord_cartesian(ylim = c(0, 3 * log10(MQTL_N_PERM + 1))) +
-  labs(title = paste0("Beta approximation vs direct permutation p-value", title_suffix),
-       subtitle = sprintf("Dotted: smallest direct p-value with %d permutations", MQTL_N_PERM),
+  labs(title = paste0("Beta vs direct permutation p-value", title_suffix),
+       subtitle = sprintf("Dotted: smallest p_perm (%d permutations); p_beta capped at 1e-%.0f",
+                          MQTL_N_PERM, y_cap),
        x = "-log10 p_perm", y = "-log10 p_beta", fill = "CpGs") +
   theme_bw())
 dev.off()
@@ -242,13 +257,12 @@ perm_summary <- data.frame(
              "FDR method", "Storey pi0",
              paste0("CpGs with cis-mQTL (Storey q < ", MQTL_FDR, ")"),
              paste0("CpGs with cis-mQTL (BH q < ", MQTL_FDR, ")"),
-             paste0("CpGs with cis-mQTL (", fdr_label, ")"),
              paste0("CpGs with cis-mQTL (step 3, pair-level FDR < ", MQTL_FDR, ")"),
              "p_beta threshold", "Significant pairs",
              paste0("Significant CpGs with nominal threshold >= ", MQTL_P_CIS_SAVE)),
   value  = c(ncol(Ys), paste(MQTL_ANCESTRY, collapse = "+"), nrow(perm), MQTL_N_PERM,
              MQTL_PERM_SEED, MQTL_PERM_FDR_METHOD, signif(sig$pi0, 4),
-             n_storey, n_bh, n_sig, n_pair, signif(sig$p_beta_threshold, 4),
+             n_storey, n_bh, n_pair, signif(sig$p_beta_threshold, 4),
              nrow(pairs), n_above)
 )
 print(perm_summary)
