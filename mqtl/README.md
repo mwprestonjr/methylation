@@ -12,7 +12,9 @@ Rscript mqtl/3_mqtl.R psomagen AFR   # a single script
 
 Step 4 runs chromosomes in parallel (`MQTL_PERM_CORES`), each worker with
 single-threaded BLAS (`RhpcBLASctl`), so the workers don't compete for the
-CPUs.
+CPUs. It needs about 8 GB for the main process plus about 4 GB per core (~70
+GB with 15 cores) and took 30-40 minutes for each of PPMI and Psomagen; lower
+`MQTL_PERM_CORES` if other jobs share the VM.
 
 Settings: [`config.R`](config.R) in this folder; shared paths and settings in
 the root [`config.R`](../config.R).
@@ -160,8 +162,12 @@ and tensorQTL, used by GTEx:
   nominal p-value threshold (`p_nominal_threshold`), as GTEx's
   `pval_nominal_threshold`. Every SNP below it is significant for that CpG
   (`cis_mqtl_perm_signif_pairs.tsv.gz`). Only step 3's saved pairs (p <
-  `MQTL_P_CIS_SAVE`) can be listed; the step warns if a significant CpG's
-  threshold is above that.
+  `MQTL_P_CIS_SAVE`) can be listed. A CpG with few SNPs in its window has a
+  looser threshold (with one SNP, about the `p_beta` cut-off itself), so a
+  small number of significant CpGs (e.g. 32 in Psomagen AFR, 130 in PPMI EUR)
+  have thresholds above `MQTL_P_CIS_SAVE` and incomplete pair lists; their
+  per-CpG results are complete. The step reports the count, and warns only if
+  it is over 1% of significant CpGs.
 - **Step 3's pair-level FDR** (Benjamini-Hochberg over all SNP-CpG tests) is
   still computed, used by `tune_meth_pcs.R` (much faster, and fine for
   comparing PC counts) and as a fallback by `5_mqtl_plots.R` if step 4 hasn't
