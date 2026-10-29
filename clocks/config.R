@@ -18,14 +18,17 @@ PACE_COV_THRESH  <- 0.8    # DunedinPACE (PACEProjector proportionOfProbesRequir
 # (pediatric/telomere clocks are skipped), per array. All clocks are still
 # estimated and saved in CLOCK_RESULTS, and their coverage in CLOCK_COVERAGE
 #   ppmi_p140 (EPICv1): all six
-#   psomagen  (EPICv2): without Hannum and skinHorvath. EPICv2 lacks CpGs they
+#   psomagen  (EPICv2): all six. EPICv2 lacks CpGs that Hannum and skinHorvath
 #                       weight heavily (Hannum: 5 CpGs on EPICv1 but not
-#                       EPICv2 add ~15 years to a typical sample), giving
-#                       clock ages ~31 and ~10 years below chronological age
-#                       and lower correlation with it
+#                       EPICv2 add ~15 years to a typical sample), so their
+#                       clock ages are ~31 and ~10 years below chronological
+#                       age. 5_epicv2_simulation.R shows this is a near-constant
+#                       offset: with EPICv2 CpGs only, PPMI's correlation with
+#                       age is unchanged and age acceleration correlates
+#                       r = 0.99 with the full-array values
 ADULT_CLOCKS <- switch(DATA_SOURCE,
                        ppmi_p140 = c("Horvath", "Hannum", "Levine", "skinHorvath", "EN", "BLUP"),
-                       psomagen  = c("Horvath", "Levine", "EN", "BLUP"))
+                       psomagen  = c("Horvath", "Hannum", "Levine", "skinHorvath", "EN", "BLUP"))
 
 # --- Group comparison (2_compare.R; covariates also 3_associations.R) --------
 

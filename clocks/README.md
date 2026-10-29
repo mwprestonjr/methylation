@@ -72,12 +72,14 @@ the root [`config.R`](../config.R).
   DunedinPACE); `clock_cpg_coverage.csv` lists the coverage per clock. The
   telomere length clock (TL) isn't estimated on EPICv2 for this reason.
 - **Clocks used per array** (`ADULT_CLOCKS`): all clocks are estimated and
-  saved, but age acceleration, comparisons and plots use only `ADULT_CLOCKS`.
-  For EPICv2 this leaves out Hannum and skinHorvath: EPICv2 lacks CpGs they
-  weight heavily (e.g. 5 Hannum CpGs on EPICv1 but not EPICv2 add ~15 years
-  to a typical sample), giving clock ages ~31 and ~10 years below
-  chronological age. A constant offset wouldn't affect age acceleration, but
-  the variation between people carried by the missing CpGs is lost.
+  saved, but age acceleration, comparisons and plots use only `ADULT_CLOCKS`:
+  the six adult clocks on both arrays. On EPICv2, Hannum and skinHorvath lack
+  CpGs they weight heavily (e.g. 5 Hannum CpGs on EPICv1 but not EPICv2 add
+  ~15 years to a typical sample), giving clock ages ~31 and ~10 years below
+  chronological age. `5_epicv2_simulation.R` shows this is a near-constant
+  offset, which age acceleration removes: re-estimated from EPICv2 CpGs only,
+  PPMI's correlation with age is unchanged and age acceleration correlates
+  r = 0.99 with the full-array values, so both clocks are kept on EPICv2.
 
 ## Figures
 

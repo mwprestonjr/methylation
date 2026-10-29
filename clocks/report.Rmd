@@ -61,6 +61,25 @@ trait_sum <- lapply(setNames(names(sources), names(sources)), res, "clock_trait_
 group     <- res("ppmi", "clock_acceleration_by_diagnosis")
 group_nc  <- res("ppmi", "clock_acceleration_by_diagnosis_no_cells")
 
+# EPICv2 simulation (clocks/5_epicv2_simulation.R, PPMI)
+sim_acc   <- res("ppmi", "clock_epicv2_sim_accuracy")
+sim_agree <- res("ppmi", "clock_epicv2_sim_agreement")
+sim_group <- res("ppmi", "clock_epicv2_sim_by_diagnosis")
+sim_setting <- function(x) {
+  factor(case_when(grepl("all CpGs", x)          ~ "PPMI, all CpGs",
+                   grepl("whole-year", x)        ~ "PPMI, EPICv2 CpGs, whole-year age",
+                   grepl("EPICv2 CpGs", x)       ~ "PPMI, EPICv2 CpGs",
+                   TRUE                          ~ "Nigeria (EPICv2)"),
+         levels = c("PPMI, all CpGs", "PPMI, EPICv2 CpGs", "PPMI, EPICv2 CpGs, whole-year age", "Nigeria (EPICv2)"))
+}
+sim_acc <- sim_acc %>% mutate(setting = sim_setting(setting))
+sim_val <- function(clock, setting, col) sim_acc[[col]][sim_acc$clock == clock & sim_acc$setting == setting]
+r_change <- sim_acc %>%
+  filter(setting %in% c("PPMI, all CpGs", "PPMI, EPICv2 CpGs")) %>%
+  group_by(clock) %>% summarise(d = diff(r[order(setting)]), .groups = "drop")
+pace_agree <- sim_agree[sim_agree$outcome == "DunedinPACE", ]
+accel_agree <- sim_agree[sim_agree$outcome != "DunedinPACE", ]
+
 n_ppmi  <- nrow(samples$ppmi)
 n_psom  <- nrow(samples$psomagen)
 n_pd_pp <- sum(samples$ppmi$phenotype == "PD")
@@ -88,9 +107,10 @@ Using baseline blood samples from PPMI (EPICv1, recently diagnosed PD and health
 
 # Summary
 
-- **Clocks track chronological age well in PPMI** (r = `r sprintf("%.2f", min(accuracy$ppmi$r))`–`r sprintf("%.2f", max(accuracy$ppmi$r))` across six adult clocks) and less well in the Nigeria cohort on EPICv2 (r = `r sprintf("%.2f", min(accuracy$psomagen$r))`–`r sprintf("%.2f", max(accuracy$psomagen$r))`, four clocks).
+- **Clocks track chronological age well in PPMI** (r = `r sprintf("%.2f", min(accuracy$ppmi$r))`–`r sprintf("%.2f", max(accuracy$ppmi$r))` across six adult clocks) and less well in the Nigeria cohort on EPICv2 (r = `r sprintf("%.2f", min(accuracy$psomagen$r))`–`r sprintf("%.2f", max(accuracy$psomagen$r))`).
 - **No difference in age acceleration or DunedinPACE between PD and controls in PPMI** (`r n_pd_pp` PD, `r n_hc_pp` controls; all FDR ≥ `r sprintf("%.2f", min(group$fdr))`). Group differences are within ±0.5 years, with 95% CIs of about ±1 year, and the result doesn't change without cell-proportion adjustment.
 - **No clinical trait is associated with any clock in PD cases** after FDR correction, in either dataset (PPMI `r n_fdr[["ppmi"]]`/`r n_tests[["ppmi"]]` tests, Nigeria `r n_fdr[["psomagen"]]`/`r n_tests[["psomagen"]]`). The nominal hits in PPMI (`r n_nominal[["ppmi"]]`/`r n_tests[["ppmi"]]` at p < 0.05, about `r round(0.05 * n_tests[["ppmi"]], 1)` expected by chance) mostly aren't repeated across clocks.
+- **Missing EPICv2 CpGs don't explain the lower accuracy in the Nigeria cohort.** Re-estimating PPMI with only the CpGs on EPICv2 leaves each clock's correlation with age almost unchanged (largest change `r sprintf("%+.3f", r_change$d[which.max(abs(r_change$d))])`), and age acceleration agrees closely with the full-array values (r = `r sprintf("%.2f", min(accel_agree$r))`–`r sprintf("%.2f", max(accel_agree$r))`). The missing CpGs do explain most of the large Hannum and skinHorvath offsets on EPICv2, but not the higher Levine age or DunedinPACE in the Nigeria cohort.
 - **The Nigeria cohort has no controls**, so only the within-case analyses were run there. Its clock values aren't comparable with PPMI's (different array, CpG coverage and population).
 
 These are preliminary, cross-sectional, baseline-only results. Section [Follow-ups] lists the open questions where input from collaborators would help most.
@@ -127,13 +147,14 @@ The module runs after QC and preprocessing (`make clocks SOURCE=<source>`):
 2. **Compare groups** (`clocks/2_compare.R`): PD vs control, PPMI only.
 3. **Clinical traits** (`clocks/3_associations.R`): associations in PD cases.
 4. **Plots** (`clocks/4_plots.R`).
+5. **EPICv2 simulation** (`clocks/5_epicv2_simulation.R`, PPMI only, run separately): PPMI clocks re-estimated from only the CpGs that are also on EPICv2 (EPICv2 manifest), with the same coverage thresholds. Accuracy is compared with the full-array estimates, with the same estimates against age truncated to whole years (as recorded in the Nigeria cohort), and with the Nigeria cohort. This holds population and cohort fixed and changes only CpG availability.
 
 ## Clocks and outcomes
 
 - **Clocks**: Horvath (pan-tissue), Hannum, Levine (PhenoAge), skinHorvath (skin & blood), Zhang EN and BLUP (methylclock implementations), and DunedinPACE. Pediatric and telomere clocks are estimated but not analyzed.
 - **Age acceleration**: the residual of clock age regressed on chronological age, in years, within each source.
 - **DunedinPACE** is already a rate (years of biological aging per calendar year, 1 = average), so it isn't residualized.
-- **Clocks per array**: all six adult clocks on EPICv1; on EPICv2, Hannum and skinHorvath are left out (see [Caveats]).
+- **Clocks per array**: all six adult clocks on both arrays. On EPICv2, Hannum and skinHorvath have large offsets from missing CpGs, which age acceleration removes (see [Caveats] and the EPICv2 simulation).
 
 ## Models
 
@@ -147,10 +168,10 @@ The module runs after QC and preprocessing (`make clocks SOURCE=<source>`):
 # Caveats
 
 - **EPICv2 CpG coverage.** methylclock leaves CpGs missing from the array out of the clock's weighted sum rather than imputing them. A clock is estimated only if at least 80% of its CpGs are on the array.
-  - On EPICv2, Hannum and skinHorvath lose CpGs they weight heavily. Five Hannum CpGs alone add about 15 years to a typical sample on EPICv1. As a result, their clock ages are about 30 and 9 years below chronological age, so they were left out.
-  - A constant offset wouldn't matter for age acceleration, but the variation between people that the missing CpGs carry is lost.
-  - DunedinPACE has `r sprintf("%.0f%%", coverage$psomagen$pct_on_array[coverage$psomagen$clock == "DunedinPACE"])` of its model probes and `r sprintf("%.0f%%", coverage$psomagen$pct_on_array[coverage$psomagen$clock == "DunedinPACE_normalization"])` of its normalization probes on EPICv2. Nigeria DunedinPACE values (mean `r sprintf("%.2f", mean(samples$psomagen$DunedinPACE, na.rm = TRUE))`, vs `r sprintf("%.2f", mean(samples$ppmi$DunedinPACE, na.rm = TRUE))` in PPMI) shouldn't be read as faster aging.
-- **Ancestry.** The clocks were trained mostly in European-ancestry samples. The lower accuracy in the Nigeria cohort may reflect ancestry, the array, age recorded in whole years, or a mix of these. The current data can't separate these explanations.
+  - On EPICv2, Hannum and skinHorvath lose CpGs they weight heavily. Five Hannum CpGs alone add about 15 years to a typical sample on EPICv1. As a result, their clock ages are about 30 and 10 years below chronological age.
+  - A constant offset doesn't matter for age acceleration, but the missing CpGs could also carry variation between people. The EPICv2 simulation in PPMI shows little is lost, so both clocks are kept: age acceleration from EPICv2 CpGs correlates at r = `r sprintf("%.2f", accel_agree$r[accel_agree$outcome == "AgeAccel_Hannum"])` (Hannum) and `r sprintf("%.2f", accel_agree$r[accel_agree$outcome == "AgeAccel_skinHorvath"])` (skinHorvath) with the full-array values.
+  - DunedinPACE has `r sprintf("%.0f%%", coverage$psomagen$pct_on_array[coverage$psomagen$clock == "DunedinPACE"])` of its model probes and `r sprintf("%.0f%%", coverage$psomagen$pct_on_array[coverage$psomagen$clock == "DunedinPACE_normalization"])` of its normalization probes on EPICv2. Nigeria DunedinPACE values (mean `r sprintf("%.2f", mean(samples$psomagen$DunedinPACE, na.rm = TRUE))`, vs `r sprintf("%.2f", mean(samples$ppmi$DunedinPACE, na.rm = TRUE))` in PPMI) shouldn't be compared directly. In the PPMI simulation, the missing probes shift DunedinPACE by only `r sprintf("%+.3f", pace_agree$mean_diff)`, so most of the difference isn't due to the array, but it isn't necessarily faster aging either (population, sample handling and cohort differences remain).
+- **Ancestry.** The clocks were trained mostly in European-ancestry samples. The EPICv2 simulation rules out missing CpGs and whole-year ages as the main reasons for the lower accuracy in the Nigeria cohort. What remains could be ancestry, other cohort differences (disease stage, sample collection and handling), errors in recorded age beyond rounding, or differences in how EPICv2 measures the CpGs it shares with EPICv1, which the simulation doesn't capture. The current data can't separate these.
 - **No controls in the Nigeria cohort.** Case–control comparisons aren't possible there, and age acceleration is relative to the cohort's own (case) mean.
 - **Cross-sectional, baseline only.** Associations with disease severity in PPMI are limited by the narrow range in early, untreated PD (e.g. H&Y mostly 1–2).
 - **Power.** With `r n_hc_pp` PPMI controls, the 95% CIs for PD vs control span about ±1 year of age acceleration, so smaller effects can't be ruled out.
@@ -183,6 +204,40 @@ fig("ppmi", "clock_01_vs_chronological_age")
 ```{r fig-accuracy-psomagen, fig.cap = "Nigeria cohort: clock age vs chronological age"}
 fig("psomagen", "clock_01_vs_chronological_age")
 ```
+
+## Is the lower accuracy on EPICv2 caused by the missing CpGs?
+
+PPMI was re-estimated as if it had been run on EPICv2: only its CpGs that are also on the EPICv2 manifest were kept. Population, cohort and samples are unchanged, so any change in accuracy is due to CpG availability alone.
+
+```{r sim-accuracy-table}
+sim_acc %>%
+  arrange(factor(clock, levels = accuracy$ppmi$clock), setting) %>%
+  transmute(Clock = clock, Setting = setting, N = n,
+            r = sprintf("%.2f", r), `MAE (years)` = sprintf("%.1f", MAE),
+            `Mean offset (years)` = sprintf("%+.1f", mean_offset),
+            `CpGs available` = sprintf("%.0f%%", pct_on_array)) %>%
+  tab(caption = "Clock accuracy in PPMI with all CpGs, with EPICv2 CpGs only, and with EPICv2 CpGs against whole-year age, vs the Nigeria cohort")
+```
+
+```{r sim-agreement-table}
+sim_agree %>%
+  transmute(Outcome = clock_name(outcome), N = n,
+            `r with all-CpG values` = sprintf("%.3f", r),
+            `Mean difference` = sprintf("%+.3f", mean_diff),
+            `SD of difference` = sprintf("%.2f", sd_diff),
+            `SD across samples` = sprintf("%.2f", sd_full)) %>%
+  tab(caption = "PPMI: age acceleration (years) and DunedinPACE (years per year) from EPICv2 CpGs only vs from all CpGs. Age acceleration differences are ~0 on average by construction (both are residuals)")
+```
+
+```{r fig-sim, fig.cap = "PPMI: clock estimates from EPICv2 CpGs only vs all CpGs"}
+fig("ppmi", "clock_05_epicv2_simulation")
+```
+
+- **Correlation with age doesn't change.** With EPICv2 CpGs only, every clock's r with age is within `r sprintf("%.3f", max(abs(r_change$d)))` of its full-array value, and truncating age to whole years doesn't lower it either. The Nigeria cohort's lower r (`r sprintf("%.2f", min(accuracy$psomagen$r))`–`r sprintf("%.2f", max(accuracy$psomagen$r))`) therefore isn't explained by the array's missing CpGs or by age rounding. PPMI and Nigeria have a similar spread of ages (SD `r sprintf("%.1f", sim_val("Horvath", "PPMI, all CpGs", "age_sd"))` vs `r sprintf("%.1f", sim_val("Horvath", "Nigeria (EPICv2)", "age_sd"))` years), so the difference in r isn't a range effect.
+- **The array explains most of the Hannum and skinHorvath offsets.** Their offsets move from `r sprintf("%+.0f", sim_val("Hannum", "PPMI, all CpGs", "mean_offset"))` to `r sprintf("%+.0f", sim_val("Hannum", "PPMI, EPICv2 CpGs", "mean_offset"))` years (Hannum; Nigeria `r sprintf("%+.0f", sim_val("Hannum", "Nigeria (EPICv2)", "mean_offset"))`) and from `r sprintf("%+.0f", sim_val("skinHorvath", "PPMI, all CpGs", "mean_offset"))` to `r sprintf("%+.0f", sim_val("skinHorvath", "PPMI, EPICv2 CpGs", "mean_offset"))` (skinHorvath; Nigeria `r sprintf("%+.0f", sim_val("skinHorvath", "Nigeria (EPICv2)", "mean_offset"))`). Their r with age stays the same, and their age acceleration ranks people almost exactly as before, so the offset is largely constant and age acceleration removes it. Both clocks are therefore kept in the Nigeria analyses.
+- **The higher Levine age in the Nigeria cohort isn't from the array.** The simulated Levine offset (`r sprintf("%+.0f", sim_val("Levine", "PPMI, EPICv2 CpGs", "mean_offset"))` years) stays close to PPMI's own, while the Nigeria cohort's is `r sprintf("%+.0f", sim_val("Levine", "Nigeria (EPICv2)", "mean_offset"))`. Likewise, DunedinPACE shifts by only `r sprintf("%+.3f", pace_agree$mean_diff)` in the simulation, against a difference of `r sprintf("%+.2f", mean(samples$psomagen$DunedinPACE, na.rm = TRUE) - mean(samples$ppmi$DunedinPACE, na.rm = TRUE))` between the cohorts. Both clocks were developed to capture physiological aging and morbidity, so these differences may reflect real differences between the cohorts (health, disease stage, environment, ancestry) rather than measurement.
+- **BLUP is the least robust** to the missing CpGs (r = `r sprintf("%.2f", accel_agree$r[accel_agree$outcome == "AgeAccel_BLUP"])` with its full-array acceleration). It uses about 320,000 CpGs, of which `r sprintf("%.0f%%", 100 - sim_val("BLUP", "PPMI, EPICv2 CpGs", "pct_on_array"))` are missing.
+- **The PD vs control result holds** with EPICv2 CpGs only (all FDR ≥ `r sprintf("%.2f", min(sim_group$fdr))`; differences `r sprintf("%+.2f", min(sim_group$estimate[sim_group$outcome != "DunedinPACE"]))` to `r sprintf("%+.2f", max(sim_group$estimate[sim_group$outcome != "DunedinPACE"]))` years).
 
 ## PD vs controls (PPMI)
 
@@ -258,7 +313,7 @@ fig("psomagen", "clock_04_trait_effects")
 
 - In early, untreated PD (PPMI baseline), we see no evidence of accelerated epigenetic aging in blood on any first- or second-generation clock or DunedinPACE. This holds with and without adjustment for immune cell composition. Effects of about a year or more are unlikely, but smaller effects can't be ruled out.
 - Within PD cases, epigenetic age isn't associated with motor, non-motor, cognitive or imaging measures at baseline. Since the disease is early and its range of severity is narrow, this is a weak test of a link with progression.
-- On EPICv2, the older clocks lose CpGs and accuracy. Results from the Nigeria cohort are usable within the cohort, but their absolute values (and DunedinPACE in particular) shouldn't be compared with EPICv1 cohorts.
+- The CpGs missing from EPICv2 barely affect how well the clocks rank people by age. They shift some clocks' absolute ages, Hannum and skinHorvath most, which age acceleration removes. The clocks' lower accuracy in the Nigeria cohort, and its higher Levine age and DunedinPACE, therefore come from differences between the cohorts, or from how EPICv2 measures the CpGs it shares with EPICv1 (which the simulation doesn't capture), rather than from the missing CpGs. Ancestry is one candidate, but it can't be separated from the other differences with the current data.
 
 # Follow-ups
 
@@ -266,11 +321,10 @@ fig("psomagen", "clock_04_trait_effects")
 
 1. **Longitudinal PPMI**: test whether baseline acceleration predicts progression (MDS-UPDRS, MoCA, DAT slopes) rather than baseline severity. If later visits are arrayed, also test within-person change in pace.
 2. **Newer clocks**: add GrimAge2 and principal-component clocks (PC-Horvath, PC-PhenoAge, PC-GrimAge), which are more reliable across arrays and closer to mortality and morbidity risk.
-3. **Missing EPICv2 CpGs**: impute them from a reference (or use EPICv2-aware clock implementations) instead of dropping them, and check whether Hannum, skinHorvath and DunedinPACE recover.
-4. **Cell composition as an outcome**: test the neutrophil-to-lymphocyte ratio and the IDOL proportions directly in PD vs controls, since extrinsic clocks partly track cell composition.
-5. **Other PPMI cohorts**: prodromal and unaffected LRRK2/GBA1 carriers, if they're in Project 140 or later arrays.
-6. **Nigeria cohort**: add controls (planned GP2 deliveries?) to enable case–control comparisons and an ancestry-aware evaluation of clock accuracy. Check ages against source records.
-7. **Data checks**: resolve the negative disease durations in PPMI.
+3. **Cell composition as an outcome**: test the neutrophil-to-lymphocyte ratio and the IDOL proportions directly in PD vs controls, since extrinsic clocks partly track cell composition.
+4. **Other PPMI cohorts**: prodromal and unaffected LRRK2/GBA1 carriers, if they're in Project 140 or later arrays.
+5. **Nigeria cohort**: add controls (planned GP2 deliveries?) to enable case–control comparisons and an ancestry-aware evaluation of clock accuracy. Check ages against source records, since age error is one of the remaining explanations for the lower accuracy.
+6. **Data checks**: resolve the negative disease durations in PPMI.
 
 **Questions for collaborators**
 
