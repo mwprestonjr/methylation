@@ -22,6 +22,7 @@ library(DunedinPACE)
 # Load shared configuration
 source("config.R")
 source("clocks/config.R")
+source("R/clock_estimate.R")
 
 # --- 1. Load unfiltered betas and sample sheet -------------------------------
 
@@ -47,25 +48,8 @@ stopifnot(all(colnames(bVals) == targets$Sample))
 
 # --- 2. Collapse EPICv2 probe names to 450K/EPIC IDs -------------------------
 
+# Replicate probes are averaged (collapse_epicv2, R/clock_estimate.R)
 cat("\nCollapsing EPICv2 probe names (e.g. cg00000029_TC21 -> cg00000029)...\n")
-
-# EPICv2 has replicate probes for some CpGs; average them into one row
-collapse_epicv2 <- function(b) {
-  cg_id <- sub("_.*$", "", rownames(b))
-  keep  <- startsWith(cg_id, "cg") | startsWith(cg_id, "ch.")   # clocks use cg and ch. probes
-  b     <- b[keep, , drop = FALSE]
-  cg_id <- cg_id[keep]
-
-  dup    <- cg_id %in% cg_id[duplicated(cg_id)]
-  single <- b[!dup, , drop = FALSE]
-  rownames(single) <- cg_id[!dup]
-
-  sums  <- rowsum(b[dup, , drop = FALSE], cg_id[dup], na.rm = TRUE)
-  n     <- rowsum((!is.na(b[dup, , drop = FALSE])) * 1, cg_id[dup])
-  multi <- sums / n
-
-  rbind(single, multi)
-}
 
 bVals_cg <- collapse_epicv2(bVals)
 rm(bVals); invisible(gc())
@@ -80,32 +64,8 @@ cat("Collapsed beta values dimensions:", dim(bVals_cg), "\n")
 # should be interpreted with caution
 cat("\nChecking clock CpG coverage...\n")
 
-# CpGs per clock (methylclockData coefficient tables; first row is the
-# intercept except for Hannum) and DunedinPACE (model probes, and the probes
-# PACEProjector uses to normalize; it needs PACE_COV_THRESH of both)
-clock_cpgs <- list(
-  Horvath     = methylclockData::get_coefHorvath()$CpGmarker[-1],
-  Hannum      = methylclockData::get_coefHannum()$CpGmarker,
-  Levine      = methylclockData::get_coefLevine()$CpGmarker[-1],
-  skinHorvath = methylclockData::get_coefSkin()$CpGmarker[-1],
-  PedBE       = methylclockData::get_coefPedBE()$CpGmarker[-1],
-  Wu          = methylclockData::get_coefWu()$CpGmarker[-1],
-  TL          = methylclockData::get_coefTL()$CpGmarker[-1],
-  BLUP        = methylclockData::get_coefBLUP()$CpGmarker[-1],
-  EN          = methylclockData::get_coefEN()$CpGmarker[-1],
-  DunedinPACE = getRequiredProbes()$DunedinPACE,
-  DunedinPACE_normalization = getRequiredProbes(backgroundList = TRUE)$DunedinPACE
-)
-
-# pct_on_array: share of the clock's CpGs on the array, what the coverage
-# thresholds are applied to
-clock_coverage <- imap_dfr(clock_cpgs, function(cpgs, clock) {
-  n_on_array <- sum(cpgs %in% rownames(bVals_cg))
-  tibble(clock        = clock,
-         n_cpgs       = length(cpgs),
-         n_on_array   = n_on_array,
-         pct_on_array = 100 * n_on_array / length(cpgs))
-})
+clock_cpgs     <- clock_cpg_list()
+clock_coverage <- clock_coverage_table(clock_cpgs, rownames(bVals_cg))
 
 # --- 4. Estimate epigenetic age ----------------------------------------------
 
@@ -121,11 +81,8 @@ dnam_age <- DNAmAge(bVals_cg,
 cat("\nEstimating DunedinPACE...\n")
 pace <- PACEProjector(bVals_cg, proportionOfProbesRequired = PACE_COV_THRESH)
 
-# Record which clocks were estimated (below the coverage threshold a clock is
-# all NA); the normalization probes row has no estimate of its own
-estimated <- c(sapply(setdiff(names(clock_cpgs), c("DunedinPACE", "DunedinPACE_normalization")),
-                      function(clock) clock %in% names(dnam_age) && !all(is.na(dnam_age[[clock]]))),
-               DunedinPACE = !all(is.na(pace$DunedinPACE)))
+# Record which clocks were estimated (R/clock_estimate.R)
+estimated <- clocks_estimated(clock_cpgs, dnam_age, pace)
 clock_coverage <- clock_coverage %>%
   mutate(estimated = unname(estimated[clock]))
 cat("\nClock CpG coverage:\n")

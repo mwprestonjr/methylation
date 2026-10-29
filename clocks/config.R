@@ -115,6 +115,17 @@ CLOCK_TRAITS <- data.frame(
 CLOCK_MIN_TRAIT_N <- 30   # cases with a value needed to test a trait
 CLOCK_MIN_LEVEL_N <- 10   # categorical levels with fewer cases are left out (e.g. GBA1 carriers in PPMI)
 
+# --- EPICv2 simulation (5_epicv2_simulation.R) -------------------------------
+
+# An EPICv1 data source is re-estimated with only the CpGs on EPICv2 (from the
+# EPICv2 annotation package, ARRAY_PROFILES in R/array_profiles.R) and compared
+# with its full-array estimates and with the EPICv2 data source below, to
+# separate the effect of the array's missing CpGs from other differences
+# between the cohorts (population, age precision, disease stage)
+EPICV2_SIM_SOURCE     <- "psomagen"
+EPICV2_SIM_COMPARISON <- file.path("/mnt/output/methylation", EPICV2_SIM_SOURCE,
+                                   "results", "clocks")   # its DIR_RESULTS_CLOCKS (config.R)
+
 # --- Outputs -----------------------------------------------------------------
 
 # In DIR_RESULTS_CLOCKS; figures in DIR_FIGURES_CLOCKS (config.R)
@@ -130,3 +141,9 @@ CLOCK_TRAIT_VALUES  <- file.path(DIR_RESULTS_CLOCKS, "clock_case_traits.csv")   
 CLOCK_TRAIT_SUMMARY <- file.path(DIR_RESULTS_CLOCKS, "clock_trait_summary.csv")       # per trait: n, distribution, tested or why skipped
 CLOCK_TRAIT_EFFECTS <- file.path(DIR_RESULTS_CLOCKS, "clock_trait_associations.csv")  # per outcome x trait: effect, CI, p, FDR
 CLOCK_TRAIT_EFFECTS_NO_CELLS <- file.path(DIR_RESULTS_CLOCKS, "clock_trait_associations_no_cells.csv")  # same, sensitivity model without cell proportions
+# 5_epicv2_simulation.R
+EPICV2_SIM_RESULTS       <- file.path(DIR_RESULTS_CLOCKS, "clock_epicv2_sim_age_acceleration.csv")  # per sample: clock ages, pace, acceleration from EPICv2 CpGs only
+EPICV2_SIM_COVERAGE      <- file.path(DIR_RESULTS_CLOCKS, "clock_epicv2_sim_cpg_coverage.csv")      # per clock: CpGs left with EPICv2 CpGs only
+EPICV2_SIM_ACCURACY      <- file.path(DIR_RESULTS_CLOCKS, "clock_epicv2_sim_accuracy.csv")          # per clock x setting: r, MAE, offset vs chronological age
+EPICV2_SIM_AGREEMENT     <- file.path(DIR_RESULTS_CLOCKS, "clock_epicv2_sim_agreement.csv")         # per outcome: EPICv2-CpG vs full-array estimates
+EPICV2_SIM_GROUP_EFFECTS <- file.path(DIR_RESULTS_CLOCKS, "clock_epicv2_sim_by_diagnosis.csv")      # per outcome: group effect from the EPICv2-CpG estimates
