@@ -72,6 +72,20 @@ n_nominal <- sapply(traits, function(d) sum(d$p.value < 0.05))
 n_fdr     <- sapply(traits, function(d) sum(d$fdr < 0.05))
 ```
 
+# Background and research questions
+
+Age is the strongest risk factor for Parkinson's disease (PD), and epigenetic clocks, which estimate biological age from DNA methylation, offer a way to ask whether PD involves faster biological aging. Three gaps limit what is known:
+
+- **Is PD associated with accelerated epigenetic aging?** This remains unsettled. Studies differ in the clocks they use, in how they handle immune cell composition (which blood-based clocks partly capture), and in disease stage at sampling. It is also unclear whether, within PD, faster epigenetic aging tracks disease severity or genetic subtype.
+- **Do the clocks work outside European-ancestry populations?** Most clocks were trained, and most PD clock studies were done, in European-ancestry cohorts. Their accuracy in other populations, in particular African-ancestry populations, is largely untested.
+- **Are results on the newer array comparable?** The EPICv2 array drops some CpGs used by established clocks, so clock estimates from newer cohorts may not be comparable with earlier ones.
+
+Using baseline blood samples from PPMI (EPICv1, recently diagnosed PD and healthy controls) and from the GP2 Nigeria cohort (EPICv2, PD cases), this report addresses three questions:
+
+1. Is epigenetic age acceleration, or pace of aging (DunedinPACE), higher in PD than in controls, independent of immune cell composition?
+2. Within PD, is epigenetic aging associated with disease duration, motor, non-motor and cognitive severity, dopaminergic imaging, family history or monogenic PD?
+3. How well do established clocks estimate chronological age on EPICv2, in an African-ancestry cohort?
+
 # Summary
 
 - **Clocks track chronological age well in PPMI** (r = `r sprintf("%.2f", min(accuracy$ppmi$r))`–`r sprintf("%.2f", max(accuracy$ppmi$r))` across six adult clocks) and less well in the Nigeria cohort on EPICv2 (r = `r sprintf("%.2f", min(accuracy$psomagen$r))`–`r sprintf("%.2f", max(accuracy$psomagen$r))`, four clocks).
