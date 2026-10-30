@@ -67,15 +67,25 @@ the exposure column or its levels may have changed.
 - **Ancestry** (`add_ancestry()` in `R/ewas_functions.R`): the GP2 NBA
   ancestry label (`EWAS_ANCESTRY_COL`, `nba_label` in `GP2_MASTER_KEY`),
   joined by GP2ID. Methylation differs between ancestries, and in PPMI
-  ancestry is unbalanced between groups: 58 of the 65 Ashkenazi Jewish (AJ)
+  ancestry is unbalanced between groups: 61 of the 68 Ashkenazi Jewish (AJ)
   samples are cases, and most LRRK2 carriers (65 of 88) are AJ or another
-  non-EUR group. Samples without a label (not genotyped or not in the
-  master key; PPMI 24, Psomagen 8) are "Unknown" rather than dropped, and
-  labels with fewer than `EWAS_MIN_ANCESTRY_N` (10) samples are pooled into
-  "Other". PPMI's model then has EUR, AJ, Other and Unknown. Psomagen is
-  nearly all AFR, so the adjustment does little there. A label is coarse:
-  it doesn't capture variation within a group (genetic PCs would, but only
-  for genotyped samples).
+  non-EUR group. Samples without a label (not in the master key or not
+  labeled) are "Unknown" rather than dropped, and labels with fewer than
+  `EWAS_MIN_ANCESTRY_N` (10) samples are pooled into "Other":
+
+  | | EUR | AJ | AFR | Other | Unknown |
+  |---|---|---|---|---|---|
+  | PPMI | 302 (74 controls) | 68 (7 controls) | - | 24 | 7 |
+  | Psomagen | - | - | 274 | 2 | 2 |
+
+  In PPMI, the adjustment mattered most where ancestry overlaps the
+  comparison: it weakened the LRRK2 haplotype CpG (see Monogenic PD
+  carriers), lowered smoking inflation (lambda 1.24 to 1.16) and slightly
+  increased the age CpGs at FDR < 0.05 (189,168 to 191,673). The
+  case-control models were barely affected (no significant CpGs either way,
+  similar top CpGs). Psomagen is nearly all AFR, so the adjustment does
+  little there. A label is coarse: it doesn't capture variation within a
+  group (genetic PCs would, but only for genotyped samples).
 - **Batch**: the M values are already ComBat-corrected for the batch variable
   (`COMBAT_BATCH_VAR`: plate for PPMI, chip for Psomagen), so batch is not a
   covariate. Adjusting for it again would remove little, and would spend one
@@ -107,25 +117,26 @@ the exposure column or its levels may have changed.
   - `carrier_<gene>`: within PD, carriers of one gene in
     `EWAS_CARRIER_GENES` vs PD without a known variant. Carriers of another
     gene or of two (LRRK2+GBA1) are left out. Phenotype is constant, so it
-    isn't a covariate.
+    isn't a covariate. Skipped if either group has fewer than
+    `EWAS_MIN_CARRIER_N` (10) samples: in PPMI only LRRK2 is tested. With 8
+    GBA1 carriers, the top CpGs changed completely when ancestry was added
+    as a covariate, so those results weren't reliable.
 
   Caveats for the carrier models:
   - **Inherited DNA around the variant**: carriers share the stretch of
     chromosome around their variant (the founder haplotype), and with it any
     nearby SNP that affects methylation. CpGs near the gene can then differ
-    for genetic, not disease, reasons. In a test run, the top LRRK2 CpG
-    (cg14035730, ~125 kb from LRRK2, SLC2A13) has one of the strongest
-    cis-mQTLs in PPMI (`mqtl/`, p ~ 1e-62), and the top GBA1 CpGs (LMNA,
-    ~900 kb from GBA1) also have cis-mQTLs. Check hits near the gene against
-    the mQTL results before reading them as carrier biology.
+    for genetic, not disease, reasons. The only significant LRRK2 CpG,
+    cg14035730 (SLC2A13, ~125 kb from LRRK2), has one of the strongest
+    cis-mQTLs in PPMI (`mqtl/`, p ~ 1e-62), so it most likely reflects the
+    haplotype rather than carrier biology. Check hits near a gene against
+    the mQTL results before interpreting them.
   - **Ancestry**: most PPMI LRRK2 carriers (65 of 88) aren't in the GP2 EUR
     group, mostly Ashkenazi Jewish (AJ), where LRRK2 G2019S is common.
-    Ancestry is a covariate (above), but with this overlap the LRRK2 effect
-    is estimated mostly from the 23 EUR carriers, and differences within
-    the AJ group aren't adjusted for.
-  - **Group size**: 8 GBA1 carriers is enough to fit
-    (`EWAS_MIN_GROUP_N`) but not to estimate effects reliably; treat GBA1
-    results as exploratory.
+    Without the ancestry covariate (above), cg14035730 had p = 2e-18 (logFC
+    -0.75); with it, p = 5e-8 (logFC -0.59, FDR 0.04). With this overlap the
+    LRRK2 effect is estimated mostly from the 23 EUR carriers, and
+    differences within the AJ group aren't adjusted for.
 - **Smoking** (`3_exposure.R`, `load_smoking()` in `R/ewas_functions.R`):
   built from each study's own questionnaire items in the GP2 extended
   clinical data (`CLINICAL_DATA`), at the first of
