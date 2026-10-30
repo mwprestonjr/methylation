@@ -25,7 +25,7 @@ From `preprocessing` (paths in the root `config.R`), so run
 | `results/preprocessing/combat_mVals.rds` | `COMBAT_MVALS` | `preprocessing/3_combat.R` | M values, CpGs x samples (columns are idat basenames) |
 | `results/preprocessing/sample_sheet_final.csv` | `SAMPLE_SHEET_FINAL` | `preprocessing/3_combat.R` | phenotype, age, sex, cell proportions, `Sentrix_Position` (chip row), any exposure column |
 | `results/preprocessing/cpg_annotation.csv` | `CPG_ANNOTATION` | `preprocessing/4_cpg_annotation.R` | hg38 position, island context and gene, joined to the results by `cpg` |
-| `r12_extended_clinical_data.csv` | `CLINICAL_DATA` | GP2 R12, `gp2_release12` bucket (root `config.R`) | `smoking_status` at the blood draw, joined by GP2ID (`3_exposure.R` only) |
+| `r12_extended_clinical_data.csv` | `CLINICAL_DATA` | GP2 R12, `gp2_release12` bucket (root `config.R`) | Smoking questionnaire items (`pdrfuq_smoke_*` for PPMI, `merq_cigarettes*` for Nigeria-PD), joined by GP2ID (`3_exposure.R` only) |
 
 ## Steps
 
@@ -33,7 +33,7 @@ From `preprocessing` (paths in the root `config.R`), so run
 |---|---|---|
 | `1_case_control.R` | `EWAS_GROUPS[2]` vs `EWAS_GROUPS[1]` (PD vs Control), adjusted for `EWAS_COVARIATES`. Skipped if a group has fewer than `EWAS_MIN_GROUP_N` samples | `case_control_*` |
 | `2_age.R` | Age at the blood draw (per year), adjusted for the other `EWAS_COVARIATES` and phenotype | `age_*` |
-| `3_exposure.R` | Smoking (`EWAS_EXPOSURE_COL`): ever vs never for PPMI, former and current vs never for Psomagen, adjusted for `EWAS_COVARIATES` and phenotype. Any other continuous or categorical sample sheet column can be set instead. Skipped if the exposure isn't available | `smoking_values.csv`, `exposure_<column>_<level>_*` |
+| `3_exposure.R` | Smoking (`EWAS_EXPOSURE_COL`): ever vs never regular smoking for both data sources, adjusted for `EWAS_COVARIATES` and phenotype. Any other continuous or categorical sample sheet column can be set instead. Skipped if the exposure isn't available | `smoking_values.csv`, `exposure_<column>_<level>_*` |
 | `4_plots.R` | Manhattan, QQ and distribution plots for every model with results; combines the model summaries | `ewas_model_summary.csv`, `figures/ewas/*.png` |
 
 Each model (prefix `case_control`, `age`, `exposure_...`) writes:
@@ -80,24 +80,43 @@ the exposure column or its levels may have changed.
   samples in `EWAS_GROUPS`. Other phenotypes (e.g. Prodromal) are still in
   the age and exposure models.
 - **Smoking** (`3_exposure.R`, `load_smoking()` in `R/ewas_functions.R`):
-  the harmonized `smoking_status` of the GP2 extended clinical data
-  (`CLINICAL_DATA`), at the first of `EWAS_CLINICAL_VISIT_MONTHS` (baseline,
-  then screening) with a known value, joined by GP2ID. In R12 every
-  participant with a known status has it at baseline, and it's the same at
-  every visit. Two versions are built: `smoking_status` (Never, Former,
-  Current) and `smoking_ever` (Never, Ever); "Unknown" or no clinical record
-  is missing, and those samples drop out of the model. The values used are
-  saved per sample in `smoking_values.csv`.
-  - **PPMI** tests `smoking_ever`: PPMI's "Former smoker" means "smoked 100
-    or more cigarettes" (PD Risk Factor Questionnaire, `pdrfuq_smoke_100`),
-    with no current/former distinction; no PPMI participant is "Current
-    smoker". Former and current smokers are therefore mixed in "Ever".
-  - **Psomagen** tests `smoking_status` (Former and Current, each vs Never),
-    for the studies that record it.
-  - Pack-years and smoking years aren't used: few studies record them, and
+  built from each study's own questionnaire items in the GP2 extended
+  clinical data (`CLINICAL_DATA`), at the first of
+  `EWAS_CLINICAL_VISIT_MONTHS` (baseline, then screening) with an answer,
+  joined by GP2ID. Question wording is from the
+  [GP2 data dictionary](https://github.com/GP2code/GP2-Data-Dictionary).
+  Both data sources test `smoking_ever` (Never vs Ever), where **Ever means
+  regular smoking: at least one cigarette a day for 6 months or longer**, the
+  definition both questionnaires share:
+
+  | | PPMI | Psomagen (Nigeria-PD) |
+  |---|---|---|
+  | Questionnaire | PD Risk Factor Questionnaire (PD RFQ-U) | Medical and Environmental Risk Questionnaire (MERQ-PD-B) |
+  | Ever | `pdrfuq_smoke_regularly` = Yes: "In your lifetime, have you ever regularly smoked cigarettes, that is, at least one cigarette per day for 6 months or longer?" | `merq_cigarettes` = Yes: "Before you were diagnosed with PD, did you ever smoke cigarettes regularly, that is at least 1 cigarette per day for at least 6 months?", or `merq_cigarettes_current` = Yes |
+  | Never | `pdrfuq_smoke_regularly` = No, or `pdrfuq_smoke_100` = No ("In your lifetime, have you smoked 100 or more cigarettes?"; the regular-smoking question is only asked after a yes) | `merq_cigarettes` = No and not `merq_cigarettes_current` = Yes |
+  | Current smoking | Not asked | `merq_cigarettes_current`: "Do you smoke cigarettes regularly now?" |
+  | Time frame | Lifetime | Before diagnosis (cases), plus now |
+
+  How the definitions still differ:
+  - **Current smoking** is only known for Psomagen, so `smoking_status`
+    (Never, Former, Current) is only filled in there; PPMI's ever-smokers
+    have no status. Psomagen's 4 current smokers are too few to test on their
+    own, so both sources test ever vs never.
+  - **Time frame**: MERQ asks about regular smoking *before diagnosis*.
+    Someone who started after diagnosis answers no, but is counted as Ever
+    through the current-smoking question. Someone who started after diagnosis
+    and has since stopped would be counted as Never.
+  - **Not used**: the harmonized `smoking_status` column. For PPMI it is
+    derived from the looser 100-cigarettes question (about 10% of PPMI's
+    100-cigarettes smokers never smoked regularly), and the Nigeria-PD MERQ
+    answers aren't in it. `smoking_ever_smoker_yes` contradicts it for some
+    participants. Pack-years and smoking years: few studies record them, and
     in different units (PREDICTPD median ~160 pack-years vs ~10 elsewhere).
-    `smoking_ever_smoker_yes` isn't used either: it contradicts
-    `smoking_status` for some participants.
+
+  Answers other than Yes/No ("Don't Know", "Uncertain") count as missing, and
+  samples without an answer drop out of the model. The values used, and the
+  questionnaire they came from (`smoking_source`), are saved per sample in
+  `smoking_values.csv`.
 - **Exposure model**: for a categorical exposure, all levels are in one
   model; levels with fewer than `EWAS_MIN_GROUP_N` samples are left out (NA),
   and each other level is reported vs the reference in its own result set.

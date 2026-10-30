@@ -55,28 +55,50 @@ load_ewas_inputs <- function() {
   list(mVals = mVals, targets = targets, cpg_annotation = cpg_annotation)
 }
 
-# Smoking at the blood draw from the GP2 extended clinical data
-# (CLINICAL_DATA), one row per GP2ID with a known status: the harmonized
-# smoking_status at the first of EWAS_CLINICAL_VISIT_MONTHS with one, as
-#   smoking_status: Never, Former, Current
-#   smoking_ever:   Never, Ever
-# "Unknown" and missing values are left out (NA after joining)
-SMOKING_LEVELS <- c("Never" = "Never", "Former smoker" = "Former", "Current smoker" = "Current")
+# Smoking from the source questionnaire items of the GP2 extended clinical
+# data (CLINICAL_DATA), one row per GP2ID with at least one answer, at the
+# first of EWAS_CLINICAL_VISIT_MONTHS with one. "Ever" is regular smoking (at
+# least 1 cigarette a day for 6 months), the definition both questionnaires
+# share (see ewas/config.R):
+#   PD RFQ-U (PPMI):   pdrfuq_smoke_regularly Yes -> Ever, No -> Never;
+#                      not asked if pdrfuq_smoke_100 is No -> Never
+#   MERQ-PD-B (Nigeria-PD): merq_cigarettes (before diagnosis) or
+#                      merq_cigarettes_current Yes -> Ever, both No -> Never
+#   smoking_status:    Never, Former, Current; Former/Current only from MERQ,
+#                      the only one that asks about current smoking
+#   smoking_ever:      Never, Ever
+#   smoking_source:    questionnaire the values come from
+# Answers other than Yes/No ("Don't Know", "Uncertain", ...) count as missing
+SMOKING_ITEMS <- c("pdrfuq_smoke_100", "pdrfuq_smoke_regularly",
+                   "merq_cigarettes", "merq_cigarettes_current")
 
 load_smoking <- function(gp2ids) {
   if (!file.exists(CLINICAL_DATA)) stop(CLINICAL_DATA, " not found (CLINICAL_DATA in config.R)")
   readr::read_csv(CLINICAL_DATA,
                   col_types  = readr::cols(.default = "c"),
-                  col_select = c("GP2ID", "visit_month", "smoking_status"),
+                  col_select = any_of(c("GP2ID", "visit_month", SMOKING_ITEMS)),
                   progress   = FALSE) %>%
-    filter(GP2ID %in% gp2ids, smoking_status %in% names(SMOKING_LEVELS)) %>%
+    filter(GP2ID %in% gp2ids) %>%
+    mutate(across(any_of(SMOKING_ITEMS), ~ ifelse(.x %in% c("Yes", "No"), .x, NA))) %>%
+    filter(if_any(any_of(SMOKING_ITEMS), ~ !is.na(.x))) %>%
     mutate(visit_rank = match(as.numeric(visit_month), EWAS_CLINICAL_VISIT_MONTHS)) %>%
     filter(!is.na(visit_rank)) %>%
     arrange(GP2ID, visit_rank) %>%
     distinct(GP2ID, .keep_all = TRUE) %>%
-    transmute(GP2ID,
-              smoking_status = unname(SMOKING_LEVELS[smoking_status]),
-              smoking_ever   = ifelse(smoking_status == "Never", "Never", "Ever"))
+    transmute(
+      GP2ID,
+      smoking_source = case_when(
+        !is.na(merq_cigarettes) | !is.na(merq_cigarettes_current)       ~ "MERQ-PD-B",
+        !is.na(pdrfuq_smoke_regularly) | !is.na(pdrfuq_smoke_100)       ~ "PD RFQ-U"),
+      smoking_ever = case_when(
+        merq_cigarettes %in% "Yes" | merq_cigarettes_current %in% "Yes" ~ "Ever",
+        merq_cigarettes %in% "No" & !merq_cigarettes_current %in% "Yes" ~ "Never",
+        pdrfuq_smoke_regularly %in% "Yes"                               ~ "Ever",
+        pdrfuq_smoke_regularly %in% "No" | pdrfuq_smoke_100 %in% "No"   ~ "Never"),
+      smoking_status = case_when(
+        smoking_ever %in% "Never"                                       ~ "Never",
+        merq_cigarettes_current %in% "Yes"                              ~ "Current",
+        smoking_ever %in% "Ever" & merq_cigarettes_current %in% "No"    ~ "Former"))
 }
 
 # --- Model -------------------------------------------------------------------

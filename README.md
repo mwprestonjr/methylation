@@ -163,7 +163,9 @@ repository root before sourcing a script.
    - `COMBAT_BATCH_VAR` (`preprocessing/config.R`): chip or plate, chosen with
      `preprocessing/2_variation_sources.R`
    - `ADULT_CLOCKS` and `CLOCK_DURATION_FROM` (`clocks/config.R`)
-   - `EWAS_EXPOSURE_COL` (`ewas/config.R`)
+   - `EWAS_EXPOSURE_COL` (`ewas/config.R`); for smoking, the new study's
+     questionnaire items must also be added to `load_smoking()`
+     (`R/ewas_functions.R`), or its samples have no smoking value
 5. **This README**: a row in [Data sources](#data-sources), and its input
    files in [Input files and versions](#input-files-and-versions).
 

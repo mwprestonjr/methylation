@@ -5,8 +5,8 @@
 # Description: CpG-wise limma model of the ComBat-corrected M values
 #              (preprocessing/3_combat.R) on an exposure in the final sample
 #              sheet or smoking from the GP2 clinical data (EWAS_EXPOSURE_COL:
-#              ever/never smoking for PPMI, never/former/current for
-#              Psomagen), adjusted for EWAS_COVARIATES and phenotype
+#              ever/never regular smoking for both data sources), adjusted
+#              for EWAS_COVARIATES and phenotype
 #              (ewas/config.R). Saves the per-sample smoking values
 #              (EWAS_SMOKING_VALUES). A continuous
 #              exposure gives one result set (exposure_<column>); a
@@ -44,15 +44,19 @@ skip <- function(reason) {
 
 # Joined by GP2ID (replicate samples of a participant get the same value);
 # samples without a known status are NA and drop out of the model
-smoking_cols <- c("smoking_status", "smoking_ever")
+smoking_cols <- c("smoking_source", "smoking_status", "smoking_ever")
 if (EWAS_EXPOSURE_COL %in% smoking_cols) {
-  cat("\nLoading smoking status from", CLINICAL_DATA, "...\n")
+  cat("\nLoading smoking from", CLINICAL_DATA, "...\n")
   inp$targets <- inp$targets %>%
     select(-any_of(smoking_cols)) %>%
     left_join(load_smoking(inp$targets$GP2ID), by = "GP2ID")
   stopifnot(all(inp$targets$Sample == colnames(inp$mVals)))
 
-  cat("Smoking status by phenotype (NA: unknown or not recorded):\n")
+  cat("Smoking by source questionnaire (NA: unknown or not recorded):\n")
+  print(table(inp$targets$smoking_source, inp$targets$smoking_ever, useNA = "ifany"))
+  cat("Ever smoking by phenotype:\n")
+  print(table(inp$targets$phenotype, inp$targets$smoking_ever, useNA = "ifany"))
+  cat("Smoking status by phenotype (Former/Current only where current smoking is asked):\n")
   print(table(inp$targets$phenotype, inp$targets$smoking_status, useNA = "ifany"))
   write.csv(inp$targets %>% select(Sample, GP2ID, phenotype, all_of(smoking_cols)),
             EWAS_SMOKING_VALUES, row.names = FALSE)

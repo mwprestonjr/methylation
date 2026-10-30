@@ -55,20 +55,17 @@ EWAS_AGE_COL <- "age"
 
 # --- Exposure (3_exposure.R) -------------------------------------------------
 
-# Smoking at the blood draw, from the harmonized smoking_status column of the
-# GP2 extended clinical data (CLINICAL_DATA in config.R), joined by GP2ID
-# (load_smoking() in R/ewas_functions.R). Two versions are built per sample:
-#   smoking_status: Never, Former, Current
-#   smoking_ever:   Never, Ever (Former or Current)
-# "Unknown" and missing are NA. Pack-years and smoking years aren't used: they
-# are recorded for few studies, and in different units (PREDICTPD median ~160
-# vs ~10 elsewhere)
-# Visits used, in order of preference (the first with a known status). In R12
-# every participant with a known status has it at baseline (0), and it is the
-# same at every visit
+# Smoking, from each study's own questionnaire items in the GP2 extended
+# clinical data (CLINICAL_DATA in config.R), joined by GP2ID (load_smoking()
+# in R/ewas_functions.R). smoking_ever (Never, Ever) is regular smoking in
+# both data sources; smoking_status (Never, Former, Current) only where
+# current smoking is asked. Definitions per questionnaire and how they
+# differ: ewas/README.md (Methods and decisions, Smoking)
+# Visits used, in order of preference (the first with an answer). In R12 these
+# questions are answered at baseline (0) and carried to later visits
 EWAS_CLINICAL_VISIT_MONTHS <- c(0, -1.5)
 # Per-sample smoking values used by 3_exposure.R (Sample, GP2ID, phenotype,
-# smoking_status, smoking_ever)
+# smoking_source, smoking_status, smoking_ever)
 EWAS_SMOKING_VALUES <- file.path(DIR_RESULTS_EWAS, "smoking_values.csv")
 
 # Exposure tested, and how it's modeled:
@@ -78,14 +75,10 @@ EWAS_SMOKING_VALUES <- file.path(DIR_RESULTS_EWAS, "smoking_values.csv")
 #                left out)
 # smoking_status or smoking_ever (above), or any other SAMPLE_SHEET_FINAL
 # column; the step is skipped if the column isn't available. Per data source:
-#   ppmi_p140: ever vs never. PPMI's "Former smoker" is "smoked 100 or more
-#              cigarettes" (PD Risk Factor Questionnaire, pdrfuq_smoke_100),
-#              which doesn't record current smoking: no PPMI participant is
-#              "Current smoker"
-#   psomagen:  never / former / current, from studies that record it
+#   both: smoking_ever (see ewas/README.md for why not smoking_status)
 EWAS_EXPOSURE_COL <- switch(DATA_SOURCE,
                             ppmi_p140 = "smoking_ever",
-                            psomagen  = "smoking_status")
+                            psomagen  = "smoking_ever")
 EWAS_EXPOSURE_TYPE      <- "categorical"
 EWAS_EXPOSURE_REFERENCE <- "Never"
 
