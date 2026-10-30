@@ -67,6 +67,10 @@ EWAS_MIN_GROUP_N  <- 3
 #     (LRRK2+GBA1), are left out
 EWAS_NONCARRIER    <- "None"
 EWAS_CARRIER_GENES <- c("LRRK2", "GBA1")
+# Fewest carriers (and non-carriers) a carrier model is fit with. Below this
+# the results are unstable: with 8 GBA1 carriers in PPMI, the top CpGs changed
+# completely when ancestry was added as a covariate
+EWAS_MIN_CARRIER_N <- 10
 
 # --- Age (2_age.R) -----------------------------------------------------------
 

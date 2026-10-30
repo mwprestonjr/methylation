@@ -14,7 +14,8 @@
 #              DIR_RESULTS_EWAS (models: case_control,
 #              case_control_no_carriers, carrier_<gene>). A model is skipped
 #              if a group has fewer than EWAS_MIN_GROUP_N samples (e.g.
-#              Psomagen, no controls)
+#              Psomagen, no controls), or EWAS_MIN_CARRIER_N for the carrier
+#              models
 # Usage:       Rscript ewas/1_case_control.R <data source>   (see config.R)
 # =============================================================================
 
@@ -36,13 +37,13 @@ remove_ewas_outputs("(case_control|case_control_no_carriers|carrier_.*)")
 inp <- load_ewas_inputs()
 
 # Fit one two-group model: `group` is a factor (reference level first) with
-# NA for samples left out. Skipped if a group is too small
-fit_group_model <- function(prefix, label, group) {
+# NA for samples left out. Skipped if a group has fewer than `min_n` samples
+fit_group_model <- function(prefix, label, group, min_n = EWAS_MIN_GROUP_N) {
   cat("\n---", label, "---\n")
   group_sizes <- table(group)
   print(group_sizes)
-  if (any(group_sizes < EWAS_MIN_GROUP_N)) {
-    cat("Fewer than", EWAS_MIN_GROUP_N, "samples in a group; skipping\n")
+  if (any(group_sizes < min_n)) {
+    cat("Fewer than", min_n, "samples in a group; skipping\n")
     return(invisible(NULL))
   }
 
@@ -95,7 +96,8 @@ if (has_variants) {
     carrier_group <- factor(ifelse(in_model, inp$targets$pd_gene, NA),
                             levels = c(EWAS_NONCARRIER, gene))
     fit_group_model(paste0("carrier_", gene),
-                    paste0(gene, " vs non-carrier ", EWAS_GROUPS[2]), carrier_group)
+                    paste0(gene, " vs non-carrier ", EWAS_GROUPS[2]), carrier_group,
+                    min_n = EWAS_MIN_CARRIER_N)
   }
 } else {
   cat("\nNo monogenic variant data for", DATA_SOURCE,

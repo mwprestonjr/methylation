@@ -34,7 +34,7 @@ clinical data for smoking and, for PPMI, the monogenic PD variants:
 
 | Step | What it does | Outputs (`results/ewas/`) |
 |---|---|---|
-| `1_case_control.R` | `EWAS_GROUPS[2]` vs `EWAS_GROUPS[1]` (PD vs Control), adjusted for `EWAS_COVARIATES`. Where monogenic variants are known (PPMI), also PD vs Control without carriers, and carriers of each gene in `EWAS_CARRIER_GENES` (LRRK2, GBA1) vs non-carrier PD. Each model is skipped if a group has fewer than `EWAS_MIN_GROUP_N` samples | `case_control_*`, `case_control_no_carriers_*`, `carrier_<gene>_*` |
+| `1_case_control.R` | `EWAS_GROUPS[2]` vs `EWAS_GROUPS[1]` (PD vs Control), adjusted for `EWAS_COVARIATES`. Where monogenic variants are known (PPMI), also PD vs Control without carriers, and carriers of each gene in `EWAS_CARRIER_GENES` (LRRK2, GBA1) vs non-carrier PD. Each model is skipped if a group has fewer than `EWAS_MIN_GROUP_N` samples (`EWAS_MIN_CARRIER_N`, 10, for the carrier models, so PPMI's 8 GBA1 carriers are skipped) | `case_control_*`, `case_control_no_carriers_*`, `carrier_<gene>_*` |
 | `2_age.R` | Age at the blood draw (per year), adjusted for the other `EWAS_COVARIATES` and phenotype | `age_*` |
 | `3_exposure.R` | Smoking (`EWAS_EXPOSURE_COL`): ever vs never regular smoking for both data sources, adjusted for `EWAS_COVARIATES` and phenotype. Any other continuous or categorical sample sheet column can be set instead. Skipped if the exposure isn't available | `smoking_values.csv`, `exposure_<column>_<level>_*` |
 | `4_plots.R` | Manhattan, QQ and distribution plots for every model with results; combines the model summaries | `ewas_model_summary.csv`, `figures/ewas/*.png` |
