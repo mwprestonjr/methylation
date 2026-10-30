@@ -5,8 +5,9 @@
 # Description: Settings used only by the ewas/ scripts: 1_case_control.R,
 #              2_age.R, 3_exposure.R, then 4_plots.R. Source after config.R.
 #              Inputs are the preprocessing/ outputs (COMBAT_MVALS,
-#              SAMPLE_SHEET_FINAL, CPG_ANNOTATION in config.R), plus smoking
-#              from CLINICAL_DATA (config.R) for 3_exposure.R; outputs go to
+#              SAMPLE_SHEET_FINAL, CPG_ANNOTATION in config.R), plus ancestry
+#              from GP2_MASTER_KEY, smoking from CLINICAL_DATA (3_exposure.R)
+#              and PPMI_GENETICS (1_case_control.R); outputs go to
 #              DIR_RESULTS_EWAS and DIR_FIGURES_EWAS (config.R)
 # =============================================================================
 
@@ -18,11 +19,20 @@
 #   age, sex
 #   cell proportions (CELL_TYPES in config.R, without Neu: they sum to ~1)
 #   chip_row: position on the chip (R01-R08), not removed by batch correction
+#   ancestry: GP2 genetic ancestry label (below)
 # The ComBat batch (combat_batch) is not a covariate: the M values are already
 # corrected for it, and adjusting again would spend one degree of freedom per
 # batch (Psomagen: one per chip). Categorical covariates with a single value
 # among the samples in a model are left out of it
-EWAS_COVARIATES <- c("age", "sex", setdiff(CELL_TYPES, "Neu"), "chip_row")
+EWAS_COVARIATES <- c("age", "sex", setdiff(CELL_TYPES, "Neu"), "chip_row", "ancestry")
+
+# Ancestry: this GP2_MASTER_KEY (config.R) column, joined by GP2ID
+# (load_ewas_inputs() in R/ewas_functions.R). The NBA label covers the most
+# samples (the mQTL genotypes are NBA too, GENO_SOURCE in mqtl/config.R).
+# Samples without a label are "Unknown" rather than dropped; labels with fewer
+# than EWAS_MIN_ANCESTRY_N samples are pooled into "Other"
+EWAS_ANCESTRY_COL   <- "nba_label"
+EWAS_MIN_ANCESTRY_N <- 10
 
 # The age and exposure models (2, 3) also adjust for phenotype, so a
 # PD-control difference isn't picked up as an age or exposure effect (left out

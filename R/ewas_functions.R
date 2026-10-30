@@ -4,7 +4,8 @@
 # Date: Oct 16, 2026
 # Description: Shared helpers for the ewas/ scripts: loading the preprocessing
 #              outputs (ComBat-corrected M values, final sample sheet, CpG
-#              annotation) and smoking status (GP2 clinical data), building
+#              annotation), genetic ancestry (GP2 master key), smoking
+#              (GP2 clinical data), building
 #              the model covariates, fitting limma
 #              CpG-wise models, and writing each model's result set and summary
 # =============================================================================
@@ -46,6 +47,9 @@ load_ewas_inputs <- function() {
   cat("Phenotypes:\n")
   print(table(targets$phenotype, useNA = "ifany"))
 
+  targets <- add_ancestry(targets)
+  stopifnot(all(colnames(mVals) == targets$Sample))
+
   # One row per probe on the array: cpg, chr (no "chr" prefix), pos_hg38,
   # island, gene annotation (preprocessing/4_cpg_annotation.R)
   cpg_annotation <- fread(CPG_ANNOTATION, colClasses = c(chr = "character"))
@@ -53,6 +57,27 @@ load_ewas_inputs <- function() {
       sum(rownames(mVals) %in% cpg_annotation$cpg), "of", nrow(mVals), "M value CpGs annotated\n")
 
   list(mVals = mVals, targets = targets, cpg_annotation = cpg_annotation)
+}
+
+# GP2 genetic ancestry (EWAS_ANCESTRY_COL of GP2_MASTER_KEY) as column
+# `ancestry`, joined by GP2ID. Missing labels are "Unknown"; labels with
+# fewer than EWAS_MIN_ANCESTRY_N samples are pooled into "Other"
+add_ancestry <- function(targets) {
+  if (!file.exists(GP2_MASTER_KEY)) stop(GP2_MASTER_KEY, " not found (GP2_MASTER_KEY in config.R)")
+  labels <- read.csv(GP2_MASTER_KEY, colClasses = "character", na.strings = c("", "NA")) %>%
+    filter(GP2ID %in% targets$GP2ID) %>%
+    distinct(GP2ID, .keep_all = TRUE) %>%
+    transmute(GP2ID, ancestry = .data[[EWAS_ANCESTRY_COL]])
+  targets <- targets %>%
+    select(-any_of("ancestry")) %>%
+    left_join(labels, by = "GP2ID") %>%
+    mutate(ancestry = replace_na(ancestry, "Unknown"))
+  small <- setdiff(names(which(table(targets$ancestry) < EWAS_MIN_ANCESTRY_N)), "Unknown")
+  targets$ancestry[targets$ancestry %in% small] <- "Other"
+  cat("Ancestry (", EWAS_ANCESTRY_COL, "; pooled into Other: ",
+      if (length(small)) paste(small, collapse = ", ") else "none", "):\n", sep = "")
+  print(table(targets$phenotype, targets$ancestry))
+  targets
 }
 
 # Smoking from the source questionnaire items of the GP2 extended clinical
@@ -113,7 +138,7 @@ build_ewas_covariates <- function(targets, exclude = character(0), phenotype = F
     stop("Covariates not in SAMPLE_SHEET_FINAL: ", paste(missing, collapse = ", "),
          " (EWAS_COVARIATES in ewas/config.R)")
   }
-  categorical <- c("sex", "chip_row", "phenotype", "combat_batch", "race")
+  categorical <- c("sex", "chip_row", "phenotype", "combat_batch", "race", "ancestry")
   as_tibble(lapply(targets[covariates], function(x) {
     if (is.character(x) || is.logical(x)) factor(x) else x
   })) %>%

@@ -18,14 +18,15 @@ the root [`config.R`](../config.R).
 ## Inputs
 
 From `preprocessing` (paths in the root `config.R`), so run
-`make preprocessing` first, plus the GP2 clinical data for smoking and, for
-PPMI, the monogenic PD variants:
+`make preprocessing` first, plus the GP2 master key for ancestry, the GP2
+clinical data for smoking and, for PPMI, the monogenic PD variants:
 
 | File | Name in code | From | Used for |
 |---|---|---|---|
 | `results/preprocessing/combat_mVals.rds` | `COMBAT_MVALS` | `preprocessing/3_combat.R` | M values, CpGs x samples (columns are idat basenames) |
 | `results/preprocessing/sample_sheet_final.csv` | `SAMPLE_SHEET_FINAL` | `preprocessing/3_combat.R` | phenotype, age, sex, cell proportions, `Sentrix_Position` (chip row), any exposure column |
 | `results/preprocessing/cpg_annotation.csv` | `CPG_ANNOTATION` | `preprocessing/4_cpg_annotation.R` | hg38 position, island context and gene, joined to the results by `cpg` |
+| GP2 master key | `GP2_MASTER_KEY` | GP2 R12, `gp2_release12` bucket (root `config.R`) | Genetic ancestry (`EWAS_ANCESTRY_COL`), joined by GP2ID (all models) |
 | `r12_extended_clinical_data.csv` | `CLINICAL_DATA` | GP2 R12, `gp2_release12` bucket (root `config.R`) | Smoking questionnaire items (`pdrfuq_smoke_*` for PPMI, `merq_cigarettes*` for Nigeria-PD), joined by GP2ID (`3_exposure.R` only) |
 | `iu_genetic_consensus_*.csv` | `PPMI_GENETICS` | PPMI (LONI), root `config.R`; `NULL` for Psomagen | Monogenic PD variant per participant (`pd_gene`, `load_pd_gene()` in `R/pd_genetics.R`), joined by `clinical_id` (`1_case_control.R` only) |
 
@@ -59,9 +60,22 @@ the exposure column or its levels may have changed.
   per year for age, per unit for a continuous exposure, vs the reference
   group for categorical variables.
 - **Covariates** (`EWAS_COVARIATES`): age, sex, cell proportions (without
-  neutrophils, as the proportions sum to ~1) and chip row. The age model
-  leaves age out because age is what it tests. Categorical covariates with
-  one value among the model's samples are left out (reported in the log).
+  neutrophils, as the proportions sum to ~1), chip row and genetic ancestry.
+  The age model leaves age out because age is what it tests. Categorical
+  covariates with one value among the model's samples are left out (reported
+  in the log).
+- **Ancestry** (`add_ancestry()` in `R/ewas_functions.R`): the GP2 NBA
+  ancestry label (`EWAS_ANCESTRY_COL`, `nba_label` in `GP2_MASTER_KEY`),
+  joined by GP2ID. Methylation differs between ancestries, and in PPMI
+  ancestry is unbalanced between groups: 58 of the 65 Ashkenazi Jewish (AJ)
+  samples are cases, and most LRRK2 carriers (65 of 88) are AJ or another
+  non-EUR group. Samples without a label (not genotyped or not in the
+  master key; PPMI 24, Psomagen 8) are "Unknown" rather than dropped, and
+  labels with fewer than `EWAS_MIN_ANCESTRY_N` (10) samples are pooled into
+  "Other". PPMI's model then has EUR, AJ, Other and Unknown. Psomagen is
+  nearly all AFR, so the adjustment does little there. A label is coarse:
+  it doesn't capture variation within a group (genetic PCs would, but only
+  for genotyped samples).
 - **Batch**: the M values are already ComBat-corrected for the batch variable
   (`COMBAT_BATCH_VAR`: plate for PPMI, chip for Psomagen), so batch is not a
   covariate. Adjusting for it again would remove little, and would spend one
@@ -105,10 +119,10 @@ the exposure column or its levels may have changed.
     ~900 kb from GBA1) also have cis-mQTLs. Check hits near the gene against
     the mQTL results before reading them as carrier biology.
   - **Ancestry**: most PPMI LRRK2 carriers (65 of 88) aren't in the GP2 EUR
-    group, mostly Ashkenazi Jewish (AJ), where LRRK2 G2019S is common. The
-    EWAS models don't adjust for ancestry, so the LRRK2 comparison, and to a
-    lesser degree the main case-control model (58 AJ cases, 7 AJ controls),
-    can pick up ancestry differences in methylation.
+    group, mostly Ashkenazi Jewish (AJ), where LRRK2 G2019S is common.
+    Ancestry is a covariate (above), but with this overlap the LRRK2 effect
+    is estimated mostly from the 23 EUR carriers, and differences within
+    the AJ group aren't adjusted for.
   - **Group size**: 8 GBA1 carriers is enough to fit
     (`EWAS_MIN_GROUP_N`) but not to estimate effects reliably; treat GBA1
     results as exploratory.

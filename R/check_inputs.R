@@ -35,7 +35,7 @@ cat("Modules:", paste(modules, collapse = ", "), "\n")
 
 # One row per input: config name, path, file or folder, modules reading it
 inputs <- list(
-  list("GP2_MASTER_KEY", GP2_MASTER_KEY, "file", c("qc", "clocks", "mqtl")),
+  list("GP2_MASTER_KEY", GP2_MASTER_KEY, "file", c("qc", "clocks", "ewas", "mqtl")),
   list("CLINICAL_DATA",  CLINICAL_DATA,  "file", c("clocks", "ewas")),
   list("GENCODE_GTF",    GENCODE_GTF,    "file", "preprocessing")
 )
