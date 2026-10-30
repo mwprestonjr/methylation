@@ -2,7 +2,7 @@
 # Configuration - shared
 # Author: GP2 Subtypes and Mechanisms - M.E., M.P.
 # Date: April 23, 2026
-# Updated: Oct 16, 2026
+# Updated: Oct 30, 2026
 # Description: Settings shared by all modules: the data sources (input paths,
 #              output directory), figure settings, and the files one module
 #              writes and another reads. Settings used by only one module are
@@ -46,8 +46,6 @@ if (DATA_SOURCE == "ppmi_p140") {
   # carriers "Control" and later converters "PD")
   PRIMARY_TIMEPOINT   <- "BL"     # Baseline only
   COHORTS_OF_INTEREST <- c(1, 2)  # PD vs Healthy Control
-
-  DIR_OUTPUT <- "/mnt/output/methylation/ppmi"
 }
 
 if (DATA_SOURCE == "psomagen") {
@@ -57,9 +55,15 @@ if (DATA_SOURCE == "psomagen") {
   DATASETS     <- c("AB00000952",
                     "AB00000963")
   DIR_DELIVERY <- "/mnt/psomagen_delivery/nba-samples"
-
-  DIR_OUTPUT <- "/mnt/output/methylation/psomagen"
 }
+
+# Output folder per data source. Listed for every source, not only
+# DATA_SOURCE, so a script can read another source's outputs (e.g.
+# EPICV2_SIM_COMPARISON in clocks/config.R)
+DIR_OUTPUTS <- c(ppmi_p140 = "/mnt/output/methylation/ppmi",
+                 psomagen  = "/mnt/output/methylation/psomagen")
+stopifnot(all(DATA_SOURCES %in% names(DIR_OUTPUTS)))
+DIR_OUTPUT <- DIR_OUTPUTS[[DATA_SOURCE]]
 
 # Output folders: one per module under results/ and figures/
 #   <DIR_OUTPUT>/results/<module>   (mqtl: one subfolder per ancestry,

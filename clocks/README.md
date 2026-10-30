@@ -25,7 +25,7 @@ the root [`config.R`](../config.R).
 | `2_compare.R` | Compares age acceleration and DunedinPACE between `CLOCK_GROUPS` (first = reference), adjusted for `CLOCK_COVARIATES`; FDR across outcomes. Repeated without cell proportions | `clock_acceleration_by_diagnosis.csv`, `clock_acceleration_by_diagnosis_no_cells.csv` |
 | `3_associations.R` | In cases (`CLOCK_CASE_GROUP`), tests each trait in `CLOCK_TRAITS` against age acceleration and DunedinPACE, adjusted for `CLOCK_COVARIATES`; FDR across all tests. Repeated without cell proportions | `clock_case_traits.csv`, `clock_trait_summary.csv`, `clock_trait_associations.csv`, `clock_trait_associations_no_cells.csv` |
 | `4_plots.R` | Clock vs chronological age (with r, median absolute error, CpG coverage), acceleration by phenotype, adjusted group differences, clinical trait effects | `figures/clocks/clock_*.png` |
-| `5_epicv2_simulation.R` | Optional, EPICv1 source only (`make clocks-epicv2-sim SOURCE=ppmi_p140`, after `make clocks` for both sources): re-estimates the clocks from only the CpGs also on EPICv2 and compares accuracy with the full-array estimates, with whole-year age, and with `EPICV2_SIM_SOURCE`; agreement with the full-array estimates; group comparison refit | `clock_epicv2_sim_age_acceleration.csv`, `clock_epicv2_sim_cpg_coverage.csv`, `clock_epicv2_sim_accuracy.csv`, `clock_epicv2_sim_agreement.csv`, `clock_epicv2_sim_by_diagnosis.csv`; `figures/clocks/clock_05_epicv2_simulation.png` |
+| `5_epicv2_simulation.R` | Optional, EPICv1 source only (`Rscript clocks/5_epicv2_simulation.R ppmi_p140`, after `make clocks` for both sources): re-estimates the clocks from only the CpGs also on EPICv2 and compares accuracy with the full-array estimates, with whole-year age, and with `EPICV2_SIM_SOURCE`; agreement with the full-array estimates; group comparison refit | `clock_epicv2_sim_age_acceleration.csv`, `clock_epicv2_sim_cpg_coverage.csv`, `clock_epicv2_sim_accuracy.csv`, `clock_epicv2_sim_agreement.csv`, `clock_epicv2_sim_by_diagnosis.csv`; `figures/clocks/clock_05_epicv2_simulation.png` |
 
 ## Methods and decisions
 
@@ -91,3 +91,18 @@ Saved in `<DIR_OUTPUT>/figures/clocks/` for the data source being processed
 - `clock_03_group_effects.png` - adjusted differences between diagnosis groups; generated when a group comparison is available.
 - `clock_04_trait_effects.png` - adjusted clinical-trait associations in cases; generated when traits were tested.
 - `clock_05_epicv2_simulation.png` - EPICv1 source only, from `5_epicv2_simulation.R`: age acceleration and DunedinPACE from EPICv2 CpGs only vs all CpGs.
+
+## Report
+
+`report.Rmd` summarizes the module for both data sources in one HTML page:
+approach, caveats, preliminary results and follow-ups. Its tables and numbers
+are read from each source's `results/clocks/` CSVs (`params` `ppmi_dir` and
+`psomagen_dir`), but the written interpretation reflects the Oct 28, 2026 run,
+so check the text after a rerun. Not part of `make clocks`; render after
+`make clocks` for both sources (and `5_epicv2_simulation.R`):
+
+```bash
+Rscript -e 'rmarkdown::render("clocks/report.Rmd", output_dir = "/mnt/output/methylation/reports")'
+```
+
+Output: `/mnt/output/methylation/reports/clocks_report.html` (self-contained).

@@ -148,9 +148,9 @@ repository root before sourcing a script.
 
 ### A new data source on a supported array (EPICv1, EPICv2)
 
-1. **`config.R`**: add the name to `DATA_SOURCES` and an
-   `if (DATA_SOURCE == "<source>")` block with its input paths and
-   `DIR_OUTPUT`.
+1. **`config.R`**: add the name to `DATA_SOURCES`, its output folder to
+   `DIR_OUTPUTS`, and an `if (DATA_SOURCE == "<source>")` block with its
+   input paths.
 2. **`qc/1_build_sample_sheet_<source>.R`**: a new script that sets
    `DATA_SOURCE` itself, finds the idat files, joins the GP2 master key, calls
    `detect_chip_arrays()` (`R/array_profiles.R`) and writes the sample sheet
@@ -279,6 +279,7 @@ Each module has its own README with its scripts and figures:
 - `mvalues.R` - caps infinite M values from beta values of exactly 0 or 1.
 - `cpg_annotation.R` - provides hg38 positions for array probes (with EPICv1 liftover) and GENCODE gene annotations; `preprocessing/4_cpg_annotation.R` saves `CPG_ANNOTATION` for every array probe, including gene and gene type, promoter/gene-body/intergenic context (nearest gene for intergenic probes), distances to the gene and its TSS, and CpG island context.
 - `mqtl_setup.R` - handles the mQTL ancestry argument and configures ancestry-specific genotype inputs and output paths.
+- `clock_estimate.R` - collapses EPICv2 probe names to 450K/EPIC IDs (replicate probes averaged) and computes clock CpG coverage, shared by `clocks/1_estimate.R` and `clocks/5_epicv2_simulation.R`.
 - `clock_models.R` - shared clock association models for diagnosis-group comparisons and clinical-trait associations.
 - `clock_traits.R` - derives clinical traits at the blood draw for clock association analyses.
 - `ewas_functions.R` - loads the `preprocessing` outputs for the EWAS, builds the covariates, fits the limma CpG-wise models, and writes each model's results, top hits and summary.

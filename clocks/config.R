@@ -126,7 +126,7 @@ CLOCK_MIN_LEVEL_N <- 10   # categorical levels with fewer cases are left out (e.
 # separate the effect of the array's missing CpGs from other differences
 # between the cohorts (population, age precision, disease stage)
 EPICV2_SIM_SOURCE     <- "psomagen"
-EPICV2_SIM_COMPARISON <- file.path("/mnt/output/methylation", EPICV2_SIM_SOURCE,
+EPICV2_SIM_COMPARISON <- file.path(DIR_OUTPUTS[[EPICV2_SIM_SOURCE]],
                                    "results", "clocks")   # its DIR_RESULTS_CLOCKS (config.R)
 
 # --- Outputs -----------------------------------------------------------------
