@@ -35,3 +35,6 @@ temp/*
 
 # workspaces
 *.code-workspace
+
+# claude
+CLAUDE.md
