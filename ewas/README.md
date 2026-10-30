@@ -100,7 +100,7 @@ the exposure column or its levels may have changed.
   How the definitions still differ:
   - **Current smoking** is only known for Psomagen, so `smoking_status`
     (Never, Former, Current) is only filled in there; PPMI's ever-smokers
-    have no status. Psomagen's 4 current smokers are too few to test on their
+    have no status. Psomagen's 5 current smokers are too few to test on their
     own, so both sources test ever vs never.
   - **Time frame**: MERQ asks about regular smoking *before diagnosis*.
     Someone who started after diagnosis answers no, but is counted as Ever
