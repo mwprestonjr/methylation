@@ -47,6 +47,17 @@ EWAS_TOP_HITS <- 100
 EWAS_GROUPS       <- c("Control", "PD")
 EWAS_MIN_GROUP_N  <- 3
 
+# Monogenic PD variants (pd_gene, load_pd_gene() in R/pd_genetics.R; PPMI
+# only). Where they're known, 1_case_control.R also fits:
+#   case_control_no_carriers: EWAS_GROUPS without carriers of any known
+#     variant (pd_gene other than EWAS_NONCARRIER; samples without variant
+#     data are kept)
+#   carrier_<gene>: within EWAS_GROUPS[2] (PD), carriers of each gene in
+#     EWAS_CARRIER_GENES vs non-carriers. Carriers of other genes, or of two
+#     (LRRK2+GBA1), are left out
+EWAS_NONCARRIER    <- "None"
+EWAS_CARRIER_GENES <- c("LRRK2", "GBA1")
+
 # --- Age (2_age.R) -----------------------------------------------------------
 
 # Sample sheet column with age at the blood draw (SAMPLE_SHEET_COLUMNS); it's

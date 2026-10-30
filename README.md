@@ -31,7 +31,7 @@ when a file is replaced.
 | PPMI Project 140 link list (SENTRIXID to PATNO) | `LINK_LIST` | `config.R` | PPMI (LONI), Project 140 documentation | - |
 | PPMI participant status (cohort, enrollment age) | `PARTICIPANT_STATUS` | `config.R` | PPMI (LONI) study data | - |
 | PPMI age at visit | `AGE_AT_VISIT` | `config.R` | PPMI (LONI) study data | - |
-| PPMI genetic status (LRRK2, GBA, ... carriers) | `PPMI_GENETICS` | `clocks/config.R` | PPMI (LONI) study data, Indiana University genetic consensus | 2025-10-25 consensus |
+| PPMI genetic status (LRRK2, GBA, ... carriers) | `PPMI_GENETICS` | `config.R` | PPMI (LONI) study data, Indiana University genetic consensus | 2025-10-25 consensus |
 | Psomagen deliveries (idat files and QC tables) | `DATASETS`, `DIR_DELIVERY` | `config.R` | Psomagen, GP2 deliveries (`gp2-psomagen` bucket) | Deliveries AB00000952, AB00000963 |
 
 **GP2 data**
@@ -282,6 +282,7 @@ Each module has its own README with its scripts and figures:
 - `cpg_annotation.R` - provides hg38 positions for array probes (with EPICv1 liftover) and GENCODE gene annotations; `preprocessing/4_cpg_annotation.R` saves `CPG_ANNOTATION` for every array probe, including gene and gene type, promoter/gene-body/intergenic context (nearest gene for intergenic probes), distances to the gene and its TSS, and CpG island context.
 - `mqtl_setup.R` - handles the mQTL ancestry argument and configures ancestry-specific genotype inputs and output paths.
 - `clock_estimate.R` - collapses EPICv2 probe names to 450K/EPIC IDs (replicate probes averaged) and computes clock CpG coverage, shared by `clocks/1_estimate.R` and `clocks/5_epicv2_simulation.R`.
+- `pd_genetics.R` - loads the monogenic PD variant per participant (`PPMI_GENETICS`, PPMI only) for the clock `pd_gene` trait and the EWAS carrier models.
 - `clock_models.R` - shared clock association models for diagnosis-group comparisons and clinical-trait associations.
 - `clock_traits.R` - derives clinical traits at the blood draw for clock association analyses.
 - `ewas_functions.R` - loads the `preprocessing` outputs for the EWAS, builds the covariates, fits the limma CpG-wise models, and writes each model's results, top hits and summary.

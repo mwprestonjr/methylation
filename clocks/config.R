@@ -72,11 +72,6 @@ CLOCK_CASE_GROUP <- "PD"
 # (visit_month 0); PPMI collects MoCA at screening (-1.5) rather than baseline
 CLOCK_CLINICAL_VISIT_MONTHS <- c(0, -1.5)
 
-# PPMI monogenic PD status (PATNO; VAR_GENE: LRRK2, GBA, PRKN, ...)
-PPMI_GENETICS <- if (DATA_SOURCE == "ppmi_p140") {
-  file.path(SUBJ_DIR, "iu_genetic_consensus_20251025_23Apr2026.csv")
-}
-
 # Disease duration = age at the blood draw - this R12 master key age. PPMI has
 # age at diagnosis for all cases (age at onset for few); Psomagen only has age
 # at onset

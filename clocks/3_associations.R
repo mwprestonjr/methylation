@@ -23,6 +23,7 @@ library(tidyverse)
 source("config.R")
 source("clocks/config.R")
 source("R/clock_models.R")
+source("R/pd_genetics.R")
 source("R/clock_traits.R")
 
 # --- 1. Cases and their traits -----------------------------------------------

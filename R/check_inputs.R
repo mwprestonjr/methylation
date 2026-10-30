@@ -46,6 +46,7 @@ if (DATA_SOURCE == "ppmi_p140") {
     list("LINK_LIST",          LINK_LIST,          "file", "qc"),
     list("PARTICIPANT_STATUS", PARTICIPANT_STATUS, "file", "qc"),
     list("AGE_AT_VISIT",       AGE_AT_VISIT,       "file", "qc"),
+    list("PPMI_GENETICS",      PPMI_GENETICS,      "file", c("clocks", "ewas")),
     # EPICv1 annotation is hg19, lifted to hg38
     list("CHAIN_HG19_HG38",    CHAIN_HG19_HG38,    "file", c("preprocessing", "mqtl"))
   ))

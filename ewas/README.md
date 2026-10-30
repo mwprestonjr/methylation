@@ -18,7 +18,8 @@ the root [`config.R`](../config.R).
 ## Inputs
 
 From `preprocessing` (paths in the root `config.R`), so run
-`make preprocessing` first, plus the GP2 clinical data for smoking:
+`make preprocessing` first, plus the GP2 clinical data for smoking and, for
+PPMI, the monogenic PD variants:
 
 | File | Name in code | From | Used for |
 |---|---|---|---|
@@ -26,17 +27,18 @@ From `preprocessing` (paths in the root `config.R`), so run
 | `results/preprocessing/sample_sheet_final.csv` | `SAMPLE_SHEET_FINAL` | `preprocessing/3_combat.R` | phenotype, age, sex, cell proportions, `Sentrix_Position` (chip row), any exposure column |
 | `results/preprocessing/cpg_annotation.csv` | `CPG_ANNOTATION` | `preprocessing/4_cpg_annotation.R` | hg38 position, island context and gene, joined to the results by `cpg` |
 | `r12_extended_clinical_data.csv` | `CLINICAL_DATA` | GP2 R12, `gp2_release12` bucket (root `config.R`) | Smoking questionnaire items (`pdrfuq_smoke_*` for PPMI, `merq_cigarettes*` for Nigeria-PD), joined by GP2ID (`3_exposure.R` only) |
+| `iu_genetic_consensus_*.csv` | `PPMI_GENETICS` | PPMI (LONI), root `config.R`; `NULL` for Psomagen | Monogenic PD variant per participant (`pd_gene`, `load_pd_gene()` in `R/pd_genetics.R`), joined by `clinical_id` (`1_case_control.R` only) |
 
 ## Steps
 
 | Step | What it does | Outputs (`results/ewas/`) |
 |---|---|---|
-| `1_case_control.R` | `EWAS_GROUPS[2]` vs `EWAS_GROUPS[1]` (PD vs Control), adjusted for `EWAS_COVARIATES`. Skipped if a group has fewer than `EWAS_MIN_GROUP_N` samples | `case_control_*` |
+| `1_case_control.R` | `EWAS_GROUPS[2]` vs `EWAS_GROUPS[1]` (PD vs Control), adjusted for `EWAS_COVARIATES`. Where monogenic variants are known (PPMI), also PD vs Control without carriers, and carriers of each gene in `EWAS_CARRIER_GENES` (LRRK2, GBA1) vs non-carrier PD. Each model is skipped if a group has fewer than `EWAS_MIN_GROUP_N` samples | `case_control_*`, `case_control_no_carriers_*`, `carrier_<gene>_*` |
 | `2_age.R` | Age at the blood draw (per year), adjusted for the other `EWAS_COVARIATES` and phenotype | `age_*` |
 | `3_exposure.R` | Smoking (`EWAS_EXPOSURE_COL`): ever vs never regular smoking for both data sources, adjusted for `EWAS_COVARIATES` and phenotype. Any other continuous or categorical sample sheet column can be set instead. Skipped if the exposure isn't available | `smoking_values.csv`, `exposure_<column>_<level>_*` |
 | `4_plots.R` | Manhattan, QQ and distribution plots for every model with results; combines the model summaries | `ewas_model_summary.csv`, `figures/ewas/*.png` |
 
-Each model (prefix `case_control`, `age`, `exposure_...`) writes:
+Each model (prefix `case_control`, `case_control_no_carriers`, `carrier_<gene>`, `age`, `exposure_...`) writes:
 
 | File | Contents |
 |---|---|
@@ -79,6 +81,37 @@ the exposure column or its levels may have changed.
   covariate are dropped from that model. The case-control model uses only
   samples in `EWAS_GROUPS`. Other phenotypes (e.g. Prodromal) are still in
   the age and exposure models.
+- **Monogenic PD carriers** (`1_case_control.R`, PPMI only): PPMI enrolled
+  carriers of known PD variants on purpose (genetic cohort), so about a third
+  of the PPMI cases carry one (LRRK2 88, GBA1 8, LRRK2+GBA1 5, PRKN 6, no
+  variant 206). The main case-control model includes them. Two further
+  model types separate them out, using `pd_gene` from `PPMI_GENETICS`
+  (`load_pd_gene()` in `R/pd_genetics.R`):
+  - `case_control_no_carriers`: PD vs Control without carriers of any known
+    variant, in either group (`pd_gene` other than `EWAS_NONCARRIER`).
+    Samples without variant data are kept.
+  - `carrier_<gene>`: within PD, carriers of one gene in
+    `EWAS_CARRIER_GENES` vs PD without a known variant. Carriers of another
+    gene or of two (LRRK2+GBA1) are left out. Phenotype is constant, so it
+    isn't a covariate.
+
+  Caveats for the carrier models:
+  - **Inherited DNA around the variant**: carriers share the stretch of
+    chromosome around their variant (the founder haplotype), and with it any
+    nearby SNP that affects methylation. CpGs near the gene can then differ
+    for genetic, not disease, reasons. In a test run, the top LRRK2 CpG
+    (cg14035730, ~125 kb from LRRK2, SLC2A13) has one of the strongest
+    cis-mQTLs in PPMI (`mqtl/`, p ~ 1e-62), and the top GBA1 CpGs (LMNA,
+    ~900 kb from GBA1) also have cis-mQTLs. Check hits near the gene against
+    the mQTL results before reading them as carrier biology.
+  - **Ancestry**: most PPMI LRRK2 carriers (65 of 88) aren't in the GP2 EUR
+    group, mostly Ashkenazi Jewish (AJ), where LRRK2 G2019S is common. The
+    EWAS models don't adjust for ancestry, so the LRRK2 comparison, and to a
+    lesser degree the main case-control model (58 AJ cases, 7 AJ controls),
+    can pick up ancestry differences in methylation.
+  - **Group size**: 8 GBA1 carriers is enough to fit
+    (`EWAS_MIN_GROUP_N`) but not to estimate effects reliably; treat GBA1
+    results as exploratory.
 - **Smoking** (`3_exposure.R`, `load_smoking()` in `R/ewas_functions.R`):
   built from each study's own questionnaire items in the GP2 extended
   clinical data (`CLINICAL_DATA`), at the first of

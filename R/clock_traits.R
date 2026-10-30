@@ -13,7 +13,7 @@
 #                other traits       CLINICAL_DATA columns at the first of
 #                                   CLOCK_CLINICAL_VISIT_MONTHS with a value
 #              Traits a data source doesn't have are NA. Source after
-#              config.R and clocks/config.R
+#              config.R, clocks/config.R and R/pd_genetics.R
 # =============================================================================
 
 # samples: GP2ID, clinical_id, age (age at the blood draw)
@@ -33,17 +33,11 @@ build_clock_traits <- function(samples) {
     mutate(disease_duration = age - duration_from, .after = age) %>%
     select(-duration_from)
 
-  # --- PPMI monogenic PD status ---
-  traits$pd_gene <- NA_character_
-  if (!is.null(PPMI_GENETICS)) {
-    genetics <- read.csv(PPMI_GENETICS, colClasses = "character") %>%
-      transmute(clinical_id = PATNO,
-                pd_gene = recode(VAR_GENE, "0" = "Idiopathic", "GBA" = "GBA1",
-                                 "LRRK2, GBA" = "LRRK2+GBA1"))
-    traits <- traits %>%
-      select(-pd_gene) %>%
-      left_join(genetics, by = "clinical_id")
-  }
+  # --- PPMI monogenic PD status (R/pd_genetics.R); cases without a variant
+  # are "Idiopathic" ---
+  traits <- traits %>%
+    left_join(load_pd_gene() %>% mutate(pd_gene = recode(pd_gene, "None" = "Idiopathic")),
+              by = "clinical_id")
 
   # --- GP2 extended clinical data at the blood-draw visit ---
   clinical_cols <- setdiff(CLOCK_TRAITS$trait, names(traits))

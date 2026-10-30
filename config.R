@@ -38,6 +38,9 @@ if (DATA_SOURCE == "ppmi_p140") {
   LINK_LIST          <- file.path(PPMI_DIR, "documentation", "ppmi_140_link_list_20210607.csv")
   PARTICIPANT_STATUS <- file.path(SUBJ_DIR, "Participant_Status_23Apr2026.csv")
   AGE_AT_VISIT       <- file.path(SUBJ_DIR, "Age_at_visit_23Apr2026.csv")
+  # Monogenic PD variant per participant (PATNO; VAR_GENE: LRRK2, GBA, PRKN,
+  # ...), read by load_pd_gene() (R/pd_genetics.R) for clocks/ and ewas/
+  PPMI_GENETICS      <- file.path(SUBJ_DIR, "iu_genetic_consensus_20251025_23Apr2026.csv")
 
   # Samples to include: PPMI enrollment cohort at the chosen visit
   #   COHORT 1 = Parkinson's Disease, 2 = Healthy Control,
@@ -55,6 +58,8 @@ if (DATA_SOURCE == "psomagen") {
   DATASETS     <- c("AB00000952",
                     "AB00000963")
   DIR_DELIVERY <- "/mnt/psomagen_delivery/nba-samples"
+
+  PPMI_GENETICS <- NULL   # no monogenic variant data
 }
 
 # Output folder per data source. Listed for every source, not only
