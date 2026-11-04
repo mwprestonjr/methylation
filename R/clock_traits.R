@@ -4,7 +4,7 @@
 # Date: Oct 9, 2026
 # Description: Builds one row per case with the traits in CLOCK_TRAITS
 #              (clocks/config.R):
-#                disease_duration   age at the blood draw - CLOCK_DURATION_FROM
+#                disease_duration   age at the blood draw - DISEASE_DURATION_FROM
 #                                   (R12 master key, GP2_MASTER_KEY)
 #                family_history_pd  R12 master key (Yes/No)
 #                pd_gene            PPMI only: monogenic PD gene from
@@ -25,7 +25,7 @@ build_clock_traits <- function(samples) {
     filter(GP2ID %in% traits$GP2ID) %>%
     distinct(GP2ID, .keep_all = TRUE) %>%
     transmute(GP2ID,
-              duration_from     = as.numeric(.data[[CLOCK_DURATION_FROM]]),
+              duration_from     = as.numeric(.data[[DISEASE_DURATION_FROM]]),
               family_history_pd = ifelse(family_history_pd %in% c("Yes", "No"),
                                          family_history_pd, NA))
   traits <- traits %>%

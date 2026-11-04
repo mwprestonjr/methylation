@@ -3,7 +3,8 @@
 # Author: GP2 Subtypes and Mechanisms - M.P.
 # Date: Oct 16, 2026
 # Description: Settings used only by the ewas/ scripts: 1_case_control.R,
-#              2_age.R, 3_exposure.R, then 4_plots.R. Source after config.R.
+#              2_age.R, 3_exposure.R, 4_clinical.R, then 5_plots.R. Source
+#              after config.R.
 #              Inputs are the preprocessing/ outputs (COMBAT_MVALS,
 #              SAMPLE_SHEET_FINAL, CPG_ANNOTATION in config.R), plus ancestry
 #              from GP2_MASTER_KEY, smoking from CLINICAL_DATA (3_exposure.R)
@@ -42,6 +43,14 @@ EWAS_ADJUST_PHENOTYPE <- TRUE
 # Fewest samples with complete data a model may be fit on
 EWAS_MIN_SAMPLES <- 10
 
+# Fewest samples in a group of a carrier, exposure or clinical model (a
+# categorical level with fewer is left out). Below this the results are
+# unstable: with 8 GBA1 carriers in PPMI, the top CpGs changed completely when
+# ancestry was added as a covariate
+EWAS_MIN_LEVEL_N <- 10
+# Fewest samples with a value for a continuous exposure or clinical trait
+EWAS_MIN_TRAIT_N <- 30
+
 # Benjamini-Hochberg FDR threshold for calling a CpG significant (summaries)
 EWAS_FDR <- 0.05
 
@@ -67,10 +76,6 @@ EWAS_MIN_GROUP_N  <- 3
 #     (LRRK2+GBA1), are left out
 EWAS_NONCARRIER    <- "None"
 EWAS_CARRIER_GENES <- c("LRRK2", "GBA1")
-# Fewest carriers (and non-carriers) a carrier model is fit with. Below this
-# the results are unstable: with 8 GBA1 carriers in PPMI, the top CpGs changed
-# completely when ancestry was added as a covariate
-EWAS_MIN_CARRIER_N <- 10
 
 # --- Age (2_age.R) -----------------------------------------------------------
 
@@ -86,28 +91,74 @@ EWAS_AGE_COL <- "age"
 # both data sources; smoking_status (Never, Former, Current) only where
 # current smoking is asked. Definitions per questionnaire and how they
 # differ: ewas/README.md (Methods and decisions, Smoking)
-# Visits used, in order of preference (the first with an answer). In R12 these
-# questions are answered at baseline (0) and carried to later visits
+# Visits used for exposures and clinical traits, in order of preference (the
+# first with an answer). The methylation sample is from the baseline visit;
+# PPMI collects some measures at screening (-1.5)
 EWAS_CLINICAL_VISIT_MONTHS <- c(0, -1.5)
-# Per-sample smoking values used by 3_exposure.R (Sample, GP2ID, phenotype,
-# smoking_source, smoking_status, smoking_ever)
-EWAS_SMOKING_VALUES <- file.path(DIR_RESULTS_EWAS, "smoking_values.csv")
+# Answers that count as missing
+EWAS_MISSING_ANSWERS <- c("Unknown", "Don't Know", "Uncertain", "Refused",
+                          "Prefer not to answer", "Not applicable")
+# Per-sample values used by 3_exposure.R (Sample, GP2ID, phenotype, smoking
+# columns, other exposures)
+EWAS_EXPOSURE_VALUES <- file.path(DIR_RESULTS_EWAS, "exposure_values.csv")
 
-# Exposure tested, and how it's modeled:
-#   continuous:  effect per unit
-#   categorical: each level vs EWAS_EXPOSURE_REFERENCE, one result set per
-#                level (levels with fewer than EWAS_MIN_GROUP_N samples are
-#                left out)
-# smoking_status or smoking_ever (above), or any other SAMPLE_SHEET_FINAL
-# column; the step is skipped if the column isn't available. Per data source:
-#   both: smoking_ever (see ewas/README.md for why not smoking_status)
-EWAS_EXPOSURE_COL <- switch(DATA_SOURCE,
-                            ppmi_p140 = "smoking_ever",
-                            psomagen  = "smoking_ever")
-EWAS_EXPOSURE_TYPE      <- "categorical"
-EWAS_EXPOSURE_REFERENCE <- "Never"
+# Exposures tested, one model each per data source:
+#   name:      in the output prefix, exposure_<name>[_<level>]
+#   column:    smoking_ever or smoking_status (above), a SAMPLE_SHEET_FINAL
+#              column, or a CLINICAL_DATA column (at EWAS_CLINICAL_VISIT_MONTHS)
+#   type:      continuous (effect per unit) or categorical (each level vs
+#              reference, one result set per level)
+#   reference: reference level of a categorical exposure
+# BMI has a well-replicated methylation signature, so it checks that the model
+# recovers known biology. The pesticide questions are only asked in Nigeria-PD
+EWAS_EXPOSURES <- switch(DATA_SOURCE,
+  ppmi_p140 = data.frame(
+    name      = c("smoking_ever", "BMI"),
+    column    = c("smoking_ever", "BMI"),
+    type      = c("categorical", "continuous"),
+    reference = c("Never", NA)),
+  psomagen = data.frame(
+    name      = c("smoking_ever", "merq_home_pesticides", "merq_job_pesticides"),
+    column    = c("smoking_ever", "merq_home_pesticides", "merq_job_pesticides"),
+    type      = c("categorical", "categorical", "categorical"),
+    reference = c("Never", "No", "No")))
 
-# --- Plots (4_plots.R) -------------------------------------------------------
+# --- Clinical traits (4_clinical.R) ------------------------------------------
+
+# Traits tested within cases (EWAS_GROUPS[2]), one model each per data source,
+# adjusted for EWAS_COVARIATES and disease duration (age at the blood draw -
+# DISEASE_DURATION_FROM, config.R), since severity scores rise with time since
+# diagnosis. At EWAS_CLINICAL_VISIT_MONTHS:
+#   name, type, reference: as in EWAS_EXPOSURES; prefix clinical_<name>[_<level>]
+#   column: a column of `file`, CLINICAL_DATA ("clinical") or GP2_MASTER_KEY
+#           ("master")
+# Hoehn & Yahr stage is a discrete category, so it is tested as categorical
+# (each stage vs stage 1), and as continuous (effect per stage) as a
+# sensitivity analysis
+EWAS_CLINICAL_HY <- data.frame(
+  name      = c("hoehn_and_yahr_categorical", "hoehn_and_yahr_continuous"),
+  column    = "hoehn_and_yahr_stage",
+  file      = "clinical",
+  type      = c("categorical", "continuous"),
+  reference = c("1", NA))
+EWAS_CLINICAL_FAMILY <- data.frame(
+  name = "family_history_pd", column = "family_history_pd", file = "master",
+  type = "categorical", reference = "No")
+EWAS_CLINICAL_PPMI <- data.frame(
+  name      = c("mds_updrs_part_iii", "moca", "dat_sbr_putamen", "rbd"),
+  column    = c("mds_updrs_part_iii_summary_score", "moca_total_score",
+                "dat_sbr_putamen_mean", "rbd_summary_score"),
+  file      = "clinical",
+  type      = "continuous",
+  reference = NA)
+EWAS_CLINICAL_TRAITS <- switch(DATA_SOURCE,
+  ppmi_p140 = rbind(EWAS_CLINICAL_HY, EWAS_CLINICAL_FAMILY, EWAS_CLINICAL_PPMI),
+  psomagen  = rbind(EWAS_CLINICAL_HY, EWAS_CLINICAL_FAMILY))
+# Per-sample values used by 4_clinical.R (Sample, GP2ID, phenotype, disease
+# duration, traits)
+EWAS_CLINICAL_VALUES <- file.path(DIR_RESULTS_EWAS, "clinical_values.csv")
+
+# --- Plots (5_plots.R) -------------------------------------------------------
 
 # Dashed line on the Manhattan plots (suggestive significance)
 EWAS_PLOT_SUGGESTIVE_P <- 1e-5
@@ -115,12 +166,13 @@ EWAS_PLOT_SUGGESTIVE_P <- 1e-5
 # --- Outputs -----------------------------------------------------------------
 
 # In DIR_RESULTS_EWAS, one set per model, named by the model's prefix
-# (case_control, age, exposure_<column>[_<level>]); written by
+# (case_control, age, exposure_<name>[_<level>], clinical_<name>[_<level>]);
+# written by
 # write_ewas_result_set() in R/ewas_functions.R:
 #   <prefix>_results.csv.gz  every CpG: limma effect (logFC, M value scale),
 #                            t, p, FDR, merged with CPG_ANNOTATION
 #   <prefix>_top_hits.csv    the EWAS_TOP_HITS CpGs with the smallest p
 #   <prefix>_summary.csv     one row: samples, CpGs, FDR hits, genomic inflation
 # Figures in DIR_FIGURES_EWAS: <prefix>_{manhattan,qq,distributions}.png
-# 4_plots.R
+# 5_plots.R
 EWAS_MODEL_SUMMARY <- file.path(DIR_RESULTS_EWAS, "ewas_model_summary.csv")  # all <prefix>_summary.csv rows combined

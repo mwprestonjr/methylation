@@ -77,7 +77,7 @@ make check         SOURCE=ppmi_p140                # step 0: check input paths (
 make qc            SOURCE=ppmi_p140                # sample sheet, QC/normalization, QC plots
 make preprocessing SOURCE=ppmi_p140                # cell counts, sources of variation, ComBat
 make clocks        SOURCE=ppmi_p140                # epigenetic clocks, age acceleration, group comparison, clinical traits
-make ewas          SOURCE=ppmi_p140                # EWAS of case-control status, age, and an exposure
+make ewas          SOURCE=ppmi_p140                # EWAS of case-control status, age, exposures, clinical traits
 make mqtl          SOURCE=ppmi_p140 ANCESTRY=EUR   # sample map, genotypes, cis-mQTLs
 make all           SOURCE=ppmi_p140                # qc, preprocessing, clocks, and ewas
 make all           SOURCE=ppmi_p140 ANCESTRY=EUR   # qc, preprocessing, clocks, ewas, and mqtl
@@ -90,7 +90,7 @@ make                                               # usage
 | `qc` | `qc/1_build_sample_sheet_<source>.R` → `qc/2_qc.R` → `qc/3_qc_plots.R` |
 | `preprocessing` | `1_cell_counts.R` → `2_variation_sources.R raw` → `3_combat.R` → `2_variation_sources.R combat` → `4_cpg_annotation.R` |
 | `clocks` | `1_estimate.R` → `2_compare.R` → `3_associations.R` → `4_plots.R` |
-| `ewas` | `1_case_control.R` → `2_age.R` → `3_exposure.R` → `4_plots.R` |
+| `ewas` | `1_case_control.R` → `2_age.R` → `3_exposure.R` → `4_clinical.R` → `5_plots.R` |
 | `mqtl` | `1_mqtl_sample_map.R` → `2_mqtl_genotypes.sh` (plink2) → `3_mqtl.R` → `4_mqtl_permutations.R` → `5_mqtl_plots.R` |
 
 Each target needs the outputs of the one before it (`preprocessing` reads the
@@ -162,8 +162,9 @@ repository root before sourcing a script.
    `switch(DATA_SOURCE, ...)` that gives `NULL` for a source it doesn't list:
    - `COMBAT_BATCH_VAR` (`preprocessing/config.R`): chip or plate, chosen with
      `preprocessing/2_variation_sources.R`
-   - `ADULT_CLOCKS` and `CLOCK_DURATION_FROM` (`clocks/config.R`)
-   - `EWAS_EXPOSURE_COL` (`ewas/config.R`); for smoking, the new study's
+   - `DISEASE_DURATION_FROM` (root `config.R`, in the source's block)
+   - `ADULT_CLOCKS` (`clocks/config.R`)
+   - `EWAS_EXPOSURES` and `EWAS_CLINICAL_TRAITS` (`ewas/config.R`); for smoking, the new study's
      questionnaire items must also be added to `load_smoking()`
      (`R/ewas_functions.R`), or its samples have no smoking value
 5. **This README**: a row in [Data sources](#data-sources), and its input
@@ -225,7 +226,7 @@ script sources `config.R` first, then its own module's config:
   source, the groups compared, the model covariates, and the clinical traits
   tested in cases
 - **`ewas/config.R`**: EWAS covariates, the groups compared, the age column,
-  the smoking variables and exposure tested (per data source), FDR and
+  the exposures and clinical traits tested (per data source), FDR and
   top-hit settings
 - **`mqtl/config.R`**: genotype files and source, genotype QC, cis window,
   model, multiple-testing and plot settings
@@ -285,8 +286,8 @@ Each module has its own README with its scripts and figures:
 - `pd_genetics.R` - loads the monogenic PD variant per participant (`PPMI_GENETICS`, PPMI only) for the clock `pd_gene` trait and the EWAS carrier models.
 - `clock_models.R` - shared clock association models for diagnosis-group comparisons and clinical-trait associations.
 - `clock_traits.R` - derives clinical traits at the blood draw for clock association analyses.
-- `ewas_functions.R` - loads the `preprocessing` outputs for the EWAS, builds the covariates, fits the limma CpG-wise models, and writes each model's results, top hits and summary.
-- `ewas_plot_functions.R` - Manhattan, QQ and effect / p-value distribution plots for `ewas/4_plots.R`.
+- `ewas_functions.R` - loads the `preprocessing` outputs, ancestry, smoking and clinical values for the EWAS, builds the covariates, fits the limma CpG-wise models, and writes each model's results, top hits and summary.
+- `ewas_plot_functions.R` - Manhattan, QQ and effect / p-value distribution plots for `ewas/5_plots.R`.
 - `mqtl_functions.R` - functions shared by `3_mqtl.R` and `tune_meth_pcs.R` for data preparation, latent methylation PCs, and per-chromosome cis scans.
 
 ## Setup

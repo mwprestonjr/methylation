@@ -80,6 +80,47 @@ add_ancestry <- function(targets) {
   targets
 }
 
+# Values of CLINICAL_DATA columns, one row per GP2ID in `gp2ids`: for each
+# column, the value at the first of EWAS_CLINICAL_VISIT_MONTHS that has one.
+# EWAS_MISSING_ANSWERS count as missing
+load_clinical_items <- function(gp2ids, items) {
+  if (!file.exists(CLINICAL_DATA)) stop(CLINICAL_DATA, " not found (CLINICAL_DATA in config.R)")
+  clinical <- readr::read_csv(CLINICAL_DATA,
+                              col_types  = readr::cols(.default = "c"),
+                              col_select = any_of(c("GP2ID", "visit_month", items)),
+                              progress   = FALSE)
+  if (length(setdiff(items, names(clinical)))) {
+    stop("Not in ", CLINICAL_DATA, ": ", paste(setdiff(items, names(clinical)), collapse = ", "))
+  }
+  clinical <- clinical %>%
+    filter(GP2ID %in% gp2ids) %>%
+    mutate(visit_rank = match(as.numeric(visit_month), EWAS_CLINICAL_VISIT_MONTHS)) %>%
+    filter(!is.na(visit_rank)) %>%
+    arrange(GP2ID, visit_rank)
+
+  out <- tibble(GP2ID = unique(gp2ids))
+  for (item in items) {
+    known <- clinical %>%
+      transmute(GP2ID, value = .data[[item]]) %>%
+      filter(!is.na(value), !value %in% EWAS_MISSING_ANSWERS) %>%
+      distinct(GP2ID, .keep_all = TRUE)
+    out[[item]] <- known$value[match(out$GP2ID, known$GP2ID)]
+  }
+  out
+}
+
+# Values of GP2_MASTER_KEY columns, one row per GP2ID in `gp2ids`.
+# EWAS_MISSING_ANSWERS count as missing
+load_master_items <- function(gp2ids, items) {
+  if (!file.exists(GP2_MASTER_KEY)) stop(GP2_MASTER_KEY, " not found (GP2_MASTER_KEY in config.R)")
+  master <- read.csv(GP2_MASTER_KEY, colClasses = "character", na.strings = c("", "NA")) %>%
+    filter(GP2ID %in% gp2ids) %>%
+    distinct(GP2ID, .keep_all = TRUE) %>%
+    select(GP2ID, all_of(items)) %>%
+    mutate(across(all_of(items), ~ ifelse(.x %in% EWAS_MISSING_ANSWERS, NA, .x)))
+  tibble(GP2ID = unique(gp2ids)) %>% left_join(master, by = "GP2ID")
+}
+
 # Smoking from the source questionnaire items of the GP2 extended clinical
 # data (CLINICAL_DATA), one row per GP2ID with at least one answer, at the
 # first of EWAS_CLINICAL_VISIT_MONTHS with one. "Ever" is regular smoking (at
@@ -130,9 +171,11 @@ load_smoking <- function(gp2ids) {
 
 # Covariate table for the model, one row per sample in `targets` order:
 # EWAS_COVARIATES (minus `exclude`, e.g. age in the age model), plus phenotype
-# if `phenotype` is TRUE. Categorical covariates are factors
-build_ewas_covariates <- function(targets, exclude = character(0), phenotype = FALSE) {
-  covariates <- setdiff(c(EWAS_COVARIATES, if (phenotype) "phenotype"), exclude)
+# if `phenotype` is TRUE and any `extra` columns of `targets`. Categorical
+# covariates are factors
+build_ewas_covariates <- function(targets, exclude = character(0), phenotype = FALSE,
+                                  extra = character(0)) {
+  covariates <- setdiff(c(EWAS_COVARIATES, if (phenotype) "phenotype", extra), exclude)
   missing <- setdiff(covariates, names(targets))
   if (length(missing)) {
     stop("Covariates not in SAMPLE_SHEET_FINAL: ", paste(missing, collapse = ", "),
@@ -196,7 +239,7 @@ genomic_lambda <- function(p) {
   median(qchisq(p, df = 1, lower.tail = FALSE), na.rm = TRUE) / qchisq(0.5, df = 1)
 }
 
-# One-row summary of a model's results, collected by 4_plots.R into
+# One-row summary of a model's results, collected by 5_plots.R into
 # EWAS_MODEL_SUMMARY
 summarize_ewas <- function(model, label, coefficient, fit, results, groups = NA_character_) {
   tibble(model       = model,
@@ -212,6 +255,73 @@ summarize_ewas <- function(model, label, coefficient, fit, results, groups = NA_
          lambda      = genomic_lambda(results$P.Value))
 }
 
+# Fit one exposure or clinical trait (3_exposure.R, 4_clinical.R). `values` has
+# one value per sample in inp$targets order, NA for samples left out; `spec` is
+# a row of EWAS_EXPOSURES or EWAS_CLINICAL_TRAITS. A continuous trait gives one
+# result set (<group>_<name>); a categorical one gives one per level vs the
+# reference (<group>_<name>_<level>), all from the same model. Levels with
+# fewer than EWAS_MIN_LEVEL_N samples are left out; skipped without enough data
+fit_trait_model <- function(inp, spec, values, group, phenotype = FALSE, extra = character(0)) {
+  prefix <- paste0(group, "_", spec$name)
+  skip <- function(reason) {
+    cat("Skipping", spec$name, ":", reason, "\n")
+    invisible(NULL)
+  }
+  cat("\n---", spec$name, "(", spec$type, ") ---\n")
+  values[values %in% ""] <- NA
+
+  if (spec$type == "categorical") {
+    # Numeric labels in one form, e.g. Hoehn & Yahr "2.0" -> "2"
+    numbers <- suppressWarnings(as.numeric(values))
+    if (!anyNA(numbers[!is.na(values)])) values <- ifelse(is.na(numbers), NA, as.character(numbers))
+    counts <- table(values)
+    print(counts)
+    levels <- names(counts)[counts >= EWAS_MIN_LEVEL_N]
+    if (!spec$reference %in% levels) {
+      return(skip(paste0("reference level '", spec$reference, "' missing or has fewer than ",
+                         EWAS_MIN_LEVEL_N, " samples")))
+    }
+    if (length(levels) < 2) return(skip("fewer than 2 levels with enough samples"))
+    if (length(setdiff(names(counts), levels))) {
+      cat("Levels left out (fewer than", EWAS_MIN_LEVEL_N, "samples):",
+          setdiff(names(counts), levels), "\n")
+    }
+    trait <- factor(values, levels = c(spec$reference, setdiff(levels, spec$reference)))
+  } else if (spec$type == "continuous") {
+    trait <- suppressWarnings(as.numeric(values))
+    cat(sum(!is.na(trait)), "samples with a value\n")
+    if (sum(!is.na(trait)) < EWAS_MIN_TRAIT_N) {
+      return(skip(paste("fewer than", EWAS_MIN_TRAIT_N, "samples with a value")))
+    }
+    if (sd(trait, na.rm = TRUE) == 0) return(skip("no variation"))
+  } else {
+    stop("type must be 'continuous' or 'categorical': ", spec$name)
+  }
+
+  model_df <- tibble(trait = trait) %>%
+    bind_cols(build_ewas_covariates(inp$targets, phenotype = phenotype, extra = extra))
+  fit <- fit_ewas(inp$mVals, model_df, "trait")
+
+  if (spec$type == "categorical") {
+    n_model <- table(fit$model_df$trait)
+    groups  <- paste(names(n_model), n_model, collapse = " / ")
+    for (lvl in levels(fit$model_df$trait)[-1]) {
+      coef       <- paste0("trait", lvl)
+      lvl_prefix <- paste0(prefix, "_", gsub("[^A-Za-z0-9.]", "_", lvl))
+      label      <- paste0(spec$column, ": ", lvl, " vs ", spec$reference)
+      cat("\n", label, "\n", sep = "")
+      results <- ewas_table(fit$fit, coef)
+      write_ewas_result_set(results, lvl_prefix, inp$cpg_annotation,
+                            summarize_ewas(lvl_prefix, label, coef, fit, results, groups))
+    }
+  } else {
+    results <- ewas_table(fit$fit, "trait")
+    write_ewas_result_set(results, prefix, inp$cpg_annotation,
+                          summarize_ewas(prefix, paste(spec$column, "(per unit)"),
+                                         "trait", fit, results))
+  }
+}
+
 # --- Outputs -----------------------------------------------------------------
 
 # A model's output files in DIR_RESULTS_EWAS (see Outputs in ewas/config.R)
@@ -222,7 +332,7 @@ ewas_output_files <- function(prefix) {
 }
 
 # Remove a model's outputs (and figures) from an earlier run, so a skipped
-# model doesn't leave stale results for 4_plots.R. `prefix` is a regex matched
+# model doesn't leave stale results for 5_plots.R. `prefix` is a regex matched
 # at the start of the file name
 remove_ewas_outputs <- function(prefix) {
   old <- c(list.files(DIR_RESULTS_EWAS, pattern = paste0("^", prefix, "_(results\\.csv\\.gz|top_hits\\.csv|summary\\.csv)$"),

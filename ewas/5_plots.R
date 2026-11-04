@@ -1,13 +1,13 @@
 # =============================================================================
-# EWAS 4: plots
+# EWAS 5: plots
 # Author: GP2 Subtypes and Mechanisms - M.P.
 # Date: Oct 16, 2026
 # Description: For every model with results in DIR_RESULTS_EWAS
-#              (<prefix>_results.csv.gz from steps 1-3), draws a Manhattan
+#              (<prefix>_results.csv.gz from steps 1-4), draws a Manhattan
 #              plot, a QQ plot and effect / p-value distributions to
 #              DIR_FIGURES_EWAS, and combines the models' <prefix>_summary.csv
 #              rows into EWAS_MODEL_SUMMARY (ewas/config.R)
-# Usage:       Rscript ewas/4_plots.R <data source>   (see config.R)
+# Usage:       Rscript ewas/5_plots.R <data source>   (see config.R)
 # =============================================================================
 
 # --- 0. Setup ----------------------------------------------------------------
@@ -24,7 +24,7 @@ source("R/ewas_plot_functions.R")
 prefixes <- sub("_results\\.csv\\.gz$", "",
                 list.files(DIR_RESULTS_EWAS, pattern = "_results\\.csv\\.gz$"))
 if (length(prefixes) == 0) {
-  stop("No EWAS results in ", DIR_RESULTS_EWAS, " - run steps 1-3 first")
+  stop("No EWAS results in ", DIR_RESULTS_EWAS, " - run steps 1-4 first")
 }
 cat("Models:", prefixes, "\n")
 

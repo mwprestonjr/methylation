@@ -72,13 +72,6 @@ CLOCK_CASE_GROUP <- "PD"
 # (visit_month 0); PPMI collects MoCA at screening (-1.5) rather than baseline
 CLOCK_CLINICAL_VISIT_MONTHS <- c(0, -1.5)
 
-# Disease duration = age at the blood draw - this R12 master key age. PPMI has
-# age at diagnosis for all cases (age at onset for few); Psomagen only has age
-# at onset
-CLOCK_DURATION_FROM <- switch(DATA_SOURCE,
-                              ppmi_p140 = "age_at_diagnosis",
-                              psomagen  = "age_of_onset")
-
 # Traits tested, one model each: <outcome> ~ trait + CLOCK_COVARIATES.
 #   trait: a column of CLINICAL_DATA, or one built in R/clock_traits.R
 #          (disease_duration, family_history_pd, pd_gene)

@@ -2,7 +2,7 @@
 # EWAS plot functions
 # Author: GP2 Subtypes and Mechanisms - M.P.
 # Date: Oct 16, 2026
-# Description: Plotting helpers for ewas/4_plots.R: Manhattan, QQ, and effect /
+# Description: Plotting helpers for ewas/5_plots.R: Manhattan, QQ, and effect /
 #              p-value distribution plots of one model's per-CpG results
 #              (<prefix>_results.csv.gz), drawn in base R (fast for ~900k
 #              points) to DIR_FIGURES_EWAS

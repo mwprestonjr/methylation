@@ -14,7 +14,7 @@
 #              DIR_RESULTS_EWAS (models: case_control,
 #              case_control_no_carriers, carrier_<gene>). A model is skipped
 #              if a group has fewer than EWAS_MIN_GROUP_N samples (e.g.
-#              Psomagen, no controls), or EWAS_MIN_CARRIER_N for the carrier
+#              Psomagen, no controls), or EWAS_MIN_LEVEL_N for the carrier
 #              models
 # Usage:       Rscript ewas/1_case_control.R <data source>   (see config.R)
 # =============================================================================
@@ -31,7 +31,7 @@ source("R/ewas_functions.R")
 source("R/pd_genetics.R")
 
 # Outputs from earlier runs (possibly of other carrier genes) would otherwise
-# be picked up by 4_plots.R
+# be picked up by 5_plots.R
 remove_ewas_outputs("(case_control|case_control_no_carriers|carrier_.*)")
 
 inp <- load_ewas_inputs()
@@ -97,7 +97,7 @@ if (has_variants) {
                             levels = c(EWAS_NONCARRIER, gene))
     fit_group_model(paste0("carrier_", gene),
                     paste0(gene, " vs non-carrier ", EWAS_GROUPS[2]), carrier_group,
-                    min_n = EWAS_MIN_CARRIER_N)
+                    min_n = EWAS_MIN_LEVEL_N)
   }
 } else {
   cat("\nNo monogenic variant data for", DATA_SOURCE,

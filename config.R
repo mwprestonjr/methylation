@@ -41,6 +41,9 @@ if (DATA_SOURCE == "ppmi_p140") {
   # Monogenic PD variant per participant (PATNO; VAR_GENE: LRRK2, GBA, PRKN,
   # ...), read by load_pd_gene() (R/pd_genetics.R) for clocks/ and ewas/
   PPMI_GENETICS      <- file.path(SUBJ_DIR, "iu_genetic_consensus_20251025_23Apr2026.csv")
+  # Disease duration = age at the blood draw - this GP2_MASTER_KEY age, for
+  # clocks/ and ewas/. PPMI has age at diagnosis for all cases (onset for few)
+  DISEASE_DURATION_FROM <- "age_at_diagnosis"
 
   # Samples to include: PPMI enrollment cohort at the chosen visit
   #   COHORT 1 = Parkinson's Disease, 2 = Healthy Control,
@@ -60,6 +63,9 @@ if (DATA_SOURCE == "psomagen") {
   DIR_DELIVERY <- "/mnt/psomagen_delivery/nba-samples"
 
   PPMI_GENETICS <- NULL   # no monogenic variant data
+  # Disease duration = age at the blood draw - this GP2_MASTER_KEY age, for
+  # clocks/ and ewas/. Psomagen only has age at onset
+  DISEASE_DURATION_FROM <- "age_of_onset"
 }
 
 # Output folder per data source. Listed for every source, not only

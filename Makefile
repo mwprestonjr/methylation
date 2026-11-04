@@ -69,7 +69,8 @@ ewas: check-source
 	$(call run_r,ewas/1_case_control.R,1_case_control)
 	$(call run_r,ewas/2_age.R,2_age)
 	$(call run_r,ewas/3_exposure.R,3_exposure)
-	$(call run_r,ewas/4_plots.R,4_plots)
+	$(call run_r,ewas/4_clinical.R,4_clinical)
+	$(call run_r,ewas/5_plots.R,5_plots)
 	@echo "[$$(date +%H:%M)] ewas complete for $(SOURCE)"
 
 mqtl: check-source check-ancestry

@@ -1,8 +1,10 @@
 # Epigenome-wide association studies (`ewas/`)
 
-Tests every CpG for association with diagnosis (case-control), age, and an
-exposure (smoking), using limma on the ComBat-corrected M values. Reads the
-`preprocessing` outputs and, for smoking, the GP2 extended clinical data. Each data source is run separately.
+Tests every CpG for association with diagnosis (case-control), age, exposures
+(smoking, BMI, pesticides) and clinical traits in cases, using limma on the
+ComBat-corrected M values. Reads the `preprocessing` outputs and the GP2
+clinical data. Each data source is run separately, with its own list of
+exposures and traits, since the studies measure different things.
 
 Run from the repository root with the `methylation` conda environment active
 (see [Running the pipeline](../README.md#running-the-pipeline)):
@@ -18,16 +20,16 @@ the root [`config.R`](../config.R).
 ## Inputs
 
 From `preprocessing` (paths in the root `config.R`), so run
-`make preprocessing` first, plus the GP2 master key for ancestry, the GP2
-clinical data for smoking and, for PPMI, the monogenic PD variants:
+`make preprocessing` first, plus the GP2 master key, the GP2 clinical data and,
+for PPMI, the monogenic PD variants:
 
 | File | Name in code | From | Used for |
 |---|---|---|---|
 | `results/preprocessing/combat_mVals.rds` | `COMBAT_MVALS` | `preprocessing/3_combat.R` | M values, CpGs x samples (columns are idat basenames) |
 | `results/preprocessing/sample_sheet_final.csv` | `SAMPLE_SHEET_FINAL` | `preprocessing/3_combat.R` | phenotype, age, sex, cell proportions, `Sentrix_Position` (chip row), any exposure column |
 | `results/preprocessing/cpg_annotation.csv` | `CPG_ANNOTATION` | `preprocessing/4_cpg_annotation.R` | hg38 position, island context and gene, joined to the results by `cpg` |
-| GP2 master key | `GP2_MASTER_KEY` | GP2 R12, `gp2_release12` bucket (root `config.R`) | Genetic ancestry (`EWAS_ANCESTRY_COL`), joined by GP2ID (all models) |
-| `r12_extended_clinical_data.csv` | `CLINICAL_DATA` | GP2 R12, `gp2_release12` bucket (root `config.R`) | Smoking questionnaire items (`pdrfuq_smoke_*` for PPMI, `merq_cigarettes*` for Nigeria-PD), joined by GP2ID (`3_exposure.R` only) |
+| GP2 master key | `GP2_MASTER_KEY` | GP2 R12, `gp2_release12` bucket (root `config.R`) | Genetic ancestry (`EWAS_ANCESTRY_COL`, all models); disease duration and family history (`4_clinical.R`), joined by GP2ID |
+| `r12_extended_clinical_data.csv` | `CLINICAL_DATA` | GP2 R12, `gp2_release12` bucket (root `config.R`) | Exposures (`3_exposure.R`) and clinical traits (`4_clinical.R`) at the blood-draw visit, joined by GP2ID |
 | `iu_genetic_consensus_*.csv` | `PPMI_GENETICS` | PPMI (LONI), root `config.R`; `NULL` for Psomagen | Monogenic PD variant per participant (`pd_gene`, `load_pd_gene()` in `R/pd_genetics.R`), joined by `clinical_id` (`1_case_control.R` only) |
 
 ## Steps
@@ -36,10 +38,11 @@ clinical data for smoking and, for PPMI, the monogenic PD variants:
 |---|---|---|
 | `1_case_control.R` | `EWAS_GROUPS[2]` vs `EWAS_GROUPS[1]` (PD vs Control), adjusted for `EWAS_COVARIATES`. Where monogenic variants are known (PPMI), also PD vs Control without carriers, and carriers of each gene in `EWAS_CARRIER_GENES` (LRRK2, GBA1) vs non-carrier PD. Each model is skipped if a group has fewer than `EWAS_MIN_GROUP_N` samples (`EWAS_MIN_CARRIER_N`, 10, for the carrier models, so PPMI's 8 GBA1 carriers are skipped) | `case_control_*`, `case_control_no_carriers_*`, `carrier_<gene>_*` |
 | `2_age.R` | Age at the blood draw (per year), adjusted for the other `EWAS_COVARIATES` and phenotype | `age_*` |
-| `3_exposure.R` | Smoking (`EWAS_EXPOSURE_COL`): ever vs never regular smoking for both data sources, adjusted for `EWAS_COVARIATES` and phenotype. Any other continuous or categorical sample sheet column can be set instead. Skipped if the exposure isn't available | `smoking_values.csv`, `exposure_<column>_<level>_*` |
-| `4_plots.R` | Manhattan, QQ and distribution plots for every model with results; combines the model summaries | `ewas_model_summary.csv`, `figures/ewas/*.png` |
+| `3_exposure.R` | Each exposure in `EWAS_EXPOSURES`, adjusted for `EWAS_COVARIATES` and phenotype: ever vs never regular smoking in both data sources, BMI in PPMI, home and job pesticides in Psomagen. Each is skipped if it has too little data | `exposure_values.csv`, `exposure_<name>[_<level>]_*` |
+| `4_clinical.R` | Within cases, each trait in `EWAS_CLINICAL_TRAITS`, adjusted for `EWAS_COVARIATES` and disease duration: Hoehn & Yahr stage (categorical and continuous) and family history in both data sources; MDS-UPDRS III, MoCA, DAT-SPECT putamen and RBD in PPMI. Each is skipped if it has too little data | `clinical_values.csv`, `clinical_<name>[_<level>]_*` |
+| `5_plots.R` | Manhattan, QQ and distribution plots for every model with results; combines the model summaries | `ewas_model_summary.csv`, `figures/ewas/*.png` |
 
-Each model (prefix `case_control`, `case_control_no_carriers`, `carrier_<gene>`, `age`, `exposure_...`) writes:
+Each model (prefix `case_control`, `case_control_no_carriers`, `carrier_<gene>`, `age`, `exposure_...`, `clinical_...`) writes:
 
 | File | Contents |
 |---|---|
@@ -48,9 +51,10 @@ Each model (prefix `case_control`, `case_control_no_carriers`, `carrier_<gene>`,
 | `<prefix>_summary.csv` | One row: label, coefficient, samples (and per group), covariates used, CpGs tested, CpGs with FDR < `EWAS_FDR`, smallest p, genomic inflation (lambda) |
 
 A model that is skipped deletes its outputs and figures from earlier runs, so
-`4_plots.R` and `ewas_model_summary.csv` only show models from the current
-settings. `3_exposure.R` always deletes all earlier `exposure_*` outputs, since
-the exposure column or its levels may have changed.
+`5_plots.R` and `ewas_model_summary.csv` only show models from the current
+settings. `3_exposure.R` and `4_clinical.R` always delete all earlier
+`exposure_*` and `clinical_*` outputs, since the list or its levels may have
+changed.
 
 ## Methods and decisions
 
@@ -94,8 +98,10 @@ the exposure column or its levels may have changed.
 - **Phenotype adjustment**: the age and exposure models also adjust for
   phenotype (`EWAS_ADJUST_PHENOTYPE`), so a PD-control difference that is
   correlated with age or exposure isn't reported as an age or exposure effect.
-  Phenotype is left out automatically when all samples have the same one.
-  Psomagen keeps it: besides PD it has a few DLB, MSA, PSP and Other samples.
+  Phenotype is left out automatically when all samples in a model have the
+  same one. In Psomagen the age model keeps it (besides PD it has a few DLB,
+  MSA, PSP and Other samples); the smoking and pesticide models don't, since
+  only PD cases answered those questions.
 - **ComBat protection**: ComBat kept the variation explained by
   `COMBAT_PROTECT` (phenotype), so case-control differences survive batch
   correction. Age and exposures aren't protected: if they differ between
@@ -118,7 +124,7 @@ the exposure column or its levels may have changed.
     `EWAS_CARRIER_GENES` vs PD without a known variant. Carriers of another
     gene or of two (LRRK2+GBA1) are left out. Phenotype is constant, so it
     isn't a covariate. Skipped if either group has fewer than
-    `EWAS_MIN_CARRIER_N` (10) samples: in PPMI only LRRK2 is tested. With 8
+    `EWAS_MIN_LEVEL_N` (10) samples: in PPMI only LRRK2 is tested. With 8
     GBA1 carriers, the top CpGs changed completely when ancestry was added
     as a covariate, so those results weren't reliable.
 
@@ -174,13 +180,44 @@ the exposure column or its levels may have changed.
   Answers other than Yes/No ("Don't Know", "Uncertain") count as missing, and
   samples without an answer drop out of the model. The values used, and the
   questionnaire they came from (`smoking_source`), are saved per sample in
-  `smoking_values.csv`.
-- **Exposure model**: for a categorical exposure, all levels are in one
-  model; levels with fewer than `EWAS_MIN_GROUP_N` samples are left out (NA),
-  and each other level is reported vs the reference in its own result set.
-  Empty strings count as missing.
+  `exposure_values.csv`.
+- **Other exposures** (`3_exposure.R`, `EWAS_EXPOSURES`): the first answer at
+  `EWAS_CLINICAL_VISIT_MONTHS` (`load_clinical_items()`).
+  - **BMI** (PPMI): not a PD hypothesis. It has a well-replicated methylation
+    signature, so it checks that the model recovers known biology.
+  - **Home and job pesticides** (Psomagen, `merq_home_pesticides`,
+    `merq_job_pesticides`; Yes vs No): lifetime exposures from MERQ-PD-B
+    ("Over your lifetime..."). Only PD cases answered, so they test exposure
+    against methylation among cases, not PD risk. Solvents (12 exposed) are
+    testable but weak, and heavy metals (7) and other chemicals (8) have too
+    few, so they aren't included.
+- **Clinical traits** (`4_clinical.R`, `EWAS_CLINICAL_TRAITS`): within cases,
+  at the first of `EWAS_CLINICAL_VISIT_MONTHS` with a value
+  (`load_clinical_items()`), or from the master key (family history).
+  - **Disease duration** is a covariate, because severity scores rise with
+    time since diagnosis: age at the blood draw minus
+    `DISEASE_DURATION_FROM` (root `config.R`). That is age at diagnosis for
+    PPMI and age at onset for Psomagen, which only has onset, so the two
+    aren't the same measure. In PPMI, 31 cases have a slightly negative
+    duration (down to -0.8 years), diagnosed just after the blood draw; they
+    are kept as they are.
+  - **Hoehn & Yahr stage** is a discrete category, so it is tested as
+    categorical (each stage vs stage 1), and as continuous (effect per stage)
+    as a sensitivity analysis. PPMI cases are early: stage 3 (6 cases) is left
+    out of the categorical model, which then only compares stage 2 with 1,
+    while Psomagen compares stages 2-5 with 1. Effects therefore aren't
+    directly comparable between the data sources. MoCA, MDS-UPDRS III,
+    DAT-SPECT and RBD are only available for PPMI.
+- **Exposure and clinical models** (`fit_trait_model()` in
+  `R/ewas_functions.R`): for a categorical variable, all levels are in one
+  model; levels with fewer than `EWAS_MIN_LEVEL_N` (10) samples are left out
+  (NA), and each other level is reported vs the reference in its own result
+  set. A continuous variable needs `EWAS_MIN_TRAIT_N` (30) samples. Empty
+  strings and `EWAS_MISSING_ANSWERS` ("Unknown", "Don't Know", ...) count as
+  missing.
 - **Multiple testing**: Benjamini-Hochberg FDR across all CpGs within each
-  model (and each exposure level). CpGs with FDR < `EWAS_FDR` are counted as
+  model (and each exposure or clinical level), not across models or traits.
+  CpGs with FDR < `EWAS_FDR` are counted as
   significant.
 - **Genomic inflation**: lambda is the median chi-square statistic from the
   p-values divided by its expected value under the null (0.456), shown in the
