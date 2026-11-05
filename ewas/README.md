@@ -28,7 +28,7 @@ for PPMI, the monogenic PD variants:
 | `results/preprocessing/combat_mVals.rds` | `COMBAT_MVALS` | `preprocessing/3_combat.R` | M values, CpGs x samples (columns are idat basenames) |
 | `results/preprocessing/sample_sheet_final.csv` | `SAMPLE_SHEET_FINAL` | `preprocessing/3_combat.R` | phenotype, age, sex, cell proportions, `Sentrix_Position` (chip row), any exposure column |
 | `results/preprocessing/cpg_annotation.csv` | `CPG_ANNOTATION` | `preprocessing/4_cpg_annotation.R` | hg38 position, island context and gene, joined to the results by `cpg` |
-| GP2 master key | `GP2_MASTER_KEY` | GP2 R12, `gp2_release12` bucket (root `config.R`) | Genetic ancestry (`EWAS_ANCESTRY_COL`, all models); disease duration and family history (`4_clinical.R`), joined by GP2ID |
+| GP2 master key | `GP2_MASTER_KEY` | GP2 R12, `gp2_release12` bucket (root `config.R`) | Genetic ancestry (`GP2_ANCESTRY_COL`, all models); disease duration and family history (`4_clinical.R`), joined by GP2ID |
 | `r12_extended_clinical_data.csv` | `CLINICAL_DATA` | GP2 R12, `gp2_release12` bucket (root `config.R`) | Exposures (`3_exposure.R`) and clinical traits (`4_clinical.R`) at the blood-draw visit, joined by GP2ID |
 | `iu_genetic_consensus_*.csv` | `PPMI_GENETICS` | PPMI (LONI), root `config.R`; `NULL` for Psomagen | Monogenic PD variant per participant (`pd_gene`, `load_pd_gene()` in `R/pd_genetics.R`), joined by `clinical_id` (`1_case_control.R` only) |
 
@@ -69,7 +69,7 @@ changed.
   covariates with one value among the model's samples are left out (reported
   in the log).
 - **Ancestry** (`add_ancestry()` in `R/ewas_functions.R`): the GP2 NBA
-  ancestry label (`EWAS_ANCESTRY_COL`, `nba_label` in `GP2_MASTER_KEY`),
+  ancestry label (`GP2_ANCESTRY_COL`, `nba_label` in `GP2_MASTER_KEY`),
   joined by GP2ID. Methylation differs between ancestries, and in PPMI
   ancestry is unbalanced between groups: 61 of the 68 Ashkenazi Jewish (AJ)
   samples are cases, and most LRRK2 carriers (65 of 88) are AJ or another

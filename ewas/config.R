@@ -27,12 +27,10 @@
 # among the samples in a model are left out of it
 EWAS_COVARIATES <- c("age", "sex", setdiff(CELL_TYPES, "Neu"), "chip_row", "ancestry")
 
-# Ancestry: this GP2_MASTER_KEY (config.R) column, joined by GP2ID
-# (load_ewas_inputs() in R/ewas_functions.R). The NBA label covers the most
-# samples (the mQTL genotypes are NBA too, GENO_SOURCE in mqtl/config.R).
-# Samples without a label are "Unknown" rather than dropped; labels with fewer
-# than EWAS_MIN_ANCESTRY_N samples are pooled into "Other"
-EWAS_ANCESTRY_COL   <- "nba_label"
+# Ancestry: the GP2_ANCESTRY_COL column of GP2_MASTER_KEY (config.R), joined by
+# GP2ID (load_ewas_inputs() in R/ewas_functions.R). Samples without a label are
+# "Unknown" rather than dropped; labels with fewer than EWAS_MIN_ANCESTRY_N
+# samples are pooled into "Other"
 EWAS_MIN_ANCESTRY_N <- 10
 
 # The age and exposure models (2, 3) also adjust for phenotype, so a

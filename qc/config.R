@@ -59,5 +59,5 @@ SAVE_MSET_QC  <- TRUE   # mSetSq_qc_passed.rds (MSET_QC): normalized, filtered G
 
 # --- Files passed between qc/ scripts ----------------------------------------
 
-SAMPLE_SHEET   <- file.path(DIR_RESULTS_QC, "sample_sheet.csv")      # 1 -> 2
+# SAMPLE_SHEET (1 -> 2) is in config.R: overview/ reads it too
 QC_FIGURE_DATA <- file.path(DIR_RESULTS_QC, "qc_figure_data.rds")    # 2 -> 3: everything needed to redraw the QC figures

@@ -59,7 +59,7 @@ load_ewas_inputs <- function() {
   list(mVals = mVals, targets = targets, cpg_annotation = cpg_annotation)
 }
 
-# GP2 genetic ancestry (EWAS_ANCESTRY_COL of GP2_MASTER_KEY) as column
+# GP2 genetic ancestry (GP2_ANCESTRY_COL of GP2_MASTER_KEY) as column
 # `ancestry`, joined by GP2ID. Missing labels are "Unknown"; labels with
 # fewer than EWAS_MIN_ANCESTRY_N samples are pooled into "Other"
 add_ancestry <- function(targets) {
@@ -67,14 +67,14 @@ add_ancestry <- function(targets) {
   labels <- read.csv(GP2_MASTER_KEY, colClasses = "character", na.strings = c("", "NA")) %>%
     filter(GP2ID %in% targets$GP2ID) %>%
     distinct(GP2ID, .keep_all = TRUE) %>%
-    transmute(GP2ID, ancestry = .data[[EWAS_ANCESTRY_COL]])
+    transmute(GP2ID, ancestry = .data[[GP2_ANCESTRY_COL]])
   targets <- targets %>%
     select(-any_of("ancestry")) %>%
     left_join(labels, by = "GP2ID") %>%
     mutate(ancestry = replace_na(ancestry, "Unknown"))
   small <- setdiff(names(which(table(targets$ancestry) < EWAS_MIN_ANCESTRY_N)), "Unknown")
   targets$ancestry[targets$ancestry %in% small] <- "Other"
-  cat("Ancestry (", EWAS_ANCESTRY_COL, "; pooled into Other: ",
+  cat("Ancestry (", GP2_ANCESTRY_COL, "; pooled into Other: ",
       if (length(small)) paste(small, collapse = ", ") else "none", "):\n", sep = "")
   print(table(targets$phenotype, targets$ancestry))
   targets

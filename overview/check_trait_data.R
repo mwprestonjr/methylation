@@ -1,5 +1,5 @@
 # =============================================================================
-# EWAS: clinical trait and exposure data check
+# Overview: clinical trait and exposure data check
 # Author: GP2 Subtypes and Mechanisms - M.P.
 # Date: Nov 4, 2026
 # Description: Counts, for each data source, how many methylation samples have
@@ -10,8 +10,8 @@
 #              phenotype), samples with a value at any visit and after
 #              baseline, the distribution, and whether there is enough data to
 #              test. Fits no models and reads no M values. Not part of
-#              `make ewas`. Saves EWAS_TRAIT_CHECK_FILE (counts only)
-# Usage:       Rscript ewas/check_trait_data.R
+#              `make`. Saves EWAS_TRAIT_CHECK_FILE (counts only)
+# Usage:       Rscript overview/check_trait_data.R
 # =============================================================================
 
 # --- 0. Setup ----------------------------------------------------------------

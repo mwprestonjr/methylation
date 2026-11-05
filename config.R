@@ -2,12 +2,13 @@
 # Configuration - shared
 # Author: GP2 Subtypes and Mechanisms - M.E., M.P.
 # Date: April 23, 2026
-# Updated: Oct 30, 2026
+# Updated: Nov 5, 2026
 # Description: Settings shared by all modules: the data sources (input paths,
 #              output directory), figure settings, and the files one module
 #              writes and another reads. Settings used by only one module are
 #              in that module's config (qc/config.R, preprocessing/config.R,
-#              clocks/config.R, ewas/config.R, mqtl/config.R). Scripts source
+#              clocks/config.R, ewas/config.R, mqtl/config.R,
+#              overview/config.R). Scripts source
 #              this file, then their module's:
 #                source("config.R"); source("qc/config.R")
 #              and are run from the repository root, e.g.
@@ -113,6 +114,11 @@ FIG_RES    <- 300  # dpi
 # NOTE: this filename may change from time to time
 GP2_MASTER_KEY <- "~/gp2_release12/nba/CURRENT_master_key_nba_wgs_28_06_2026.csv"
 
+# GP2 genetic ancestry: this GP2_MASTER_KEY column, for ewas/ and overview/. The
+# NBA label covers the most samples (the mQTL genotypes are NBA too, GENO_SOURCE
+# in mqtl/config.R)
+GP2_ANCESTRY_COL <- "nba_label"
+
 # GP2 R12 internal-use master key: as GP2_MASTER_KEY, plus age at sample
 # collection. Used only for Psomagen age (qc/1_build_sample_sheet_psomagen.R).
 GP2_INTERNAL_KEY <- "~/gp2_release12/INTERNAL_USE_ONLY_master_key_release12_final_vwb.csv"
@@ -131,6 +137,7 @@ SAMPLE_SHEET_COLUMNS <- c("GP2ID", "GP2sampleID", "clinical_id",
                           "Array", "Basename")
 
 # qc/ outputs (also <DIR_RESULTS_QC>/bVals.rds)
+SAMPLE_SHEET     <- file.path(DIR_RESULTS_QC, "sample_sheet.csv")      # all samples, before QC
 SAMPLE_SHEET_QC  <- file.path(DIR_RESULTS_QC, "sample_sheet_qc_passed.csv")
 MSET_QC          <- file.path(DIR_RESULTS_QC, "mSetSq_qc_passed.rds")
 MVALS_QC         <- file.path(DIR_RESULTS_QC, "mVals.rds")             # normalized, probe-filtered, replicate probes averaged

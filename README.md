@@ -144,6 +144,10 @@ In an interactive R session, set `DATA_SOURCE <- "ppmi_p140"` (and
 `MQTL_ANCESTRY <- "AFR"` for mQTL scripts) with the working directory at the
 repository root before sourcing a script.
 
+`overview/1_sample_overview.R` covers all data sources, so it takes no
+arguments and isn't part of `make`. Run it after `qc` has finished for each data
+source; see [overview/README.md](overview/README.md).
+
 ## Adding a data source or array
 
 ### A new data source on a supported array (EPICv1, EPICv2)
@@ -205,6 +209,7 @@ preprocessing/    cell counts, sources of variation, ComBat batch correction (se
 clocks/           epigenetic clocks, age acceleration, group comparison, clinical traits (settings: clocks/config.R)
 ewas/             epigenome-wide association studies: case-control, age, exposure (settings: ewas/config.R)
 mqtl/             cis-mQTL mapping against GP2 genotypes (settings: mqtl/config.R)
+overview/         sample counts and figures across data sources, not part of make (settings: overview/config.R)
 logs/             step logs from make
 ```
 
@@ -215,9 +220,9 @@ script sources `config.R` first, then its own module's config:
 
 - **`config.R`** (repository root): anything more than one module uses - the
   data sources (input paths, `DIR_OUTPUT`), figure settings, the files one
-  module writes and another reads (e.g. `SAMPLE_SHEET_QC`, `COMBAT_MVALS`,
+  module writes and another reads (e.g. `SAMPLE_SHEET`, `SAMPLE_SHEET_QC`, `COMBAT_MVALS`,
   `SAMPLE_SHEET_FINAL`, `CPG_ANNOTATION`), the R12 master keys
-  (`GP2_MASTER_KEY`, `GP2_INTERNAL_KEY`) and extended clinical data (`CLINICAL_DATA`), `SAMPLE_SHEET_COLUMNS`, `CELL_TYPES`,
+  (`GP2_MASTER_KEY`, `GP2_INTERNAL_KEY`), the ancestry column (`GP2_ANCESTRY_COL`) and extended clinical data (`CLINICAL_DATA`), `SAMPLE_SHEET_COLUMNS`, `CELL_TYPES`,
   and the hg19->hg38 liftover chain and GENCODE gene settings
 - **`qc/config.R`**: QC thresholds, SeSAMe and density outlier settings
 - **`preprocessing/config.R`**: sources-of-variation settings, the ComBat batch
@@ -230,6 +235,7 @@ script sources `config.R` first, then its own module's config:
   top-hit settings
 - **`mqtl/config.R`**: genotype files and source, genotype QC, cis window,
   model, multiple-testing and plot settings
+- **`overview/config.R`**: output files and figure colors of the sample overview
 
 Rule of thumb: a setting read by another module belongs in `config.R`;
 otherwise it goes in its module's config.
@@ -264,6 +270,7 @@ Each module has its own README with its scripts and figures:
 | `clocks/` | epigenetic clocks, age acceleration, group comparison, clinical traits | [clocks/README.md](clocks/README.md) |
 | `ewas/` | CpG-wise association with case-control status, age and an exposure | [ewas/README.md](ewas/README.md) |
 | `mqtl/` | cis-mQTL mapping against GP2 genotypes | [mqtl/README.md](mqtl/README.md) |
+| `overview/` | sample counts and figures across data sources, run on its own | [overview/README.md](overview/README.md) |
 
 ### Shared files
 
