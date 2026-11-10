@@ -2,11 +2,12 @@
 # QC Plots
 # Author: GP2 Subtypes and Mechanisms - M.P.
 # Date: Sept 25, 2026
-# Updated: Sept 29, 2026
+# Updated: Nov 10, 2026
 # Description: Plots the QC results of qc/2_qc.R from its saved figure data
 #              (QC_FIGURE_DATA) and saves the figures to DIR_FIGURES_QC:
-#   qc_01  Median methylated vs unmethylated intensity per sample (minfi
-#          plotQC); low-intensity samples are flagged in red
+#   qc_01  Median methylated vs unmethylated intensity per sample, as minfi
+#          plotQC draws it but without sample index labels; samples below
+#          LOW_INTENSITY_CUTOFF are red
 #   qc_02  Mean detection p-value per sample, sorted, log scale, with the
 #          DETECTION_P_THRESHOLD line
 #   qc_02b Fraction of cg probes detected (SeSAMe pOOBAH) per sample, sorted,
@@ -35,8 +36,16 @@ cat("Samples loaded:", nrow(qc_metrics), "\n")
 
 # --- 1. Median intensities (qc_01) -------------------------------------------
 
+# Drawn here rather than with minfi::plotQC, which labels every low-intensity
+# sample with its row index; the samples are in qc_sample_metrics.csv
+low_intensity <- (qc_metrics$mMed + qc_metrics$uMed) / 2 < LOW_INTENSITY_CUTOFF
 png(file.path(DIR_FIGURES_QC, "qc_01_median_intensities.png"), width = FIG_WIDTH, height = FIG_HEIGHT, units = "in", res = FIG_RES)
-minfi::plotQC(qc_metrics[, c("mMed", "uMed")])
+plot(qc_metrics$mMed, qc_metrics$uMed, xlim = c(8, 14), ylim = c(8, 14),
+     col = ifelse(low_intensity, "red", "black"),
+     xlab = "Meth median intensity (log2)", ylab = "Unmeth median intensity (log2)")
+abline(2 * LOW_INTENSITY_CUTOFF, -1, lty = 2)
+legend("topleft", pch = 1, col = c("black", "red"), bty = "n",
+       legend = c("good", sprintf("low intensity (n = %d)", sum(low_intensity))))
 dev.off()
 cat("QC plot saved\n")
 

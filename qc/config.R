@@ -50,6 +50,13 @@ COLLAPSE_REPLICATE_PROBES <- TRUE
 # memory than the VM has for a few hundred EPIC samples
 DETP_CHUNK_SIZE <- 50
 
+# --- QC figures (qc/3_qc_plots.R) -------------------------------------------
+
+# qc_01 marks samples whose mean of the log2 median methylated and unmethylated
+# intensities is below this, as minfi plotQC does (its default cutoff). Shown
+# only, not used to remove samples
+LOW_INTENSITY_CUTOFF <- 10.5
+
 # --- Optional outputs (qc/2_qc.R) --------------------------------------------
 
 # Outputs no later step reads; large (for ~400 EPICv1 samples about 2.3 GB and

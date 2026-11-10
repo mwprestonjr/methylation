@@ -153,7 +153,7 @@ root `config.R`), so later scripts don't depend on the data source.
 Saved in `<DIR_OUTPUT>/figures/qc/` for the data source being processed
 (`DIR_OUTPUT` in the root `config.R`).
 
-- `qc_01_median_intensities.png` - methylated vs unmethylated median intensity per sample.
+- `qc_01_median_intensities.png` - methylated vs unmethylated median intensity per sample; samples below `LOW_INTENSITY_CUTOFF` (minfi's default, 10.5) in red, shown only, not removed.
 - `qc_02_detection_pvalues.png` - mean detection p-value per sample and the QC threshold.
 - `qc_02b_sesame_detection.png` - fraction of detected CpG probes per sample; generated only when SeSAMe QC is enabled.
 - `qc_03_sex_prediction.png` - predicted vs reported sex from X/Y intensities.
