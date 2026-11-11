@@ -144,9 +144,10 @@ In an interactive R session, set `DATA_SOURCE <- "ppmi_p140"` (and
 `MQTL_ANCESTRY <- "AFR"` for mQTL scripts) with the working directory at the
 repository root before sourcing a script.
 
-`overview/1_sample_overview.R` covers all data sources, so it takes no
-arguments and isn't part of `make`. Run it after `qc` has finished for each data
-source; see [overview/README.md](overview/README.md).
+The `overview/` scripts (sample counts, array comparison, trait data) cover
+all data sources, so they take no arguments and aren't part of `make`. Run
+them after `qc` or `preprocessing` has finished for each data source; see
+[overview/README.md](overview/README.md).
 
 ## Adding a data source or array
 
@@ -209,7 +210,7 @@ preprocessing/    cell counts, sources of variation, ComBat batch correction (se
 clocks/           epigenetic clocks, age acceleration, group comparison, clinical traits (settings: clocks/config.R)
 ewas/             epigenome-wide association studies: case-control, age, exposure (settings: ewas/config.R)
 mqtl/             cis-mQTL mapping against GP2 genotypes (settings: mqtl/config.R)
-overview/         sample counts and figures across data sources, not part of make (settings: overview/config.R)
+overview/         sample counts, array comparison and figures across data sources, not part of make (settings: overview/config.R)
 logs/             step logs from make
 ```
 
@@ -235,7 +236,7 @@ script sources `config.R` first, then its own module's config:
   top-hit settings
 - **`mqtl/config.R`**: genotype files and source, genotype QC, cis window,
   model, multiple-testing and plot settings
-- **`overview/config.R`**: output files and figure colors of the sample overview
+- **`overview/config.R`**: output files and figure colors of the sample overview and array comparison
 
 Rule of thumb: a setting read by another module belongs in `config.R`;
 otherwise it goes in its module's config.
@@ -270,7 +271,7 @@ Each module has its own README with its scripts and figures:
 | `clocks/` | epigenetic clocks, age acceleration, group comparison, clinical traits | [clocks/README.md](clocks/README.md) |
 | `ewas/` | CpG-wise association with case-control status, age and an exposure | [ewas/README.md](ewas/README.md) |
 | `mqtl/` | cis-mQTL mapping against GP2 genotypes | [mqtl/README.md](mqtl/README.md) |
-| `overview/` | sample counts and figures across data sources, run on its own | [overview/README.md](overview/README.md) |
+| `overview/` | sample counts, EPICv1 vs EPICv2 comparison and figures across data sources, run on its own | [overview/README.md](overview/README.md) |
 
 ### Shared files
 

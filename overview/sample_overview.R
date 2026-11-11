@@ -1,5 +1,5 @@
 # =============================================================================
-# Overview 1: samples per data source
+# Overview: samples per data source
 # Author: GP2 Subtypes and Mechanisms - M.P.
 # Date: Nov 5, 2026
 # Description: Counts samples and participants per data source before and after
@@ -14,7 +14,7 @@
 #   overview_02_sex         share of each sex by phenotype, with counts
 #   overview_03_ancestry    samples by genetic ancestry
 #   overview_04_age         age at sample collection by phenotype
-# Usage:       Rscript overview/1_sample_overview.R
+# Usage:       Rscript overview/sample_overview.R
 # =============================================================================
 
 # --- 0. Setup ----------------------------------------------------------------
