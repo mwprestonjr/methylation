@@ -1,6 +1,9 @@
 # mQTL (`mqtl/`)
 
 Maps cis-mQTLs (SNP-methylation associations within +/- 1 Mb) against GP2 genotypes, one data source and ancestry at a time. Reads the `preprocessing` outputs.
+The scan uses GP2's imputed genotypes by default (`MQTL_GENOTYPES` in
+`mqtl/config.R`), or the NBA array genotypes, as in the first analysis (see
+Genotypes below).
 
 Run from the repository root with the `methylation` conda environment active
 (see [Running the pipeline](../README.md#running-the-pipeline)):
@@ -14,7 +17,10 @@ Step 4 runs chromosomes in parallel (`MQTL_PERM_CORES`), each worker with
 single-threaded BLAS (`RhpcBLASctl`), so the workers don't compete for the
 CPUs. It needs about 8 GB for the main process plus about 4 GB per core (~70
 GB with 15 cores) and took 30-40 minutes for each of PPMI and Psomagen; lower
-`MQTL_PERM_CORES` if other jobs share the VM.
+`MQTL_PERM_CORES` if other jobs share the VM. Those figures are for array genotypes;
+imputed genotypes have about 15 times more SNPs per cis window, so steps 3 and
+4 take much longer and step 4 needs more memory per core. Start with fewer
+cores and watch memory on the first chromosomes.
 
 Settings: [`config.R`](config.R) in this folder; shared paths and settings in
 the root [`config.R`](../config.R).
@@ -22,15 +28,18 @@ the root [`config.R`](../config.R).
 ## Before running
 
 The genotype files must be readable from the VM (e.g. the `gp2_release12` bucket
-mounted at `~/gp2_release12` with gcsfuse), and `GENO_SOURCE` in `mqtl/config.R`
-must match them (`nba` for the NBA array files).
+mounted at `~/gp2_release12` with gcsfuse; `GP2_RELEASE_DIR` in
+`mqtl/config.R`), and `GENO_SOURCE` must match the array files (`nba` for the
+NBA array). Imputed runs also need the ancestry's imputed VCFs
+(`MQTL_IMPUTED_VCFS`); `make check SOURCE=<source> ANCESTRY=<label>` checks all
+of them.
 
 ## Scripts
 
 Run steps 1-5 separately for each data source and ancestry.
 
 - `1_mqtl_sample_map.R` - creates the ancestry-specific methylation/genotype sample map.
-- `2_mqtl_genotypes.sh` - prepares and QC-filters genotypes with PLINK 2.
+- `2_mqtl_genotypes.sh` - prepares and QC-filters genotypes with PLINK 2; for imputed genotypes, merges the imputation batches with `R/merge_imputed_dosages.R`.
 - `3_mqtl.R` - performs the cis-mQTL scan.
 - `4_mqtl_permutations.R` - CpG-level significance by permutation (see Significance).
 - `5_mqtl_plots.R` - summarizes and plots mQTL results.
@@ -39,18 +48,21 @@ Run steps 1-5 separately for each data source and ancestry.
 
 ## Outputs
 
-In `<DIR_OUTPUT>/results/mqtl/<ANCESTRY>/` (`MQTL_DIR`, set in
-`R/mqtl_setup.R`), so each ancestry has its own set.
+In `<DIR_OUTPUT>/results/mqtl/<ANCESTRY>_imputed/` for imputed genotypes, or
+`<DIR_OUTPUT>/results/mqtl/<ANCESTRY>/` for array genotypes (`MQTL_DIR`, set
+in `R/mqtl_setup.R`), so each ancestry and genotype set has its own set.
 
 | Step | File | Contents | Read by |
 |---|---|---|---|
-| 1 | `mqtl_sample_map.csv` (`MQTL_SAMPLE_MAP`) | Methylation samples with genotypes for this ancestry: GP2ID, clinical ID, methylation sample ID, phenotype, ancestry | steps 3, 4, 5, `tune_meth_pcs.R` |
-| 1 | `mqtl_keep.txt` (`MQTL_KEEP`) | plink2 `--keep` file (FID, IID) of those samples | step 2 |
+| 1 | `mqtl_sample_map.csv` (`MQTL_SAMPLE_MAP`) | Methylation samples with genotypes for this ancestry: GP2ID, clinical ID, methylation sample ID, phenotype, ancestry (imputed: also imputation batch and VCF sample ID) | steps 3, 4, 5, `tune_meth_pcs.R` |
+| 1 | `mqtl_keep.txt` (`MQTL_KEEP`) | plink2 `--keep` file (FID, IID) of those samples in the array genotypes | step 2 |
+| 1 | `mqtl_keep_imputed_part<k>.txt` (`MQTL_KEEP_IMPUTED`) | Imputed only: plink2 `--keep` file (VCF sample IDs) per imputation batch holding any of the samples | step 2 |
 | 2 | `genotypes/geno_qc.{pgen,pvar,psam}` | Genotypes after variant and sample QC (autosomal biallelic SNPs; `MQTL_MAF`, `MQTL_GENO_MISSING`, `MQTL_SAMPLE_MISSING`, `MQTL_HWE_P`), variant IDs `chr:pos:ref:alt` (hg38) | step 2 |
 | 2 | `genotypes/geno_qc.rmdup.list` | Duplicate variant IDs removed | |
 | 2 | `genotypes/ld_prune.prune.{in,out}` | LD-pruned variant list used for the genotype PCs | step 2 |
 | 2 | `genotypes/geno_pcs.{eigenvec,eigenval}` | `MQTL_N_GENO_PCS` genotype PCs (ancestry covariates) | step 3, `tune_meth_pcs.R` |
-| 2 | `genotypes/geno_chr<N>.traw` | Genotypes per chromosome, SNPs x samples, as 0/1/2 copies of the `COUNTED` allele (hard calls) | steps 3, 4, 5, `tune_meth_pcs.R` |
+| 2 | `genotypes/geno_chr<N>.traw` | Genotypes per chromosome, SNPs x samples, as copies of the `COUNTED` allele: dosages (0-2) for imputed genotypes, 0/1/2 hard calls for array genotypes | steps 3, 4, 5, `tune_meth_pcs.R` |
+| 2 | `genotypes/imputed_variant_counts.tsv` | Imputed only: per chromosome, samples, variants per imputation batch after the R2 and batch MAF filters, variants in all batches, and after missingness and MAF in our samples | |
 | 2 | `genotypes/*.log` | plink2 logs | |
 | 3 | `cis_mqtl_all_saved.tsv.gz` | Every SNP-CpG pair with p < `MQTL_P_CIS_SAVE`: effect, t, p, positions, distance, FDR | steps 4, 5 |
 | 3 | `cis_mqtl_lead_per_cpg.tsv` | Lead (strongest) SNP per CpG, same columns; one row per CpG with any saved pair | steps 4, 5 |
@@ -74,14 +86,60 @@ keeps the best of duplicate arrays (see the QC README), and
 `1_mqtl_sample_map.R` stops if a GP2ID still appears twice, since both
 arrays would get the same genotypes and count as independent samples.
 
-**Genotype QC** (`2_mqtl_genotypes.sh`, PLINK 2), on the analyzed samples:
+**Genotypes** (`MQTL_GENOTYPES`): the scan uses GP2's imputed dosages by
+default. The NBA array has about 1.6M directly typed variants, so most GWAS
+lead variants and their LD neighbors aren't on it; colocalization with PD risk
+loci and comparison with imputation-based resources (GoDMC) need the imputed
+variants. The array genotypes are still read in every run: they define the
+samples (the array files have relatives removed; the imputed VCFs don't) and
+give the genotype PCs, for which directly typed, LD-pruned SNPs are the
+standard input. The first analysis used the array genotypes; its results are
+kept in `<ANCESTRY>/` for comparison with `<ANCESTRY>_imputed/`.
+
+The imputed data are Minimac4 output (hg38; dosage in the `DS` field,
+imputation R2 in INFO). Where they are in GP2 R12 (`MQTL_IMPUTED_VCFS`):
+- most ancestries, including AFR: `imputed_vcf_filtered_r2/<ANCESTRY>/`,
+  already filtered by GP2 to R2 >= 0.3 (`bcftools filter -i R2>=0.3`, per
+  the VCF header)
+- EUR: not in that folder. EUR was imputed in four sample batches of about
+  22,300 people each, whose raw (unfiltered) output is in
+  `imputation_out_dir/EUR_part1` to `EUR_part4`; the `EUR_merged` folder there
+  is empty. PPMI's EUR samples are spread over all four batches.
+
+**Imputed variant QC** (`2_mqtl_genotypes.sh` and
+`R/merge_imputed_dosages.R`), per chromosome and imputation batch, on the
+analyzed samples:
+- imputation R2 >= `MQTL_MIN_R2` (0.3), GP2's threshold for its filtered
+  files, so EUR (filtered here) and the other ancestries (filtered by GP2) are
+  treated alike. R2 comes from INFO, estimated by Minimac4 over the whole
+  batch, far more precisely than it could be in our samples. A variant must
+  pass in every batch our samples are in: R2 is estimated per batch, and a
+  variant missing from one batch would be missing for all its samples
+- MAF in the imputation batch (INFO) >= `MQTL_IMPUTED_MIN_BATCH_MAF` (1%),
+  only to keep the files small
+- the same SNP filters and IDs as the array: biallelic A/C/G/T SNPs, IDs
+  `chr:pos:ref:alt`, duplicates reduced to one
+- after joining the batches: missingness <= `MQTL_GENO_MISSING` and MAF >=
+  `MQTL_MAF` (5%) in our samples
+- no Hardy-Weinberg or sample missingness filter: dosages have no missing
+  calls, and Hardy-Weinberg checks genotype calling, which GP2 did on the
+  array data before imputation
+
+The batches are merged in R because plink2 can't merge files with different
+samples (non-concatenating `--pmerge` is not implemented). Reading each
+batch's VCF is the slow part of step 2.
+
+**Array genotype QC** (`2_mqtl_genotypes.sh`, PLINK 2), on the analyzed
+samples; for the genotype PCs in every run, and the scan genotypes in array
+runs:
 - autosomal, biallelic, single-base (A/C/G/T) SNPs only
 - minor allele frequency >= `MQTL_MAF` (5%), variant missingness <=
   `MQTL_GENO_MISSING` (5%), sample missingness <= `MQTL_SAMPLE_MISSING` (5%),
   Hardy-Weinberg p >= `MQTL_HWE_P` (1e-6)
 - variants renamed `chr:pos:ref:alt` (hg38); duplicates (assayed more than once
   on the NBA array) are reduced to one
-- genotypes exported as hard calls: 0/1/2 copies of the counted allele
+- genotypes exported as hard calls: 0/1/2 copies of the counted allele (array
+  runs)
 
 **Methylation**: ComBat-corrected M values, inverse-normal transformed per CpG
 (each CpG's values ranked and mapped to a standard normal). This limits the
@@ -196,9 +254,10 @@ and tensorQTL, used by GTEx:
 - **Probe-SNP artifacts**: SNP-CpG pairs with the SNP inside the probe are
   excluded (see Model), but a SNP outside the probe in LD with one inside it
   can still pick up the artifact. Only variants in the QC'd genotypes can be
-  excluded: indels, SNPs with MAF < `MQTL_MAF` and variants not on the array
-  stay in the probe unexcluded, and a common SNP in LD with one of them can
-  show the artifact. Before this exclusion, lead SNPs within
+  excluded: indels, SNPs with MAF < `MQTL_MAF` and, in array runs, variants
+  not on the array stay in the probe unexcluded, and a common SNP in LD with
+  one of them can show the artifact. Imputed genotypes cover far more of the
+  SNPs in probes. Before this exclusion, lead SNPs within
   50 bp of their CpG were 3.5% of significant CpGs in Psomagen AFR and 1.7%
   in PPMI EUR.
 - **Autosomes only**: QC removes X and Y probes, and step 2 keeps autosomal
@@ -215,14 +274,19 @@ and tensorQTL, used by GTEx:
 - **Lead SNP is not necessarily causal**: it tags a block of correlated SNPs
   (see the regional plots); identifying the causal variant needs
   fine-mapping.
-- **Hard-call genotypes**: imputation uncertainty isn't carried into the model
-  or the LD estimates.
+- **Imputation**: imputed dosages carry imputation uncertainty into the
+  model (a poorly imputed variant has dosages shrunk toward its mean, which
+  weakens its association rather than creating one), down to R2 0.3. The
+  imputation batches of EUR were imputed separately; if batch membership
+  differed by phenotype or plate, batch-specific dosage differences could act
+  like a batch effect, so check that batch (`imputed_part` in the sample map)
+  isn't associated with phenotype or the methylation PCs.
 - **Psomagen samples are PD cases** only (plus a few other parkinsonisms), so
   its mQTLs are estimated in cases.
 
 ## Figures
 
-Saved in `<DIR_OUTPUT>/figures/mqtl/<ANCESTRY>/` for the data source being processed
+Saved in `<DIR_OUTPUT>/figures/mqtl/<ANCESTRY>[_imputed]/` for the data source being processed
 (`DIR_OUTPUT` in the root `config.R`).
 
 - `mqtl_01_lead_snp_distance.png` - distance between each significant lead SNP (step 3's pair-level FDR) and its CpG; generated by `mqtl/3_mqtl.R`.

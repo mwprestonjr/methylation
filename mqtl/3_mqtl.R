@@ -125,14 +125,14 @@ write.csv(all_covs %>% mutate(meth_id = colnames(meth_int), .before = 1),
           file.path(MQTL_DIR, "mqtl_covariates.csv"), row.names = FALSE)
 
 mqtl_summary <- data.frame(
-  metric = c("Samples", "Ancestry", "CpGs tested", "Cis window (bp)",
+  metric = c("Samples", "Ancestry", "Genotypes", "CpGs tested", "Cis window (bp)",
              "Genotype PCs", "Methylation PCs", "Total cis tests",
              "Tests excluded: SNP in probe",
              paste0("Tests excluded: SNP in probe, p < ", MQTL_P_CIS_SAVE),
              paste0("CpGs with cis-mQTL (", fdr_label, ")"),
              paste0("CpGs with cis-mQTL (", strict_label, ")"),
              "Saved pairs: p <", paste(fdr_label, "p-value threshold")),
-  value  = c(ncol(meth_int), paste(MQTL_ANCESTRY, collapse = "+"), n_cpgs, MQTL_CIS_WINDOW,
+  value  = c(ncol(meth_int), paste(MQTL_ANCESTRY, collapse = "+"), MQTL_GENOTYPES, n_cpgs, MQTL_CIS_WINDOW,
              MQTL_N_GENO_PCS, MQTL_N_METH_PCS, n_tests, n_probe_tests, n_probe_saved,
              nrow(sig_fdr), nrow(sig_strict), MQTL_P_CIS_SAVE,
              if (is.na(fdr_p)) "beyond saved range (counts incomplete)" else signif(fdr_p, 3))

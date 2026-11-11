@@ -74,6 +74,19 @@ if (is.na(ancestry)) {
     inputs <- c(inputs, list(list(paste0("GENO_PFILE (", ancestry, ")"),
                                   paste0(pfile, ext), "file", "mqtl")))
   }
+  # Imputed dosages: every autosome of every imputation batch
+  # (MQTL_IMPUTED_VCFS, resolved as in R/mqtl_setup.R)
+  if (MQTL_GENOTYPES == "imputed") {
+    vcfs <- if (ancestry %in% names(MQTL_IMPUTED_VCFS)) MQTL_IMPUTED_VCFS[[ancestry]] else
+      gsub("{ANCESTRY}", ancestry, MQTL_IMPUTED_VCFS$default, fixed = TRUE)
+    for (part in seq_along(vcfs)) {
+      for (chr in 1:22) {
+        inputs <- c(inputs, list(list(sprintf("Imputed VCF (%s batch %d)", ancestry, part),
+                                      gsub("{CHR}", chr, vcfs[part], fixed = TRUE),
+                                      "file", "mqtl")))
+      }
+    }
+  }
 }
 
 # --- 2. Check ----------------------------------------------------------------
