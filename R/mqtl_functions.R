@@ -128,10 +128,15 @@ mqtl_prepare <- function() {
 # The probe strand and CpG position come from the sesame hg38 manifest
 # (probe_strand of the Zhou lab InfiniumAnnotation, aligned to hg38): a "+"
 # probe lies at lower coordinates than its CpG, a "-" probe at higher ones.
-# CpGs missing from the manifest, or on another chromosome there, get the
-# range on both sides of their position in cpg_pos. So do sites averaged from
-# replicate probes on different strands (replicate_map, from
-# REPLICATE_PROBES: site, probe, kept = the row name of the average).
+# CpGs missing from the manifest, on another chromosome there, or more than a
+# probe length from their position in cpg_pos get the range on both sides of
+# their position in cpg_pos. The last are mostly EPICv1 CpGs in segmental
+# duplications (e.g. chr1 120-150 Mb), where the hg19 position lifted to hg38
+# and sesame's hg38 alignment pick different copies; the scan tests SNPs
+# around the cpg_pos position, so that is where the probe's SNPs are
+# excluded. So do sites averaged from replicate probes on different strands
+# (replicate_map, from REPLICATE_PROBES: site, probe, kept = the row name of
+# the average).
 # Returns a data.frame: geneid, lo, hi, in cpg_pos order
 probe_snp_regions <- function(cpg_pos, profile, replicate_map = NULL) {
   from <- -1
@@ -143,6 +148,10 @@ probe_snp_regions <- function(cpg_pos, profile, replicate_map = NULL) {
   strand <- as.character(strand(man))[m]
   known  <- !is.na(m) & strand %in% c("+", "-") &
             sub("^chr", "", as.character(seqnames(man))[m]) == cpg_pos$chr
+  elsewhere <- known & abs(beg - cpg_pos$left) > to
+  cat("CpGs placed elsewhere by the sesame manifest (> ", to, " bp from cpg_pos): ",
+      sum(elsewhere), "\n", sep = "")
+  known  <- known & !elsewhere
   if (!is.null(replicate_map) && nrow(replicate_map) > 0) {
     rep_strand <- as.character(strand(man))[match(replicate_map$probe, names(man))]
     n_strands  <- tapply(rep_strand, replicate_map$kept,
@@ -216,10 +225,14 @@ load_chr_genotypes <- function(geno_dir, chr, sample_map, sample_names, sliced =
 # genes and region are the chromosome's rows of cpg_pos and probe_regions.
 # Used by run_cis_chr and cis_perm_chr, so both test the same SNPs
 cis_snp_ranges <- function(genes, region, snp_bp) {
-  data.frame(first       = findInterval(genes$left - MQTL_CIS_WINDOW - 1, snp_bp) + 1,
-             last        = findInterval(genes$right + MQTL_CIS_WINDOW, snp_bp),
-             probe_first = findInterval(region$lo - 1, snp_bp) + 1,
-             probe_last  = findInterval(region$hi, snp_bp))
+  first <- findInterval(genes$left - MQTL_CIS_WINDOW - 1, snp_bp) + 1
+  last  <- findInterval(genes$right + MQTL_CIS_WINDOW, snp_bp)
+  # Probe range clipped to the window, so SNPs outside it are never counted
+  # as excluded (probe_snp_regions keeps it within the window anyway)
+  data.frame(first       = first,
+             last        = last,
+             probe_first = pmax(findInterval(region$lo - 1, snp_bp) + 1, first),
+             probe_last  = pmin(findInterval(region$hi, snp_bp), last))
 }
 
 # cis-mQTL scan of one chromosome: tests within +/- MQTL_CIS_WINDOW, keeps
@@ -267,7 +280,7 @@ run_cis_chr <- function(geno, meth_int, cpg_pos, probe_regions, chr, cvrt) {
   win        <- cis_snp_ranges(genes, region, sort(geno$snp_info$pos))
   n_cis      <- win$last - win$first + 1
   stopifnot(sum(n_cis) == me$cis$ntests)
-  n_in_probe <- win$probe_last - win$probe_first + 1
+  n_in_probe <- pmax(win$probe_last - win$probe_first + 1, 0)
   cpg_tests  <- data.frame(cpg = genes$geneid, chr = chr,
                            n_snps = n_cis - n_in_probe, n_probe_snps = n_in_probe,
                            probe_lo = region$lo, probe_hi = region$hi)
@@ -424,6 +437,7 @@ cis_perm_chr <- function(geno, Ys, y_norm, genes, region, Q, perms, df,
   G      <- residualize_rows(G, Q)
   g_norm <- sqrt(rowSums(G^2))
   G      <- G / ifelse(g_norm > 1e-8, g_norm, Inf)
+  rm(miss); invisible(gc(full = FALSE))   # copies made above: ~1 GB each for WGS chr1
 
   win <- cis_snp_ranges(genes, region, snp_info$pos)
   win$n_snps <- (win$last - win$first + 1) - pmax(win$probe_last - win$probe_first + 1, 0)
@@ -469,11 +483,14 @@ cis_perm_chr <- function(geno, Ys, y_norm, genes, region, Q, perms, df,
                  p_beta = ba[["p_beta"]])
     }))
 
-    # Each block leaves ~200 MB of garbage. A forked worker (4_mqtl_permutations.R)
-    # inherits the parent's garbage collection trigger, which is high after
-    # its setup, so without collecting here each worker held up to ~10 GB
+    # Each block leaves r_perm (SNPs x CpGs x permutations) as garbage: ~50 MB
+    # with array genotypes, ~600 MB with WGS on chr1. A forked worker
+    # (4_mqtl_permutations.R) inherits the parent's garbage collection
+    # trigger, which is high after its setup, so without collecting each
+    # block a worker held up to ~10 GB (array, every 10 blocks) and WGS
+    # workers ran the VM out of memory
     rm(Yp, r_perm)
-    if (b %% 10 == 0) invisible(gc(full = FALSE))
+    invisible(gc(full = FALSE))
   }
   bind_rows(out) %>% mutate(chr = genes$chr[1], .after = cpg)
 }

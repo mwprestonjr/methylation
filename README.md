@@ -41,7 +41,8 @@ when a file is replaced.
 | GP2 master key (IDs, sex, race, phenotype, ages at onset/diagnosis, family history, genotype availability, QC and ancestry labels) | `GP2_MASTER_KEY` | `config.R` | GP2 release bucket (`gp2_release12`) | Release 12 (final) |
 | GP2 internal-use master key (age at sample collection, for Psomagen age) | `GP2_INTERNAL_KEY` | `config.R` | GP2 release bucket (`gp2_release12`), internal-use master key | Release 12 (final) |
 | GP2 extended clinical data (MDS-UPDRS, MoCA, H&Y, smoking, ...) | `CLINICAL_DATA` | `config.R` | GP2 release bucket (`gp2_release12`) | Release 12 |
-| GP2 genotypes, plink2 files per ancestry, related individuals removed | `GENO_PFILE_PATH`, `GENO_PFILE_NAME`, `GENO_SOURCE` | `mqtl/config.R` | GP2 release bucket (`gp2_release12`) | Release 12, NBA array (imputed), hg38 |
+| GP2 whole-genome sequencing, plink2 files per ancestry (all samples), and GP2's aneuploidy sample list | `GENO_PFILE_WGS`, `WGS_ANEUPLOIDY` | `mqtl/config.R` | GP2 release bucket (`gp2_release12`), `dragen/` | Release 12, DRAGEN, hg38 |
+| GP2 NBA array genotypes, plink2 files per ancestry, related individuals removed (`MQTL_GENOTYPES = "array"`) | `GENO_PFILE_ARRAY` | `mqtl/config.R` | GP2 release bucket (`gp2_release12`), `nba/gwas/` | Release 12, NBA array (not imputed), hg38 |
 
 Files from the GP2 release bucket (`GP2_MASTER_KEY`, `GP2_INTERNAL_KEY`, `CLINICAL_DATA`, the mQTL genotypes) must
 be readable from the VM, e.g. the `gp2_release12` bucket mounted at
@@ -99,11 +100,11 @@ them in this order the first time; afterwards a target can be rerun on its own.
 
 - **`SOURCE`** (required): one of the data sources above.
 - **`ANCESTRY`** (`mqtl` only): the GP2 master key ancestry label to analyze,
-  e.g. `EUR` for PPMI or `AFR` for Psomagen. The genotype file for that
-  ancestry is found from `GENO_PFILE_PATH`/`GENO_PFILE_NAME` in `mqtl/config.R`, and
-  results go to `results/mqtl/<ANCESTRY>/` and figures to
-  `figures/mqtl/<ANCESTRY>/`. Several labels (`EUR,AJ`) only
-  work if one genotype file covers all of them.
+  e.g. `EUR` for PPMI or `AFR` for Psomagen; one label per run. The genotype
+  files for that ancestry are found from `GENO_PFILE_WGS` or
+  `GENO_PFILE_ARRAY` (`MQTL_GENOTYPES`) in `mqtl/config.R`, and results go to
+  `results/mqtl/<ANCESTRY>_wgs/` and figures to `figures/mqtl/<ANCESTRY>_wgs/`
+  (without `_wgs` for array genotypes).
 - **Logs**: each step writes `logs/<module>/<step>_<SOURCE>_<timestamp>.log`
   (mQTL steps start with the ancestry); all steps of one run share the
   timestamp. `make` itself prints one line per step.
@@ -234,7 +235,7 @@ script sources `config.R` first, then its own module's config:
 - **`ewas/config.R`**: EWAS covariates, the groups compared, the age column,
   the exposures and clinical traits tested (per data source), FDR and
   top-hit settings
-- **`mqtl/config.R`**: genotype files and source, genotype QC, cis window,
+- **`mqtl/config.R`**: genotype files and source (WGS or array), genotype QC, cis window,
   model, multiple-testing and plot settings
 - **`overview/config.R`**: output files and figure colors of the sample overview and array comparison
 
@@ -251,7 +252,7 @@ Output folders, per data source (`DIR_OUTPUT` in `config.R`), one per module
 │   ├── preprocessing/       cell proportions, ComBat M values, final sample sheet, CpG annotation, variation sources
 │   ├── clocks/              clock estimates, accuracy, coverage, group comparison, clinical trait associations
 │   ├── ewas/                per-CpG results, top hits and summary per model, combined model summary
-│   └── mqtl/<ANCESTRY>/     sample map, genotypes/, cis-mQTL results, summary, top hits, tuning table
+│   └── mqtl/<ANCESTRY>[_wgs]/  sample map, genotypes/, cis-mQTL results, summary, top hits, tuning table
 └── figures/
     ├── qc/
     ├── preprocessing/

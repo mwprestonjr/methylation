@@ -64,15 +64,19 @@ if (DATA_SOURCE == "psomagen") {
   }
 }
 
-# Genotypes: one file set per ancestry (GENO_PFILE_NAME); without an ancestry
-# only the folder is checked
+# Genotypes: one file set per ancestry (GENO_PFILE_WGS or GENO_PFILE_ARRAY,
+# by MQTL_GENOTYPES); without an ancestry only the release folder is checked
 if (is.na(ancestry)) {
-  inputs <- c(inputs, list(list("GENO_PFILE_PATH", GENO_PFILE_PATH, "dir", "mqtl")))
+  inputs <- c(inputs, list(list("GP2_RELEASE_DIR", GP2_RELEASE_DIR, "dir", "mqtl")))
 } else {
-  pfile <- file.path(GENO_PFILE_PATH, gsub("{ANCESTRY}", ancestry, GENO_PFILE_NAME, fixed = TRUE))
+  for_ancestry <- function(path) gsub("{ANCESTRY}", ancestry, path, fixed = TRUE)
+  pfile <- for_ancestry(switch(MQTL_GENOTYPES, wgs = GENO_PFILE_WGS, array = GENO_PFILE_ARRAY))
   for (ext in c(".pgen", ".pvar", ".psam")) {
-    inputs <- c(inputs, list(list(paste0("GENO_PFILE (", ancestry, ")"),
+    inputs <- c(inputs, list(list(paste0("GENO_PFILE (", MQTL_GENOTYPES, ", ", ancestry, ")"),
                                   paste0(pfile, ext), "file", "mqtl")))
+  }
+  if (MQTL_GENOTYPES == "wgs") {
+    inputs <- c(inputs, list(list("WGS_ANEUPLOIDY", WGS_ANEUPLOIDY, "file", "mqtl")))
   }
 }
 

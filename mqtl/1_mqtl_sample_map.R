@@ -2,12 +2,13 @@
 # mQTL Step 1: Link methylation samples to GP2 genotypes
 # Author: GP2 Subtypes and Mechanisms - M.P.
 # Date: Oct 7, 2026
+# Updated: Nov 12, 2026
 # Description: Maps methylation samples to GP2 genotype sample IDs via the
 #              GP2 master key (by GP2ID), keeps samples genotyped in
-#              GENO_SOURCE that passed GP2 QC, restricts to MQTL_ANCESTRY, and
-#              writes a plink2 --keep file for 2_mqtl_genotypes.sh
+#              GENO_SOURCE that passed GP2 QC, restricts to MQTL_ANCESTRY
+#              (and for WGS leaves out samples with an aneuploidy), and writes a plink2 --keep file for 2_mqtl_genotypes.sh
 # Usage:       Rscript mqtl/1_mqtl_sample_map.R <data source> <ancestry>
-#              e.g. psomagen AFR, or ppmi_p140 EUR,AJ (see R/mqtl_setup.R)
+#              e.g. psomagen AFR (see R/mqtl_setup.R)
 # =============================================================================
 
 # --- 0. Setup ----------------------------------------------------------------
@@ -77,7 +78,23 @@ if (length(dup_gp2) > 0) {
        "rerun qc/2_qc.R ", DATA_SOURCE, ", which keeps one array per person")
 }
 
-# --- 4. Save outputs ---------------------------------------------------------
+# --- 4. WGS: samples without aneuploidy --------------------------------------
+
+# Relatives are removed in step 2 (KING, MQTL_KING_CUTOFF). The aneuploidy list
+# has a GP2ID column (also GP2sampleID, ploidy estimate)
+if (MQTL_GENOTYPES == "wgs") {
+  if (!file.exists(WGS_ANEUPLOIDY)) {
+    stop(WGS_ANEUPLOIDY, " not found - check WGS_ANEUPLOIDY in mqtl/config.R")
+  }
+  aneuploidy <- read.csv(WGS_ANEUPLOIDY, colClasses = "character")
+  dropped    <- aneuploidy %>% filter(GP2ID %in% sample_map$GP2ID)
+  cat("\nOn the WGS aneuploidy list (left out):", nrow(dropped), "\n")
+  if (nrow(dropped) > 0) print(dropped %>% select(GP2ID, any_of("ploidy_estimation")))
+  sample_map <- sample_map %>% filter(!GP2ID %in% aneuploidy$GP2ID)
+  cat("Samples retained:", nrow(sample_map), "\n")
+}
+
+# --- 5. Save outputs ---------------------------------------------------------
 
 write.csv(sample_map, MQTL_SAMPLE_MAP, row.names = FALSE)
 
@@ -92,7 +109,7 @@ keep <- psam[psam$IID %in% sample_map$GP2ID, id_cols, drop = FALSE]
 cat("\nSamples in the genotype file (", basename(GENO_PFILE), "):",
     nrow(keep), "of", nrow(sample_map), "\n")
 if (nrow(keep) == 0) {
-  stop("None of the samples are in ", GENO_PFILE, ".psam - check GENO_PFILE_PATH/GENO_PFILE_NAME")
+  stop("None of the samples are in ", GENO_PFILE, ".psam - check GENO_PFILE_", toupper(MQTL_GENOTYPES), " in mqtl/config.R")
 }
 writeLines(c(paste0("#", paste(id_cols, collapse = "\t")),
              do.call(paste, c(keep, sep = "\t"))),
