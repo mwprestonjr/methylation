@@ -2,12 +2,14 @@
 # Merge imputed dosages across imputation batches (mQTL step 2)
 # Author: GP2 Subtypes and Mechanisms - M.P.
 # Date: Nov 11, 2026
+# Updated: Nov 17, 2026
 # Description: Called by mqtl/2_mqtl_genotypes.sh for each chromosome when
 #              MQTL_GENOTYPES is "imputed". Reads the per-batch dosage files
 #              (genotypes/imputed_part<k>_chr<N>.traw, our samples in each
 #              imputation batch, already filtered on R2 and batch MAF), keeps
-#              the variants present in every batch, joins the samples,
-#              applies MQTL_GENO_MISSING and MQTL_MAF in our samples, and
+#              the variants present in every batch, joins the samples, keeps
+#              the unrelated ones (KING, genotypes/king.king.cutoff.in.id),
+#              applies MQTL_GENO_MISSING and MQTL_MAF in them, and
 #              writes genotypes/geno_chr<N>.traw for steps 3-5. plink2 can't
 #              merge files with different samples (non-concatenating
 #              --pmerge is not implemented), hence this step. Appends the
@@ -36,7 +38,7 @@ if (is.na(chr)) stop("Usage: Rscript R/merge_imputed_dosages.R <data source> <an
 part_files <- Sys.glob(file.path(geno_dir, paste0("imputed_part*_chr", chr, ".traw")))
 if (length(part_files) == 0) {
   stop("No imputed_part*_chr", chr, ".traw in ", geno_dir,
-       " - run bash mqtl/2_mqtl_genotypes.sh ", DATA_SOURCE, " ", MQTL_RUN)
+       " - run bash mqtl/2_mqtl_genotypes.sh ", DATA_SOURCE, " ", MQTL_ANCESTRY)
 }
 parts    <- lapply(part_files, fread)
 n_part   <- vapply(parts, nrow, integer(1))
@@ -58,6 +60,22 @@ rm(parts, p); invisible(gc())
 setorder(merged, POS)
 samples <- setdiff(names(merged), info_col)
 stopifnot(!anyDuplicated(samples))
+
+# Unrelated samples only (KING on the array genotypes, step 2). .traw sample
+# columns are "<FID>_<IID>" with the VCF ID as IID (the GP2ID, or
+# "<GP2ID>_<GP2ID>"), so they're matched on ending in "_<GP2ID>"; GP2IDs can
+# contain "_" themselves
+king_file <- file.path(geno_dir, "king.king.cutoff.in.id")
+if (!file.exists(king_file)) {
+  stop(king_file, " not found - run bash mqtl/2_mqtl_genotypes.sh ", DATA_SOURCE, " ", MQTL_ANCESTRY)
+}
+king      <- fread(king_file)
+unrelated <- king[[grep("IID$", names(king))]]
+keep      <- vapply(samples, function(s) any(endsWith(s, paste0("_", unrelated))), logical(1))
+if (any(!keep)) {
+  merged  <- merged[, !samples[!keep], with = FALSE]
+  samples <- samples[keep]
+}
 
 # --- 3. QC in our samples ----------------------------------------------------
 

@@ -88,30 +88,56 @@ cat("\n--- Permutations:", MQTL_N_PERM, "per CpG, seed", MQTL_PERM_SEED, "|",
     MQTL_PERM_CORES, "cores ---\n")
 start_time <- Sys.time()
 
+# Each chromosome's result is saved as it finishes (perm_chr/), so a rerun
+# after a failure (e.g. a worker out of memory) only runs the chromosomes
+# still missing. A saved result is reused only if it was made with the same
+# step 3 covariates, permutation settings and the chromosome's CpGs and probe
+# regions (run_key); the folder is deleted once all outputs are saved
+chr_dir <- file.path(MQTL_DIR, "perm_chr")
+dir.create(chr_dir, showWarnings = FALSE)
+run_key <- function(chr) {
+  on_chr <- cpg_pos$chr == as.character(chr)
+  list(covariates = unname(tools::md5sum(covs_file)), n_perm = MQTL_N_PERM,
+       seed = MQTL_PERM_SEED, window = MQTL_CIS_WINDOW, samples = colnames(Ys),
+       cpgs = cpg_pos[on_chr, c("geneid", "left", "right")],
+       probe_regions = prep$probe_regions[on_chr, ])
+}
+chr_file  <- function(chr) file.path(chr_dir, paste0("chr", chr, ".rds"))
+saved_chr <- function(chr) {
+  if (!file.exists(chr_file(chr))) return(NULL)
+  x <- readRDS(chr_file(chr))
+  if (identical(x$key, run_key(chr))) x$res else NULL
+}
+done <- chrs[vapply(chrs, function(chr) !is.null(saved_chr(chr)), logical(1))]
+if (length(done) > 0) cat("Saved from an earlier run: chr", paste(sort(done), collapse = ", "), "\n")
+
 # mc.preschedule = FALSE runs each chromosome as its own job. Each forked
 # worker would otherwise run BLAS with one thread per CPU, so the workers
 # would oversubscribe the CPUs many times over; one thread each instead
-perm <- mclapply(chrs, function(chr) {
+perm <- mclapply(setdiff(chrs, done), function(chr) {
   blas_set_num_threads(1)
   t0     <- Sys.time()
   on_chr <- cpg_pos$chr == as.character(chr)
   geno   <- load_chr_genotypes(prep$geno_dir, chr, prep$sample_map, colnames(Ys), sliced = FALSE)
+  n_snp  <- nrow(geno$geno)
   res    <- cis_perm_chr(geno, Ys[on_chr, , drop = FALSE], y_norm[on_chr],
                          cpg_pos[on_chr, ], prep$probe_regions[on_chr, ], Q, perms, df)
-  cat(sprintf("chr%d: %d CpGs, %d SNPs, %.1f min\n", chr, nrow(res), nrow(geno$geno),
+  saveRDS(list(key = run_key(chr), res = res), chr_file(chr))
+  cat(sprintf("chr%d: %d CpGs, %d SNPs, %.1f min\n", chr, nrow(res), n_snp,
               as.numeric(difftime(Sys.time(), t0, units = "mins"))))
-  res
+  TRUE
 }, mc.cores = MQTL_PERM_CORES, mc.preschedule = FALSE)
 
 # mclapply returns errors instead of stopping, and NULL for a worker that was
 # killed (e.g. out of memory); report which chromosomes failed
-failed <- vapply(perm, function(x) is.null(x) || inherits(x, "try-error"), logical(1))
+failed <- vapply(perm, function(x) !isTRUE(x), logical(1))
 if (any(failed)) {
-  stop("Permutations failed for chr ", paste(chrs[failed], collapse = ", "),
-       " (no result: worker killed, e.g. out of memory - lower MQTL_PERM_CORES or MQTL_PERM_BLOCK)",
-       "\n", paste(unique(unlist(perm[failed])), collapse = "\n"))
+  stop("Permutations failed for chr ", paste(setdiff(chrs, done)[failed], collapse = ", "),
+       " (no result: worker killed, e.g. out of memory - lower MQTL_PERM_CORES or MQTL_PERM_BLOCK).",
+       " The other chromosomes are saved in ", chr_dir, "; rerunning runs only the failed ones",
+       "\n", paste(unique(unlist(perm[failed & !vapply(perm, is.null, logical(1))])), collapse = "\n"))
 }
-perm <- bind_rows(perm) %>%
+perm <- bind_rows(lapply(chrs, saved_chr)) %>%
   left_join(cpg_pos %>% select(cpg = geneid, cpg_pos = left), by = "cpg") %>%
   mutate(distance = pos - cpg_pos)
 cat("Permutation time:", round(as.numeric(difftime(Sys.time(), start_time, units = "mins")), 1), "min\n")
@@ -269,4 +295,5 @@ print(perm_summary)
 write.csv(perm_summary, file.path(MQTL_DIR, "mqtl_perm_summary.csv"), row.names = FALSE)
 
 cat("\nmQTL step 4 complete!\n")
+unlink(chr_dir, recursive = TRUE)   # per-chromosome results, now in the outputs above
 cat("Results saved to:", MQTL_DIR, "| figures to:", MQTL_FIG_DIR, "\n")
